@@ -4,24 +4,27 @@ project(RL)
 include(BuildFlags.cmake)
 message(STATUS "Using compiler: ${CMAKE_CXX_COMPILER_ID}")
 
-add_library(RendererCommonDependencies INTERFACE)
+add_library(RLCommon INTERFACE)
 
-target_include_directories(RendererCommonDependencies INTERFACE ${CMAKE_SOURCE_DIR})
-target_include_directories(RendererCommonDependencies SYSTEM INTERFACE ${PROJECT_SOURCE_DIR}/third_party/include)
-target_include_directories(RendererCommonDependencies SYSTEM INTERFACE $ENV{VULKAN_SDK}/Include)
+target_include_directories(RLCommon INTERFACE ${CMAKE_SOURCE_DIR})
+target_include_directories(RLCommon SYSTEM INTERFACE ${PROJECT_SOURCE_DIR}/third_party/include)
+target_include_directories(RLCommon SYSTEM INTERFACE $ENV{VULKAN_SDK}/Include)
 
-target_link_directories(RendererCommonDependencies INTERFACE ${PROJECT_SOURCE_DIR}/third_party/lib)
-target_link_directories(RendererCommonDependencies INTERFACE $ENV{VULKAN_SDK}/Lib)
+target_link_directories(RLCommon INTERFACE ${PROJECT_SOURCE_DIR}/third_party/lib)
+target_link_directories(RLCommon INTERFACE $ENV{VULKAN_SDK}/Lib)
 
-target_link_libraries(RendererCommonDependencies INTERFACE vulkan-1)
-target_link_libraries(RendererCommonDependencies INTERFACE glfw3)
+target_link_libraries(RLCommon INTERFACE vulkan-1)
+target_link_libraries(RLCommon INTERFACE glfw3)
 add_compile_definitions(VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
 
-target_compile_options(RendererCommonDependencies INTERFACE -Wall)
+target_compile_options(RLCommon INTERFACE -Wall)
 
-set(SRC
+set(RL_SRC
 	main.cpp
 )
 
-add_executable(${PROJECT_NAME} ${SRC})
-target_link_libraries(${PROJECT_NAME} RendererCommonDependencies)
+add_executable(RL ${RL_SRC})
+target_link_libraries(${PROJECT_NAME} RLCommon)
+
+add_subdirectory(base)
+target_link_libraries(RL Base)
