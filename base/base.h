@@ -13,8 +13,13 @@ struct BaseConfig {
   const char* engine_name;
 };
 
-extern BaseConfig DEFAULT_BASE_CONFIG;
-
+/*
+ * 'Base' is a singleton class responsible for initializing and managing
+ * 'vk::Instance', 'vk::DynamicLoader'm vk::DebugUtilsMessengerEXT.
+ * For managing device, queues, swapchain and window 'Context' is used.
+ * Context is bound to base in order for it to become accessible globaly.
+ * 'Base' is responsible for disposal of 'Context'
+ */
 class Base {
   vk::DynamicLoader dynamic_loader_;
   vk::UniqueInstance instance_;
@@ -23,7 +28,6 @@ class Base {
   Base() = default;
 
   void InitInstance(BaseConfig &config);
-  void InitDynamicLoader();
   void InitDebugLogger();
 
  public:

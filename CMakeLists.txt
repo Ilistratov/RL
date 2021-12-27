@@ -4,6 +4,9 @@ project(RL)
 include(BuildFlags.cmake)
 message(STATUS "Using compiler: ${CMAKE_CXX_COMPILER_ID}")
 
+string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
+add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
+
 add_library(RLCommon INTERFACE)
 
 target_include_directories(RLCommon INTERFACE ${CMAKE_SOURCE_DIR})
@@ -28,3 +31,6 @@ target_link_libraries(${PROJECT_NAME} RLCommon)
 
 add_subdirectory(base)
 target_link_libraries(RL Base)
+
+add_subdirectory(utill)
+target_link_libraries(RL Utill)
