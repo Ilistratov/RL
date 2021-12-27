@@ -7,11 +7,11 @@
 
 namespace utill {
 
-template<typename T>
-std::ostream& operator<<(std::ostream& out, const std::vector<T> &vec) {
+template <typename T>
+std::ostream& operator<<(std::ostream& out, const std::vector<T>& vec) {
   out << "[";
   bool first = true;
-  for (const auto &el : vec) {
+  for (const auto& el : vec) {
     if (!first) {
       out << ", ";
     }
@@ -30,10 +30,10 @@ class LogEntry {
 
  public:
   LogEntry(Logger* dst_logger, std::string_view source_location);
-  LogEntry(LogEntry &&other);
+  LogEntry(LogEntry&& other);
 
-      template <typename T>
-      LogEntry& operator<<(const T& entry_contents) {
+  template <typename T>
+  LogEntry& operator<<(const T& entry_contents) {
     message_ << entry_contents;
     return *this;
   }
@@ -52,7 +52,7 @@ class Logger {
   void Log(const std::string& message);
 };
 
-extern  Logger GlobalLogger;
+extern Logger GlobalLogger;
 
 }  // namespace utill
 

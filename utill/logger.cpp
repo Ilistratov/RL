@@ -22,12 +22,12 @@ LogEntry::LogEntry(Logger* dst_logger, const std::string_view source_location)
   message_ << "[" << source_location << "]";
 }
 
-LogEntry::LogEntry(LogEntry &&other) {
+LogEntry::LogEntry(LogEntry&& other) {
   std::swap(dst_logger_, other.dst_logger_);
   message_.swap(other.message_);
 }
 
-    LogEntry::~LogEntry() {
+LogEntry::~LogEntry() {
   if (dst_logger_) {
     dst_logger_->Log(message_.str());
   }
@@ -52,4 +52,4 @@ void Logger::Log(const std::string& message) {
 
 Logger GlobalLogger;
 
-}
+}  // namespace utill
