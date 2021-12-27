@@ -7,8 +7,8 @@
 namespace base {
 
 struct BaseConfig {
-  std::vector<const char *> instance_extensions;
-  std::vector<const char *> instance_layers;
+  std::vector<const char*> instance_extensions;
+  std::vector<const char*> instance_layers;
   const char* app_name;
   const char* engine_name;
 };
@@ -27,13 +27,15 @@ class Base {
 
   Base() = default;
 
-  void InitInstance(BaseConfig &config);
+  void InitInstance(BaseConfig& config);
   void InitDebugLogger();
 
  public:
   static Base& Get();
 
   void Init(BaseConfig config);
+
+  vk::Instance GetInstance() const;
 
   ~Base();
 };

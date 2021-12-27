@@ -89,6 +89,10 @@ void Base::Init(BaseConfig config) {
   LOG(INFO) << "Initialized Base";
 }
 
+vk::Instance Base::GetInstance() const {
+  return instance_.get();
+}
+
 Base::~Base() {
   LOG(INFO) << "Clearing Base";
   glfwTerminate();

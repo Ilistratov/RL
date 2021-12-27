@@ -1,5 +1,6 @@
 set(Base_SRC
   base.cpp
+  context.cpp
 )
 
 add_library(Base ${Base_SRC})

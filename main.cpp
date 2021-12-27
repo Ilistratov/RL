@@ -1,7 +1,7 @@
 #include <iostream>
-#include <source_location>
 
 #include "base/base.h"
+#include "base/context.h"
 #include "utill/logger.h"
 
 int main() {
@@ -14,8 +14,21 @@ int main() {
       "RL",
       "RL",
   };
+
+  base::ContextConfig context_config = {
+      {},
+      {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+       VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
+       VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
+       VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME},
+      2,
+      vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eGraphics |
+          vk::QueueFlagBits::eTransfer,
+      vk::Extent2D{1280, 768}};
+
   try {
     base::Base::Get().Init(config);
+    base::Context ctx(context_config);
   } catch (std::exception e) {
     LOG(ERROR) << e.what();
   }
