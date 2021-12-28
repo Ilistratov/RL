@@ -2,6 +2,7 @@ set(Base_SRC
   base.cpp
   context.cpp
   physical_device_picker.cpp
+  swapchain.cpp
   window.cpp
 )
 

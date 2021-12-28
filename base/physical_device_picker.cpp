@@ -46,9 +46,15 @@ bool PhysicalDevicePicker::CheckExtensions(vk::PhysicalDevice device) {
   return true;
 }
 
+bool PhysicalDevicePicker::CheckSurfaceSupport(vk::PhysicalDevice device) {
+  return device.getSurfaceSupportKHR(GetSuitableQueueFamilyIndex(device),
+                                     surface_);
+}
+
 bool PhysicalDevicePicker::IsDeviceSuitable(vk::PhysicalDevice device) {
   return CheckFeatures(device) && CheckPresentModes(device) &&
-         GetSuitableQueueFamilyIndex(device) != -1 && CheckExtensions(device);
+         GetSuitableQueueFamilyIndex(device) != -1 && CheckExtensions(device) &&
+         CheckSurfaceSupport(device);
 }
 
 uint64_t PhysicalDevicePicker::calcDeviceMemSize(

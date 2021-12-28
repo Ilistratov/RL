@@ -19,6 +19,7 @@ class PhysicalDevicePicker {
   bool CheckPresentModes(vk::PhysicalDevice device) const;
   uint32_t GetSuitableQueueFamilyIndex(vk::PhysicalDevice device) const;
   bool CheckExtensions(vk::PhysicalDevice device);
+  bool CheckSurfaceSupport(vk::PhysicalDevice device);
   bool IsDeviceSuitable(vk::PhysicalDevice device);
   uint64_t calcDeviceMemSize(vk::PhysicalDevice device) const;
   bool DeviceCmp(vk::PhysicalDevice lhs, vk::PhysicalDevice rhs) const;

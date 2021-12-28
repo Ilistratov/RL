@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "base/context.h"
+#include "base/swapchain.h"
 #include "base/window.h"
 
 namespace base {
@@ -28,6 +29,7 @@ class Base {
 
   Window window_;
   Context context_;
+  Swapchain swapchain_;
 
   Base() = default;
 
@@ -40,6 +42,7 @@ class Base {
   void InitBase(BaseConfig config);
   void CreateWindow(vk::Extent2D window_extent);
   void CreateContext(ContextConfig context_config);
+  void InitSwapchain();
 
   Window& GetWindow();
   Context& GetContext();

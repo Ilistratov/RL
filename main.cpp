@@ -29,6 +29,7 @@ int main() {
     base::Base::Get().InitBase(config);
     base::Base::Get().CreateWindow(vk::Extent2D{1280, 768});
     base::Base::Get().CreateContext(context_config);
+    base::Base::Get().InitSwapchain();
   } catch (std::exception e) {
     LOG(ERROR) << e.what();
   }

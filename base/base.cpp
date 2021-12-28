@@ -100,6 +100,10 @@ void Base::CreateContext(ContextConfig config) {
   context_ = Context(config);
 }
 
+void Base::InitSwapchain() {
+  swapchain_.Create();
+}
+
 vk::Instance Base::GetInstance() const {
   return instance_.get();
 }
@@ -114,6 +118,8 @@ Context& Base::GetContext() {
 
 Base::~Base() {
   LOG(INFO) << "Clearing Base";
+  context_.GetDevice().waitIdle();
+  swapchain_.Destroy();
   context_ = Context();
   window_ = Window();
   glfwTerminate();
