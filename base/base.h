@@ -4,6 +4,9 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "base/context.h"
+#include "base/window.h"
+
 namespace base {
 
 struct BaseConfig {
@@ -15,15 +18,16 @@ struct BaseConfig {
 
 /*
  * 'Base' is a singleton class responsible for initializing and managing
- * 'vk::Instance', 'vk::DynamicLoader'm vk::DebugUtilsMessengerEXT.
- * For managing device, queues, swapchain and window 'Context' is used.
- * Context is bound to base in order for it to become accessible globaly.
- * 'Base' is responsible for disposal of 'Context'
+ * 'vk::Instance', 'vk::DynamicLoader'm vk::DebugUtilsMessengerEXT, 'Window',
+ * 'Context' and 'Swapchain'
  */
 class Base {
   vk::DynamicLoader dynamic_loader_;
   vk::UniqueInstance instance_;
   vk::UniqueDebugUtilsMessengerEXT debug_messenger_;
+
+  Window window_;
+  Context context_;
 
   Base() = default;
 
@@ -33,7 +37,12 @@ class Base {
  public:
   static Base& Get();
 
-  void Init(BaseConfig config);
+  void InitBase(BaseConfig config);
+  void CreateWindow(vk::Extent2D window_extent);
+  void CreateContext(ContextConfig context_config);
+
+  Window& GetWindow();
+  Context& GetContext();
 
   vk::Instance GetInstance() const;
 

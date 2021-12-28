@@ -23,12 +23,12 @@ int main() {
        VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME},
       2,
       vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eGraphics |
-          vk::QueueFlagBits::eTransfer,
-      vk::Extent2D{1280, 768}};
+          vk::QueueFlagBits::eTransfer};
 
   try {
-    base::Base::Get().Init(config);
-    base::Context ctx(context_config);
+    base::Base::Get().InitBase(config);
+    base::Base::Get().CreateWindow(vk::Extent2D{1280, 768});
+    base::Base::Get().CreateContext(context_config);
   } catch (std::exception e) {
     LOG(ERROR) << e.what();
   }

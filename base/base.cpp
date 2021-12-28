@@ -12,11 +12,6 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 namespace base {
 
-Base& Base::Get() {
-  static Base instance;
-  return instance;
-}
-
 void Base::InitInstance(BaseConfig& config) {
   assert(!instance_);
   bool glfw_init_result = glfwInit();
@@ -80,23 +75,48 @@ void Base::InitDebugLogger() {
                                            &debugMessageFunc));
 }
 
-void Base::Init(BaseConfig config) {
+Base& Base::Get() {
+  static Base instance;
+  return instance;
+}
+
+void Base::InitBase(BaseConfig config) {
   LOG(INFO) << "Initializing Base";
   VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
   InitInstance(config);
   VULKAN_HPP_DEFAULT_DISPATCHER.init(instance_.get());
   InitDebugLogger();
-  LOG(INFO) << "Initialized Base";
+}
+
+void Base::CreateWindow(vk::Extent2D window_extent) {
+  LOG(INFO) << "Creating window";
+  assert(!window_.GetWindow());
+  window_ = Window(window_extent);
+}
+
+void Base::CreateContext(ContextConfig config) {
+  LOG(INFO) << "Creating context";
+  assert(!context_.GetDevice());
+  context_ = Context(config);
 }
 
 vk::Instance Base::GetInstance() const {
   return instance_.get();
 }
 
+Window& Base::GetWindow() {
+  return window_;
+}
+
+Context& Base::GetContext() {
+  return context_;
+}
+
 Base::~Base() {
   LOG(INFO) << "Clearing Base";
+  context_ = Context();
+  window_ = Window();
   glfwTerminate();
-  LOG(INFO) << "Cleared Base";
 }
 
 }  // namespace base

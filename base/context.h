@@ -16,19 +16,18 @@ struct ContextConfig {
   // all flags from 'required_flags'
   uint32_t queue_count;
   vk::QueueFlags required_flags;
-  vk::Extent2D window_extent;
 };
 
+/*
+ * 'Context' class is responsible for creating and managing 'vk::Device',
+ * and device queues
+ */
 class Context {
   vk::Device device_;
   vk::PhysicalDevice physical_device_;
   uint32_t queue_family_index_ = -1;
   std::vector<vk::Queue> device_queues_;
-  GLFWwindow* window_ = nullptr;
-  vk::SurfaceKHR surface_;
 
-  void CreateWindow(ContextConfig& config);
-  void CreateSurface(ContextConfig& config);
   void PickPhysicalDevice(ContextConfig& config);
   void CreateDevice(ContextConfig& config);
 
@@ -38,8 +37,10 @@ class Context {
 
   Context(Context&& other) noexcept;
   void operator=(Context&& other) noexcept;
-
   void Swap(Context& other) noexcept;
+
+  vk::PhysicalDevice GetPhysicalDevice() const;
+  vk::Device GetDevice() const;
 
   ~Context();
 };
