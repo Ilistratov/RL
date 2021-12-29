@@ -7,7 +7,7 @@
 int main() {
   LOG(INFO) << "RL start";
 
-  base::BaseConfig config = {
+  base::BaseConfig base_config = {
       {VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
        VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
       {"VK_LAYER_KHRONOS_validation"},
@@ -26,10 +26,8 @@ int main() {
           vk::QueueFlagBits::eTransfer};
 
   try {
-    base::Base::Get().InitBase(config);
-    base::Base::Get().CreateWindow(vk::Extent2D{1280, 768});
-    base::Base::Get().CreateContext(context_config);
-    base::Base::Get().InitSwapchain();
+    base::Base::Get().Init(base_config, vk::Extent2D{1280, 768},
+                           context_config);
   } catch (std::exception e) {
     LOG(ERROR) << e.what();
   }

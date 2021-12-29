@@ -35,14 +35,17 @@ class Base {
 
   void InitInstance(BaseConfig& config);
   void InitDebugLogger();
+  void InitBase(BaseConfig& config);
+  void CreateWindow(vk::Extent2D window_extent);
+  void CreateContext(ContextConfig& context_config);
+  void CreateSwapchain();
 
  public:
   static Base& Get();
 
-  void InitBase(BaseConfig config);
-  void CreateWindow(vk::Extent2D window_extent);
-  void CreateContext(ContextConfig context_config);
-  void InitSwapchain();
+  void Init(BaseConfig config,
+            vk::Extent2D window_extent,
+            ContextConfig context_config);
 
   Window& GetWindow();
   Context& GetContext();

@@ -75,12 +75,7 @@ void Base::InitDebugLogger() {
                                            &debugMessageFunc));
 }
 
-Base& Base::Get() {
-  static Base instance;
-  return instance;
-}
-
-void Base::InitBase(BaseConfig config) {
+void Base::InitBase(BaseConfig& config) {
   LOG(INFO) << "Initializing Base";
   VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
   InitInstance(config);
@@ -94,14 +89,28 @@ void Base::CreateWindow(vk::Extent2D window_extent) {
   window_ = Window(window_extent);
 }
 
-void Base::CreateContext(ContextConfig config) {
+void Base::CreateContext(ContextConfig& config) {
   LOG(INFO) << "Creating context";
   assert(!context_.GetDevice());
   context_ = Context(config);
 }
 
-void Base::InitSwapchain() {
+void Base::CreateSwapchain() {
   swapchain_.Create();
+}
+
+Base& Base::Get() {
+  static Base instance;
+  return instance;
+}
+
+void Base::Init(BaseConfig config,
+                vk::Extent2D window_extent,
+                ContextConfig context_config) {
+  InitBase(config);
+  CreateWindow(vk::Extent2D{1280, 768});
+  CreateContext(context_config);
+  CreateSwapchain();
 }
 
 vk::Instance Base::GetInstance() const {
