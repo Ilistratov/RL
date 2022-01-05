@@ -24,6 +24,13 @@ void Task::RecordDstDep(uint32_t src_task_ind, const BarrierDep& dep) const {
   dst_dep_cmd_.waitEvents2KHR(event, dep_info);
 }
 
+Task::Task(vk::PipelineStageFlags2KHR stage_flags,
+           vk::Semaphore external_wait,
+           vk::Semaphore external_signal)
+    : stage_flags_(stage_flags),
+      external_wait_(external_wait),
+      external_signal_(external_signal) {}
+
 Task::BarrierDep& Task::GetSrcDep(uint32_t dst_task_ind) {
   return src_deps_by_task_ind_[dst_task_ind];
 }
@@ -38,7 +45,7 @@ bool Task::IsHasExecutionDep() const {
 
 std::vector<vk::SemaphoreSubmitInfoKHR> Task::GetSemaphoresToWait() {
   assert(executer_);
-  on_complete_semaphore_.Wait();
+  WaitOnCompletion();
   std::vector<vk::SemaphoreSubmitInfoKHR> result;
   if (external_wait_) {
     result.push_back(
@@ -61,6 +68,10 @@ std::vector<vk::SemaphoreSubmitInfoKHR> Task::GetSemaphoresToSignal() {
   }
   result.push_back(on_complete_semaphore_.GetSignalInfo(stage_flags_));
   return result;
+}
+
+void Task::WaitOnCompletion() {
+  on_complete_semaphore_.Wait();
 }
 
 void Task::OnSchedule(Executer* executer, uint32_t task_ind) {

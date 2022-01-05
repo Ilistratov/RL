@@ -28,17 +28,19 @@ class Task {
   vk::CommandBuffer workload_cmd_;
   vk::CommandBuffer dst_dep_cmd_;
   vk::CommandBuffer primary_cmd_;
+  vk::PipelineStageFlags2KHR stage_flags_;
   vk::Semaphore external_wait_;
   vk::Semaphore external_signal_;
-  vk::PipelineStageFlags2KHR stage_flags_;
-  Executer* executer_;
+  Executer* executer_ = nullptr;
   uint32_t task_ind_ = UINT32_MAX;
 
   void RecordSrcDep(uint32_t dst_task_ind, const BarrierDep& dep) const;
   void RecordDstDep(uint32_t src_task_ind, const BarrierDep& dep) const;
 
  public:
-  Task() = default;
+  Task(vk::PipelineStageFlags2KHR stage_flags,
+       vk::Semaphore external_wait = {},
+       vk::Semaphore external_signal = {});
 
   BarrierDep& GetSrcDep(uint32_t dst_task_ind);
   BarrierDep& GetDstDep(uint32_t src_task_ind);
@@ -46,6 +48,7 @@ class Task {
   bool IsHasExecutionDep() const;
   std::vector<vk::SemaphoreSubmitInfoKHR> GetSemaphoresToWait();
   std::vector<vk::SemaphoreSubmitInfoKHR> GetSemaphoresToSignal();
+  void WaitOnCompletion();
 
   void OnSchedule(Executer* executer, uint32_t task_ind);
   void OnCmdCreate(vk::CommandBuffer primary_cmd,

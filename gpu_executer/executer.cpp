@@ -16,14 +16,15 @@ void Executer::CreateCommandBuffers() {
   task_primary_cmd_ =
       context.GetDevice().allocateCommandBuffers(vk::CommandBufferAllocateInfo(
           cmd_pool_, vk::CommandBufferLevel::ePrimary, tasks_.size()));
-  auto secondary_cmd =
+  task_secondary_cmd_ =
       context.GetDevice().allocateCommandBuffers(vk::CommandBufferAllocateInfo(
           cmd_pool_, vk::CommandBufferLevel::eSecondary, 3 * tasks_.size()));
 
   for (uint32_t task_id = 0; task_id < tasks_.size(); task_id++) {
     std::array<vk::CommandBuffer, 3> task_secondary_cmd = {
-        secondary_cmd[task_id * 3 + 0], secondary_cmd[task_id * 3 + 1],
-        secondary_cmd[task_id * 3 + 2]};
+        task_secondary_cmd_[task_id * 3 + 0],
+        task_secondary_cmd_[task_id * 3 + 1],
+        task_secondary_cmd_[task_id * 3 + 2]};
     tasks_[task_id].task->OnCmdCreate(task_primary_cmd_[task_id],
                                       task_secondary_cmd);
   }
@@ -39,7 +40,7 @@ void Executer::NotifyRecord() {
 void Executer::OrderTasksDfs(uint32_t task_ind,
                              std::vector<uint32_t>& used_flag) {
   used_flag[task_ind] = 1;
-  for (auto dep_task_ind : dep_graph_[task_ind]) {
+  for (auto dep_task_ind : tasks_[task_ind].dep_graph_) {
     if (used_flag[dep_task_ind] == 1) {
       LOG(ERROR) << "Dependency loop for tasks " << task_ind << " "
                  << dep_task_ind;
@@ -67,8 +68,10 @@ void Executer::OrderTasks() {
 
 void Executer::CleanupDepGraph() {
   LOG(INFO) << "Cleaning up gpu Executer dep graph";
-  dep_graph_.clear();
-  dep_graph_.shrink_to_fit();
+  for (auto& task : tasks_) {
+    task.dep_graph_.clear();
+    task.dep_graph_.shrink_to_fit();
+  }
   dep_graph_edges_.clear();
 }
 
@@ -89,7 +92,27 @@ void Executer::AddDepGraphEdge(uint32_t src_task_ind, uint32_t dst_task_ind) {
     return;
   }
   dep_graph_edges_.insert({src_task_ind, dst_task_ind});
-  dep_graph_[dst_task_ind].push_back(src_task_ind);
+  tasks_[dst_task_ind].dep_graph_.push_back(src_task_ind);
+}
+
+Executer::SubmitInfo Executer::GetBatchSubmitInfo(uint32_t batch_start,
+                                                  uint32_t batch_end) {
+  SubmitInfo result;
+  for (uint32_t task_pos = batch_start; task_pos < batch_end; ++task_pos) {
+    uint32_t task_ind = task_order_[task_pos];
+    auto& task = tasks_[task_ind];
+    result.cmd_to_execute.push_back(task_primary_cmd_[task_ind]);
+
+    auto semaphores_to_wait = task.task->GetSemaphoresToWait();
+    assert(semaphores_to_wait.empty() || result.semaphores_to_wait.empty());
+    result.semaphores_to_wait = semaphores_to_wait;
+
+    auto semaphores_to_signal = task.task->GetSemaphoresToSignal();
+    for (auto semaphore_submit_info : semaphores_to_signal) {
+      result.semaphores_to_signal.push_back(semaphore_submit_info);
+    }
+  }
+  return result;
 }
 
 std::vector<vk::BufferMemoryBarrier2KHR> Executer::GetBufferBarriers(
@@ -166,7 +189,6 @@ uint32_t Executer::ScheduleTask(std::unique_ptr<Task> task) {
   auto& task_info = tasks_[task_ind];
   task_info.task = std::move(task);
   task_info.task->OnSchedule(this, task_ind);
-  dep_graph_.push_back({});
   return task_ind;
 }
 
@@ -182,12 +204,10 @@ void Executer::PreExecuteInit() {
 }
 
 void Executer::Execute() {
-  std::vector<std::vector<vk::SemaphoreSubmitInfoKHR>> batch_semaphores_wait;
-  std::vector<std::vector<vk::CommandBufferSubmitInfoKHR>> batch_cmd_execute;
-  std::vector<std::vector<vk::SemaphoreSubmitInfoKHR>> batch_semaphores_signal;
+  std::vector<Executer::SubmitInfo> batch;
   std::vector<vk::SubmitInfo2KHR> batch_submit_info;
-
   uint32_t batch_start_pos = 0;
+
   while (batch_start_pos < tasks_.size()) {
     uint32_t batch_end_pos = batch_start_pos;
     while (batch_end_pos + 1 < tasks_.size() &&
@@ -196,35 +216,25 @@ void Executer::Execute() {
     }
     ++batch_end_pos;
 
-    batch_semaphores_wait.push_back({});
-    batch_semaphores_signal.push_back({});
-    batch_cmd_execute.push_back({});
-    batch_cmd_execute.back().reserve(batch_end_pos - batch_start_pos);
-
-    for (uint32_t task_pos = batch_start_pos; task_pos < batch_end_pos;
-         ++task_pos) {
-      uint32_t task_ind = task_order_[task_pos];
-      auto& task = tasks_[task_ind];
-      batch_cmd_execute.back().push_back(task_primary_cmd_[task_ind]);
-
-      auto semaphores_to_wait = task.task->GetSemaphoresToWait();
-      assert(semaphores_to_wait.empty() ||
-             batch_semaphores_wait.back().empty());
-      batch_semaphores_wait.back() = semaphores_to_wait;
-
-      auto semaphores_to_signal = task.task->GetSemaphoresToSignal();
-      for (auto semaphore_submit_info : semaphores_to_signal) {
-        batch_semaphores_signal.back().push_back(semaphore_submit_info);
-      }
-
-      batch_submit_info.push_back(vk::SubmitInfo2KHR(
-          {}, batch_semaphores_wait.back(), batch_cmd_execute.back(),
-          batch_semaphores_signal.back()));
-    }
+    batch.push_back(GetBatchSubmitInfo(batch_start_pos, batch_end_pos));
+    batch_start_pos = batch_end_pos;
+    batch_submit_info.push_back(vk::SubmitInfo2KHR(
+        {}, batch.back().semaphores_to_wait, batch.back().cmd_to_execute,
+        batch.back().semaphores_to_signal));
   }
 
   auto& context = base::Base::Get().GetContext();
   context.GetQueue(0).submit2KHR(batch_submit_info);
+}
+
+Executer::~Executer() {
+  for (auto& task : tasks_) {
+    task.task->WaitOnCompletion();
+  }
+  auto device = base::Base::Get().GetContext().GetDevice();
+  device.freeCommandBuffers(cmd_pool_, task_primary_cmd_);
+  device.freeCommandBuffers(cmd_pool_, task_secondary_cmd_);
+  device.destroyCommandPool(cmd_pool_);
 }
 
 }  // namespace gpu_executer
