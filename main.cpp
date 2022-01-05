@@ -1,3 +1,4 @@
+#include <array>
 #include <iostream>
 
 #include "base/base.h"

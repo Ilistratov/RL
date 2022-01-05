@@ -29,8 +29,10 @@ void Context::CreateDevice(ContextConfig& config) {
                      vk::PhysicalDeviceSynchronization2FeaturesKHR>
       info_chain(device_info, timeline_semaphore_features,
                  synchronization2_features);
+
   LOG(DEBUG) << "Creating device with:\nExt: " << config.device_extensions
              << "\nLayers: " << config.device_layers;
+
   device_ = physical_device_.createDevice(info_chain.get());
   assert(device_);
 
@@ -72,6 +74,15 @@ vk::PhysicalDevice Context::GetPhysicalDevice() const {
 
 vk::Device Context::GetDevice() const {
   return device_;
+}
+
+uint32_t Context::GetQueueFamilyIndex() const {
+  return queue_family_index_;
+}
+
+vk::Queue Context::GetQueue(uint32_t queue_ind) const {
+  assert(queue_ind < device_queues_.size());
+  return device_queues_[queue_ind];
 }
 
 Context::~Context() {

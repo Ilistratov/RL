@@ -41,6 +41,8 @@ class Context {
 
   vk::PhysicalDevice GetPhysicalDevice() const;
   vk::Device GetDevice() const;
+  uint32_t GetQueueFamilyIndex() const;
+  vk::Queue GetQueue(uint32_t queue_ind) const;
 
   ~Context();
 };
