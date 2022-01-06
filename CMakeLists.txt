@@ -32,5 +32,8 @@ target_link_libraries(${PROJECT_NAME} RLCommon)
 add_subdirectory(base)
 target_link_libraries(RL Base)
 
+add_subdirectory(gpu_executer)
+target_link_libraries(RL GpuExecuter)
+
 add_subdirectory(utill)
 target_link_libraries(RL Utill)
