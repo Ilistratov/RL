@@ -59,4 +59,21 @@ class Task {
   virtual ~Task();
 };
 
+template <typename T>
+concept CmdInvocable = std::is_invocable<T, vk::CommandBuffer>::value;
+
+template <CmdInvocable Func>
+class LambdaTask : public Task {
+  Func func_;
+
+ public:
+  LambdaTask(vk::PipelineStageFlags2KHR stage_flags,
+             Func func,
+             vk::Semaphore external_wait = {},
+             vk::Semaphore external_signal = {})
+      : Task(stage_flags, external_wait, external_signal), func_(func) {}
+
+  void OnWorkloadRecord(vk::CommandBuffer cmd) override { func_(cmd); }
+};
+
 }  // namespace gpu_executer
