@@ -28,6 +28,12 @@ class Buffer {
   void BindMemory(MemoryBlock memory);
   vk::MemoryRequirements GetMemoryRequierments() const;
 
+  vk::BufferMemoryBarrier2KHR GetBarrier(
+      vk::PipelineStageFlags2KHR src_stage_flags,
+      vk::AccessFlags2KHR src_access_flags,
+      vk::PipelineStageFlags2KHR dst_stage_flags,
+      vk::AccessFlags2KHR dst_access_flags) const;
+
   ~Buffer();
 };
 

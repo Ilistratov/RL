@@ -50,6 +50,16 @@ vk::MemoryRequirements Buffer::GetMemoryRequierments() const {
   return device.getBufferMemoryRequirements(buffer_);
 }
 
+vk::BufferMemoryBarrier2KHR Buffer::GetBarrier(
+    vk::PipelineStageFlags2KHR src_stage_flags,
+    vk::AccessFlags2KHR src_access_flags,
+    vk::PipelineStageFlags2KHR dst_stage_flags,
+    vk::AccessFlags2KHR dst_access_flags) const {
+  return vk::BufferMemoryBarrier2KHR(src_stage_flags, src_access_flags,
+                                     dst_stage_flags, dst_access_flags, {}, {},
+                                     buffer_, 0, size_);
+}
+
 Buffer::~Buffer() {
   auto device = base::Base::Get().GetContext().GetDevice();
   device.destroyBuffer(buffer_);

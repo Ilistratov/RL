@@ -1,4 +1,5 @@
 set(GpuResources_SRC
+  buffer_manager.cpp
   buffer.cpp
   device_memory_allocator.cpp
   memory_block.cpp
