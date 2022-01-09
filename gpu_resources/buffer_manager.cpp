@@ -77,14 +77,15 @@ void BufferManager::CreateBuffer() {
   buffer_ = Buffer(size_, GetAccumulatedUsage());
 }
 
-void BufferManager::ReserveMemoryBlock(DeviceMemoryAllocator& allocator) {
+void BufferManager::ReserveMemoryBlock(DeviceMemoryAllocator& allocator) const {
   allocator.AddMemoryBlock(buffer_.GetMemoryRequierments(), memory_properties_);
 }
 
-void BufferManager::AllocateAndBindMemory(DeviceMemoryAllocator& allocator) {
+vk::BindBufferMemoryInfo BufferManager::GetBindMemoryInfo(
+    DeviceMemoryAllocator& allocator) const {
   auto memory_block = allocator.GetMemoryBlock(buffer_.GetMemoryRequierments(),
                                                memory_properties_);
-  buffer_.BindMemory(memory_block);
+  return buffer_.GetBindMemoryInfo(memory_block);
 }
 
 std::map<uint32_t, vk::BufferMemoryBarrier2KHR> BufferManager::GetBarriers()

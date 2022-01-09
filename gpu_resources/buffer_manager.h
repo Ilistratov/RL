@@ -37,13 +37,14 @@ class BufferManager {
   BufferManager(const BufferManager&) = delete;
   void operator=(const BufferManager&) = delete;
 
-  // It is considered that accesses are perfomed sequentially
-  // in order of user_ind increasments. Same order as
-  // tasks in gpu_executer are executed.
+  // It is considered that accesses are perfomed sequentially in order of
+  // user_ind increasments. Same order as order in which tasks in gpu_executer
+  // are executed.
   void AddUsage(uint32_t user_ind, Usage usage);
   void CreateBuffer();
-  void ReserveMemoryBlock(DeviceMemoryAllocator& allocator);
-  void AllocateAndBindMemory(DeviceMemoryAllocator& allocator);
+  void ReserveMemoryBlock(DeviceMemoryAllocator& allocator) const;
+  vk::BindBufferMemoryInfo GetBindMemoryInfo(
+      DeviceMemoryAllocator& allocator) const;
 
   std::map<uint32_t, vk::BufferMemoryBarrier2KHR> GetBarriers() const;
 

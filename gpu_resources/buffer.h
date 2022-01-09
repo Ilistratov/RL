@@ -25,7 +25,7 @@ class Buffer {
   vk::Buffer GetBuffer() const;
   vk::DeviceSize GetSize() const;
 
-  void BindMemory(MemoryBlock memory);
+  vk::BindBufferMemoryInfo GetBindMemoryInfo(MemoryBlock memory) const;
   vk::MemoryRequirements GetMemoryRequierments() const;
 
   vk::BufferMemoryBarrier2KHR GetBarrier(

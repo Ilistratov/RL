@@ -36,12 +36,11 @@ vk::DeviceSize Buffer::GetSize() const {
   return size_;
 }
 
-void Buffer::BindMemory(MemoryBlock memory) {
-  assert(!bound_memory_.memory);
-  assert(memory.size >= size_);
-  bound_memory_ = memory;
-  auto device = base::Base::Get().GetContext().GetDevice();
-  device.bindBufferMemory(buffer_, bound_memory_.memory, bound_memory_.offset);
+vk::BindBufferMemoryInfo Buffer::GetBindMemoryInfo(MemoryBlock memory) const {
+  auto requierments = GetMemoryRequierments();
+  assert(memory.size >= requierments.size);
+  assert(memory.offset % requierments.alignment == 0);
+  return vk::BindBufferMemoryInfo(buffer_, memory.memory, memory.offset);
 }
 
 vk::MemoryRequirements Buffer::GetMemoryRequierments() const {
