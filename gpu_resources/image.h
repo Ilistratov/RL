@@ -24,6 +24,8 @@ class Image {
   void operator=(Image&& other) noexcept;
   void Swap(Image& other) noexcept;
 
+  vk::Image GetImage() const;
+
   vk::BindImageMemoryInfo GetBindMemoryInfo(MemoryBlock memory) const;
   vk::MemoryRequirements GetMemoryRequierments() const;
 

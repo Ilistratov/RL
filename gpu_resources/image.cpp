@@ -32,6 +32,10 @@ void Image::Swap(Image& other) noexcept {
   std::swap(format_, other.format_);
 }
 
+vk::Image Image::GetImage() const {
+  return image_;
+}
+
 vk::BindImageMemoryInfo Image::GetBindMemoryInfo(MemoryBlock memory) const {
   auto requierments = GetMemoryRequierments();
   assert(memory.size >= requierments.size);

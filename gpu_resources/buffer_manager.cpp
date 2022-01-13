@@ -30,36 +30,55 @@ vk::BufferUsageFlags BufferManager::GetAccumulatedUsage() const {
   return result;
 }
 
+std::map<uint32_t, BufferManager::Usage>::const_iterator
+BufferManager::LoopedNext(
+    std::map<uint32_t, BufferManager::Usage>::const_iterator it) const {
+  ++it;
+  if (it == usage_by_ind_.end()) {
+    it = usage_by_ind_.begin();
+  }
+  return it;
+}
+
+std::map<uint32_t, BufferManager::Usage>::const_iterator
+BufferManager::LoopedPrev(
+    std::map<uint32_t, BufferManager::Usage>::const_iterator it) const {
+  if (it == usage_by_ind_.begin()) {
+    it = usage_by_ind_.end();
+  }
+  --it;
+  return it;
+}
+
 BufferManager::Usage BufferManager::GetDstUsage(uint32_t src_user_ind) const {
   auto it = usage_by_ind_.find(src_user_ind);
   assert(it != usage_by_ind_.end());
-  ++it;
+  it = LoopedNext(it);
   Usage result;
-  if (it != usage_by_ind_.end()) {
-    result = it->second;
-  }
-  while (it != usage_by_ind_.end() && !it->second.IsModify()) {
+  result = it->second;
+  while (!it->second.IsModify()) {
     result |= it->second;
-    ++it;
+    if (it->first == src_user_ind) {
+      break;
+    }
+    it = LoopedNext(it);
   }
   return result;
 }
 
-BufferManager::Usage BufferManager::GetSrcUsage(uint32_t src_user_ind) const {
-  auto it = usage_by_ind_.find(src_user_ind);
+BufferManager::Usage BufferManager::GetSrcUsage(uint32_t dst_user_ind) const {
+  auto it = usage_by_ind_.find(dst_user_ind);
   assert(it != usage_by_ind_.end());
+  it = LoopedPrev(it);
   Usage result;
-  if (it == usage_by_ind_.begin()) {
-    return result;
-  }
-  --it;
   result = it->second;
-  while (it != usage_by_ind_.begin()) {
-    --it;
-    if (it->second.IsModify()) {
+  it = LoopedPrev(it);
+  while (!it->second.IsModify()) {
+    result |= it->second;
+    if (it->first == dst_user_ind) {
       break;
     }
-    result |= it->second;
+    it = LoopedPrev(it);
   }
   return result;
 }
@@ -74,6 +93,7 @@ void BufferManager::AddUsage(uint32_t user_ind, BufferManager::Usage usage) {
 }
 
 void BufferManager::CreateBuffer() {
+  assert(!buffer_.GetBuffer());
   buffer_ = Buffer(size_, GetAccumulatedUsage());
 }
 
@@ -98,8 +118,8 @@ std::map<uint32_t, vk::BufferMemoryBarrier2KHR> BufferManager::GetBarriers()
                                        dst_usage.stage, dst_usage.access);
     } else {
       auto it = usage_by_ind_.find(ind);
-      ++it;
-      if (it == usage_by_ind_.end() || !it->second.IsModify()) {
+      it = LoopedNext(it);
+      if (!it->second.IsModify()) {
         continue;
       }
       auto src_usage = GetSrcUsage(it->first);
