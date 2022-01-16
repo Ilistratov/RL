@@ -2,15 +2,14 @@
 
 namespace gpu_resources {
 
-BufferManager::Usage& BufferManager::Usage::operator|=(
-    const BufferManager::Usage& other) {
+BufferUsage& BufferUsage::operator|=(BufferUsage other) {
   access |= other.access;
   stage |= other.stage;
   usage |= other.usage;
   return *this;
 }
 
-bool BufferManager::Usage::IsModify() const {
+bool BufferUsage::IsModify() const {
   return (access | (vk::AccessFlagBits2KHR::eAccelerationStructureWrite |
                     vk::AccessFlagBits2KHR::eColorAttachmentWrite |
                     vk::AccessFlagBits2KHR::eDepthStencilAttachmentWrite |
@@ -22,6 +21,10 @@ bool BufferManager::Usage::IsModify() const {
          vk::AccessFlagBits2KHR::eNone;
 }
 
+bool BufferUsage::IsDependencyNeeded(BufferUsage other) const {
+  return IsModify() || other.IsModify();
+}
+
 vk::BufferUsageFlags BufferManager::GetAccumulatedUsage() const {
   vk::BufferUsageFlags result;
   for (auto [ind, usage] : usage_by_ind_) {
@@ -30,67 +33,9 @@ vk::BufferUsageFlags BufferManager::GetAccumulatedUsage() const {
   return result;
 }
 
-std::map<uint32_t, BufferManager::Usage>::const_iterator
-BufferManager::LoopedNext(
-    std::map<uint32_t, BufferManager::Usage>::const_iterator it) const {
-  ++it;
-  if (it == usage_by_ind_.end()) {
-    it = usage_by_ind_.begin();
-  }
-  return it;
-}
-
-std::map<uint32_t, BufferManager::Usage>::const_iterator
-BufferManager::LoopedPrev(
-    std::map<uint32_t, BufferManager::Usage>::const_iterator it) const {
-  if (it == usage_by_ind_.begin()) {
-    it = usage_by_ind_.end();
-  }
-  --it;
-  return it;
-}
-
-BufferManager::Usage BufferManager::GetDstUsage(uint32_t src_user_ind) const {
-  auto it = usage_by_ind_.find(src_user_ind);
-  assert(it != usage_by_ind_.end());
-  it = LoopedNext(it);
-  Usage result;
-  result = it->second;
-  while (!it->second.IsModify()) {
-    result |= it->second;
-    if (it->first == src_user_ind) {
-      break;
-    }
-    it = LoopedNext(it);
-  }
-  return result;
-}
-
-BufferManager::Usage BufferManager::GetSrcUsage(uint32_t dst_user_ind) const {
-  auto it = usage_by_ind_.find(dst_user_ind);
-  assert(it != usage_by_ind_.end());
-  it = LoopedPrev(it);
-  Usage result;
-  result = it->second;
-  it = LoopedPrev(it);
-  while (!it->second.IsModify()) {
-    result |= it->second;
-    if (it->first == dst_user_ind) {
-      break;
-    }
-    it = LoopedPrev(it);
-  }
-  return result;
-}
-
 BufferManager::BufferManager(vk::DeviceSize size,
                              vk::MemoryPropertyFlags memory_properties)
     : size_(size), memory_properties_(memory_properties) {}
-
-void BufferManager::AddUsage(uint32_t user_ind, BufferManager::Usage usage) {
-  assert(!usage_by_ind_.contains(user_ind));
-  usage_by_ind_[user_ind] = usage;
-}
 
 void BufferManager::CreateBuffer() {
   assert(!buffer_.GetBuffer());
@@ -112,20 +57,16 @@ std::map<uint32_t, vk::BufferMemoryBarrier2KHR> BufferManager::GetBarriers()
     const {
   std::map<uint32_t, vk::BufferMemoryBarrier2KHR> result;
   for (auto [ind, usage] : usage_by_ind_) {
-    if (usage.IsModify()) {
-      auto dst_usage = GetDstUsage(ind);
-      result[ind] = buffer_.GetBarrier(usage.stage, usage.access,
-                                       dst_usage.stage, dst_usage.access);
-    } else {
-      auto it = usage_by_ind_.find(ind);
-      it = LoopedNext(it);
-      if (!it->second.IsModify()) {
-        continue;
-      }
-      auto src_usage = GetSrcUsage(it->first);
-      result[ind] = buffer_.GetBarrier(src_usage.stage, src_usage.access,
-                                       it->second.stage, it->second.access);
+    auto src_it = usage_by_ind_.find(ind);
+    auto dst_it = LoopedNext(src_it);
+    if (!usage.IsDependencyNeeded(dst_it->second)) {
+      continue;
     }
+    auto [src_usage, dst_usage] = GetUsageForBarrier(ind);
+    vk::BufferMemoryBarrier2KHR barrier(
+        src_usage.stage, src_usage.access, dst_usage.stage, dst_usage.access,
+        {}, {}, buffer_.GetBuffer(), 0, buffer_.GetSize());
+    result[ind] = barrier;
   }
   return result;
 }
