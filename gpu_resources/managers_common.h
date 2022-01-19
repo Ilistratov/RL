@@ -11,6 +11,8 @@ namespace gpu_resources {
 template <typename UsageT>
 class ResourceManagerBase {
  protected:
+  // TODO switch to std::list<std::pair<uint32_t, UsageT>> as it makes more
+  // sence here
   std::map<uint32_t, UsageT> usage_by_ind_;
   using UsageIt = typename std::map<uint32_t, UsageT>::const_iterator;
 
