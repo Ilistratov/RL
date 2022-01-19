@@ -7,36 +7,28 @@
 
 namespace gpu_executer {
 
-void Task::RecordSrcDep(uint32_t dst_task_ind, const BarrierDep& dep) const {
-  auto buffer_barriers = executer_->GetBufferBarriers(dep.buffer_barrier_ind);
-  auto image_barriers = executer_->GetImageBarriers(dep.image_barrier_ind);
-  vk::DependencyInfoKHR dep_info({}, {}, buffer_barriers, image_barriers);
-  auto event = src_events_by_task_ind_.at(dst_task_ind);
-  src_dep_cmd_.setEvent2KHR(event, dep_info);
-};
-
-void Task::RecordDstDep(uint32_t src_task_ind, const BarrierDep& dep) const {
-  auto buffer_barriers = executer_->GetBufferBarriers(dep.buffer_barrier_ind);
-  auto image_barriers = executer_->GetImageBarriers(dep.image_barrier_ind);
-  vk::DependencyInfoKHR dep_info({}, {}, buffer_barriers, image_barriers);
-  auto event = executer_->GetTaskByInd(src_task_ind)
-                   ->src_events_by_task_ind_.at(task_ind_);
-  dst_dep_cmd_.waitEvents2KHR(event, dep_info);
+void Task::RecordBarriers() {
+  barrier_cmd_.reset();
+  barrier_cmd_.begin(vk::CommandBufferBeginInfo{});
+  vk::DependencyInfoKHR dep_info(vk::DependencyFlags{}, {}, buffer_barriers_,
+                                 image_barriers_);
+  barrier_cmd_.pipelineBarrier2KHR(dep_info);
+  barrier_cmd_.end();
 }
 
 Task::Task(vk::PipelineStageFlags2KHR stage_flags,
            vk::Semaphore external_wait,
            vk::Semaphore external_signal)
-    : stage_flags_(stage_flags),
-      external_wait_(external_wait),
-      external_signal_(external_signal) {}
+    : external_wait_(external_wait),
+      external_signal_(external_signal),
+      stage_flags_(stage_flags) {}
 
-Task::BarrierDep& Task::GetSrcDep(uint32_t dst_task_ind) {
-  return src_deps_by_task_ind_[dst_task_ind];
+void Task::AddBarrier(vk::BufferMemoryBarrier2KHR barrier) {
+  buffer_barriers_.push_back(barrier);
 }
 
-Task::BarrierDep& Task::GetDstDep(uint32_t src_task_ind) {
-  return dst_deps_by_task_ind_[src_task_ind];
+void Task::AddBarrier(vk::ImageMemoryBarrier2KHR barrier) {
+  image_barriers_.push_back(barrier);
 }
 
 bool Task::IsHasExecutionDep() const {
@@ -82,51 +74,26 @@ void Task::OnSchedule(Executer* executer, uint32_t task_ind) {
 }
 
 void Task::OnCmdCreate(vk::CommandBuffer primary_cmd,
-                       std::array<vk::CommandBuffer, 3> secondary_cmd) {
-  for (const auto& cb : secondary_cmd) {
-    assert(cb);
-  }
+                       vk::CommandBuffer workload_cmd,
+                       vk::CommandBuffer barrier_cmd) {
   assert(primary_cmd);
+  assert(workload_cmd);
+  assert(barrier_cmd);
 
-  src_dep_cmd_ = secondary_cmd[0];
-  workload_cmd_ = secondary_cmd[1];
-  dst_dep_cmd_ = secondary_cmd[2];
   primary_cmd_ = primary_cmd;
-
-  auto device = base::Base::Get().GetContext().GetDevice();
-  for (const auto& [dst_task_ind, dep] : src_deps_by_task_ind_) {
-    if (!src_events_by_task_ind_.contains(dst_task_ind)) {
-      src_events_by_task_ind_[dst_task_ind] = device.createEvent(
-          vk::EventCreateInfo(vk::EventCreateFlagBits::eDeviceOnlyKHR));
-    }
-  }
+  workload_cmd_ = workload_cmd;
+  barrier_cmd_ = barrier_cmd;
 }
 
 void Task::OnRecord() {
-  dst_dep_cmd_.begin(vk::CommandBufferBeginInfo{});
-  for (const auto& [src_task_ind, dep] : dst_deps_by_task_ind_) {
-    RecordDstDep(src_task_ind, dep);
-  }
-  dst_dep_cmd_.end();
-
-  src_dep_cmd_.begin(vk::CommandBufferBeginInfo{});
-  for (const auto& [dst_task_ind, dep] : src_deps_by_task_ind_) {
-    RecordSrcDep(dst_task_ind, dep);
-  }
-  src_dep_cmd_.end();
-
+  WaitOnCompletion();
+  RecordBarriers();
+  workload_cmd_.reset();
   OnWorkloadRecord(workload_cmd_);
-
+  primary_cmd_.reset();
   primary_cmd_.begin(vk::CommandBufferBeginInfo{});
-  primary_cmd_.executeCommands({dst_dep_cmd_, workload_cmd_, src_dep_cmd_});
+  primary_cmd_.executeCommands({workload_cmd_, barrier_cmd_});
   primary_cmd_.end();
-}
-
-Task::~Task() {
-  auto device = base::Base::Get().GetContext().GetDevice();
-  for (auto [ind, event] : src_events_by_task_ind_) {
-    device.destroyEvent(event);
-  }
 }
 
 }  // namespace gpu_executer

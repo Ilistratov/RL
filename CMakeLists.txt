@@ -35,5 +35,8 @@ target_link_libraries(RL Base)
 add_subdirectory(gpu_executer)
 target_link_libraries(RL GpuExecuter)
 
+add_subdirectory(gpu_resources)
+target_link_libraries(RL GpuResources)
+
 add_subdirectory(utill)
 target_link_libraries(RL Utill)
