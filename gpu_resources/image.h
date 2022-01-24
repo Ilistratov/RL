@@ -7,15 +7,17 @@
 namespace gpu_resources {
 
 class Image {
-  vk::Image image_;
+  vk::Image image_ = {};
   vk::Extent2D extent_ = {0, 0};
   vk::Format format_ = vk::Format::eUndefined;
+  bool is_managed_ = true;
 
  public:
   Image() = default;
   Image(vk::Extent2D extent,
         vk::Format format,
         vk::ImageUsageFlags image_usage);
+  Image(vk::Image image, vk::Extent2D extent, vk::Format format);
 
   Image(const Image&) = delete;
   void operator=(const Image&) = delete;
@@ -25,6 +27,7 @@ class Image {
   void Swap(Image& other) noexcept;
 
   vk::Image GetImage() const;
+  bool IsManaged() const;
 
   vk::BindImageMemoryInfo GetBindMemoryInfo(MemoryBlock memory) const;
   vk::MemoryRequirements GetMemoryRequierments() const;
@@ -38,6 +41,8 @@ class Image {
       vk::AccessFlags2KHR dst_access_flags,
       vk::ImageLayout src_layout = vk::ImageLayout::eUndefined,
       vk::ImageLayout dst_layout = vk::ImageLayout::eUndefined) const;
+
+  ~Image();
 };
 
 }  // namespace gpu_resources

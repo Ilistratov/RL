@@ -125,6 +125,10 @@ Context& Base::GetContext() {
   return context_;
 }
 
+Swapchain& Base::GetSwapchain() {
+  return swapchain_;
+}
+
 Base::~Base() {
   LOG(INFO) << "Clearing Base";
   context_.GetDevice().waitIdle();

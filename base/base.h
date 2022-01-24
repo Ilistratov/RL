@@ -49,6 +49,7 @@ class Base {
 
   Window& GetWindow();
   Context& GetContext();
+  Swapchain& GetSwapchain();
 
   vk::Instance GetInstance() const;
 

@@ -2,7 +2,16 @@
 
 #include "base/base.h"
 #include "base/context.h"
+#include "descriptor_handler/pool.h"
+#include "gpu_executer/executer.h"
+#include "gpu_resources/image_manager.h"
+#include "pipeline_handler/compute.h"
 #include "utill/logger.h"
+
+struct PerFrame {
+  descriptor_handler::Pool descriptor_pool;
+  pipeline_handler::Compute pipeline;
+};
 
 int main() {
   LOG(INFO) << "RL start";

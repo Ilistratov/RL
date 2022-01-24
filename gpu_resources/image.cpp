@@ -7,7 +7,7 @@ namespace gpu_resources {
 Image::Image(vk::Extent2D extent,
              vk::Format format,
              vk::ImageUsageFlags image_usage)
-    : extent_(extent), format_(format) {
+    : extent_(extent), format_(format), is_managed_(true) {
   assert(extent.height > 0 && extent.width > 0);
   auto device = base::Base::Get().GetContext().GetDevice();
   image_ = device.createImage(vk::ImageCreateInfo(
@@ -15,6 +15,9 @@ Image::Image(vk::Extent2D extent,
       vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal, image_usage,
       vk::SharingMode::eExclusive, {}, {}));
 }
+
+Image::Image(vk::Image image, vk::Extent2D extent, vk::Format format)
+    : image_(image), extent_(extent), format_(format), is_managed_(false) {}
 
 Image::Image(Image&& other) noexcept {
   *this = std::move(other);
@@ -36,7 +39,12 @@ vk::Image Image::GetImage() const {
   return image_;
 }
 
+bool Image::IsManaged() const {
+  return is_managed_;
+}
+
 vk::BindImageMemoryInfo Image::GetBindMemoryInfo(MemoryBlock memory) const {
+  assert(!is_managed_);
   auto requierments = GetMemoryRequierments();
   assert(memory.size >= requierments.size);
   assert(memory.offset % requierments.alignment == 0);
@@ -44,6 +52,9 @@ vk::BindImageMemoryInfo Image::GetBindMemoryInfo(MemoryBlock memory) const {
 }
 
 vk::MemoryRequirements Image::GetMemoryRequierments() const {
+  if (!is_managed_) {
+    return {};
+  }
   auto device = base::Base::Get().GetContext().GetDevice();
   return device.getImageMemoryRequirements(image_);
 }
@@ -62,6 +73,13 @@ vk::ImageMemoryBarrier2KHR Image::GetBarrier(
   return vk::ImageMemoryBarrier2KHR(
       src_stage_flags, src_access_flags, dst_stage_flags, dst_access_flags,
       src_layout, dst_layout, {}, {}, image_, GetSubresourceRange());
+}
+
+Image::~Image() {
+  if (is_managed_) {
+    auto device = base::Base::Get().GetContext().GetDevice();
+    device.destroyImage(image_);
+  }
 }
 
 }  // namespace gpu_resources

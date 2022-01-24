@@ -1,5 +1,7 @@
 #include "gpu_resources/image_manager.h"
 
+#include "base/base.h"
+
 namespace gpu_resources {
 
 ImageUsage& ImageUsage::operator|=(ImageUsage other) {
@@ -34,18 +36,40 @@ vk::ImageUsageFlags ImageManager::GetAccumulatedUsage() const {
   return result;
 }
 
-ImageManager::ImageManager(vk::Extent2D extent,
+ImageManager::ImageManager(vk::Image image,
+                           vk::Extent2D extent,
                            vk::Format format,
                            vk::MemoryPropertyFlags memory_properties)
-    : extent_(extent), format_(format), memory_properties_(memory_properties) {}
+    : image_(image, extent, format),
+      extent_(extent),
+      format_(format),
+      memory_properties_(memory_properties) {}
+
+ImageManager ImageManager::CreateRenderTarget() {
+  auto& swapchain = base::Base::Get().GetSwapchain();
+  return ImageManager({}, swapchain.GetExtent(), swapchain.GetFormat(),
+                      vk::MemoryPropertyFlagBits::eDeviceLocal);
+}
+
+ImageManager ImageManager::CreateSwapchainImage(uint32_t swapchain_image_ind) {
+  auto& swapchain = base::Base::Get().GetSwapchain();
+  return ImageManager(swapchain.GetImage(swapchain_image_ind),
+                      swapchain.GetExtent(), swapchain.GetFormat(),
+                      vk::MemoryPropertyFlagBits::eDeviceLocal);
+}
 
 void ImageManager::CreateImage() {
-  assert(image_.GetImage());
-  image_ = Image(extent_, format_, GetAccumulatedUsage());
+  if (image_.IsManaged()) {
+    assert(!image_.GetImage());
+    image_ = Image(extent_, format_, GetAccumulatedUsage());
+  }
 }
 
 void ImageManager::ReserveMemoryBlock(DeviceMemoryAllocator& allocator) const {
-  allocator.AddMemoryBlock(image_.GetMemoryRequierments(), memory_properties_);
+  if (image_.IsManaged()) {
+    allocator.AddMemoryBlock(image_.GetMemoryRequierments(),
+                             memory_properties_);
+  }
 }
 
 vk::BindImageMemoryInfo ImageManager::GetBindMemoryInfo(
