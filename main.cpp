@@ -71,9 +71,9 @@ class RenderTargetImageAdapter : public descriptor_handler::Binding {
 struct PushConstants {
   uint32_t s_width = 0;
   uint32_t s_height = 0;
-  uint32_t tm_milisec = 0;
-  float mouse_x = 0;
-  float mouse_y = 0;
+  float center_x = 0;
+  float center_y = 0;
+  float scale = 1.0;
 };
 
 struct PerFrame {
@@ -225,14 +225,13 @@ void Run() {
     auto current_time = std::chrono::system_clock::now();
     prt[ind].pc.s_width = swapchain.GetExtent().width;
     prt[ind].pc.s_height = swapchain.GetExtent().height;
-    prt[ind].pc.tm_milisec =
-        std::chrono::duration_cast<std::chrono::milliseconds>(run_start -
-                                                              current_time)
-            .count();
     double xpos, ypos;
     glfwGetCursorPos(window.GetWindow(), &xpos, &ypos);
-    prt[ind].pc.mouse_x = xpos;
-    prt[ind].pc.mouse_y = ypos;
+    double rat = -1.0 / swapchain.GetExtent().height;
+    double aspect =
+        double(swapchain.GetExtent().width) / swapchain.GetExtent().height;
+    prt[ind].pc.center_x = (xpos * rat + aspect) * 2;
+    prt[ind].pc.center_y = (ypos * rat + 0.5) * 2;
     prt[ind].executer.Execute();
     if (swapchain.Present(prt[ind].transfer_finished_semaphore) !=
         vk::Result::eSuccess) {

@@ -1,30 +1,47 @@
 [[vk::binding(0, 0)]] RWTexture2D<float4> outputImg;
 
 struct PushConstants {
-  uint s_width;
-  uint s_height;
-  uint tm_milisec;
-  float mouse_x;
-  float mouse_y;
+  uint width;
+  uint height;
+  float center_x;
+  float center_y;
+  float scale;
 };
-[[vk::push_constant]] ConstantBuffer<PushConstants> pushConstants;
+[[vk::push_constant]] ConstantBuffer<PushConstants> pushC;
 
-void DrawGrid(uint2 pix_pos, uint grid_dim, float3 col) {
-  if ((pix_pos.x & (grid_dim - 1)) == 0 || (pix_pos.y & (grid_dim - 1)) == 0) {
-    outputImg[pix_pos.xy] = float4(col, 1.0);
+float2 PixCordToWorldCord(uint2 pix_cord) {
+  float2 uv =
+      (float2(pix_cord) + float2(0.5, 0.5)) / uint2(pushC.width, pushC.height);
+  uv = 2 * uv - float2(1, 1);
+  float aspect = float(pushC.height) / pushC.width;
+  float2 cord = float2(pushC.center_x, pushC.center_y) +
+                (float2(pushC.scale, pushC.scale * aspect) * uv);
+  return cord;
+}
+
+float3 Mandelbrot(float2 c) {
+  float2 z = float2(0, 0);
+  int iter_cnt = 0;
+  while (iter_cnt < 128 && z.x * z.x + z.y * z.y < 4) {
+    z = float2(z.x * z.x - z.y * z.y, 2 * z.x * z.y) + c;
+    ++iter_cnt;
+  }
+
+  float val = iter_cnt / 128.0;
+
+  if (iter_cnt == 128) {
+    val = 0;
+  }
+
+  if (val < 0.5) {
+    return float3(0, val * 2, 0);
+  } else {
+    return float3((val - 0.5) * 2, 1.0, (val - 0.5) * 2);
   }
 }
 
 [numthreads(8, 8, 1)] void main(uint3 DTid
                                 : SV_DispatchThreadID, uint Gind
                                 : SV_GroupIndex) {
-  float mouse_dst = distance(
-      float2(pushConstants.mouse_x, pushConstants.mouse_y), float2(DTid.xy));
-  float max_dst = length(float2(pushConstants.s_width, pushConstants.s_height));
-  float val = 1 - mouse_dst / max_dst;
-  val = pow(val, 4);
-  outputImg[DTid.xy] = float4(val, val, val, 1.0);
-  DrawGrid(DTid.xy, 16, float3(0.3, 0, 0));
-  DrawGrid(DTid.xy, 32, float3(0.6, 0, 0));
-  DrawGrid(DTid.xy, 64, float3(0.9, 0, 0));
+  outputImg[DTid.xy] = float4(Mandelbrot(PixCordToWorldCord(DTid.xy)), 1.0);
 }
