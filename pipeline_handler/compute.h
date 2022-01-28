@@ -27,10 +27,14 @@ class Compute {
   void operator=(Compute&& other) noexcept;
   void Swap(Compute& other) noexcept;
 
+  void UpdateDescriptorSet(
+      const std::vector<const descriptor_handler::Binding*>& bindings);
   void RecordDispatch(vk::CommandBuffer& cmd,
                       uint32_t group_count_x,
                       uint32_t group_count_y,
                       uint32_t group_count_z);
+
+  vk::PipelineLayout GetLayout() const;
 
   ~Compute();
 };

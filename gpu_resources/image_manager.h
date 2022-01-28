@@ -35,7 +35,9 @@ class ImageManager : public gpu_resources::ResourceManagerBase<ImageUsage> {
                vk::MemoryPropertyFlags memory_properties);
 
  public:
-  static ImageManager CreateRenderTarget();
+  ImageManager() = default;
+
+  static ImageManager CreateStorageImage();
   static ImageManager CreateSwapchainImage(uint32_t swapchain_image_ind);
 
   ImageManager(const ImageManager&) = delete;
@@ -43,7 +45,7 @@ class ImageManager : public gpu_resources::ResourceManagerBase<ImageUsage> {
 
   ImageManager(ImageManager&& other) noexcept;
   void operator=(ImageManager&& other) noexcept;
-  void Swap(ImageManager&& other);
+  void Swap(ImageManager& other) noexcept;
 
   void CreateImage();
   void ReserveMemoryBlock(DeviceMemoryAllocator& allocator) const;

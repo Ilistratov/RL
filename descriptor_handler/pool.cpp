@@ -56,8 +56,6 @@ Pool::~Pool() {
     sets.push_back(set.set_);
   }
   auto device = base::Base::Get().GetContext().GetDevice();
-  device.freeDescriptorSets(pool_, sets);
-  managed_sets_.clear();
   device.destroyDescriptorPool(pool_);
 }
 

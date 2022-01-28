@@ -27,12 +27,15 @@ class Image {
   void Swap(Image& other) noexcept;
 
   vk::Image GetImage() const;
+  vk::Extent2D GetExtent() const;
+  vk::Format GetFormat() const;
   bool IsManaged() const;
 
   vk::BindImageMemoryInfo GetBindMemoryInfo(MemoryBlock memory) const;
   vk::MemoryRequirements GetMemoryRequierments() const;
 
   vk::ImageSubresourceRange GetSubresourceRange() const;
+  vk::ImageSubresourceLayers GetSubresourceLayers() const;
 
   vk::ImageMemoryBarrier2KHR GetBarrier(
       vk::PipelineStageFlags2KHR src_stage_flags,
@@ -41,6 +44,10 @@ class Image {
       vk::AccessFlags2KHR dst_access_flags,
       vk::ImageLayout src_layout = vk::ImageLayout::eUndefined,
       vk::ImageLayout dst_layout = vk::ImageLayout::eUndefined) const;
+
+  static void RecordBlit(vk::CommandBuffer cmd,
+                         const Image& src,
+                         const Image& dst);
 
   ~Image();
 };

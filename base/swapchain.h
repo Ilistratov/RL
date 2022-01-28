@@ -28,10 +28,12 @@ class Swapchain {
   vk::Extent2D GetExtent() const noexcept;
   vk::Format GetFormat() const noexcept;
   vk::Image GetImage(uint32_t image_ind) const noexcept;
+  uint32_t GetImageCount() const;
 
   bool AcquireNextImage();
   uint32_t GetActiveImageInd() const noexcept;
   vk::Semaphore GetImageAvaliableSemaphore() const noexcept;
+  vk::Result Present(vk::Semaphore semaphore_to_wait);
 };
 
 }  // namespace base

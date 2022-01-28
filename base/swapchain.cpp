@@ -76,6 +76,10 @@ vk::Image Swapchain::GetImage(uint32_t image_ind) const noexcept {
   return images_[image_ind];
 }
 
+uint32_t Swapchain::GetImageCount() const {
+  return images_.size();
+}
+
 const static uint64_t SWAPCHAIN_PRESENT_TIMEOUT_NSEC = 5'000'000'000;
 
 bool Swapchain::AcquireNextImage() {
@@ -107,6 +111,30 @@ uint32_t Swapchain::GetActiveImageInd() const noexcept {
 
 vk::Semaphore Swapchain::GetImageAvaliableSemaphore() const noexcept {
   return image_avaliable_;
+}
+
+vk::Result Swapchain::Present(vk::Semaphore semaphore_to_wait) {
+  vk::Result res;
+  vk::Queue present_queue = Base::Get().GetContext().GetQueue(0);
+  try {
+    res = present_queue.presentKHR(vk::PresentInfoKHR(
+        semaphore_to_wait, swapchain_, active_image_ind_, {}));
+  } catch (const vk::OutOfDateKHRError& e) {
+    return vk::Result::eErrorOutOfDateKHR;
+  } catch (const std::exception& e) {
+    LOG(ERROR) << "Exception during present: " << e.what();
+    return vk::Result::eErrorUnknown;
+  }
+
+  if (res == vk::Result::eSuccess) {
+    active_image_ind_ = UINT32_MAX;
+    return vk::Result::eSuccess;
+  } else if (res == vk::Result::eSuboptimalKHR) {
+    return vk::Result::eSuboptimalKHR;
+  }
+
+  LOG(ERROR) << "Unexpected error " << vk::to_string(res);
+  return vk::Result::eErrorUnknown;
 }
 
 }  // namespace base

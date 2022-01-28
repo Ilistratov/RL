@@ -9,7 +9,8 @@ namespace gpu_executer {
 
 void Task::RecordBarriers() {
   barrier_cmd_.reset();
-  barrier_cmd_.begin(vk::CommandBufferBeginInfo{});
+  vk::CommandBufferInheritanceInfo inheritance_info{};
+  barrier_cmd_.begin(vk::CommandBufferBeginInfo({}, &inheritance_info));
   vk::DependencyInfoKHR dep_info(vk::DependencyFlags{}, {}, buffer_barriers_,
                                  image_barriers_);
   barrier_cmd_.pipelineBarrier2KHR(dep_info);
@@ -63,7 +64,8 @@ std::vector<vk::SemaphoreSubmitInfoKHR> Task::GetSemaphoresToSignal() {
 }
 
 void Task::WaitOnCompletion() {
-  on_complete_semaphore_.Wait();
+  auto res = on_complete_semaphore_.Wait(5'000'000);
+  assert(res == vk::Result::eSuccess);
 }
 
 void Task::OnSchedule(Executer* executer, uint32_t task_ind) {
@@ -89,7 +91,10 @@ void Task::OnRecord() {
   WaitOnCompletion();
   RecordBarriers();
   workload_cmd_.reset();
+  vk::CommandBufferInheritanceInfo inheritance_info{};
+  workload_cmd_.begin(vk::CommandBufferBeginInfo({}, &inheritance_info));
   OnWorkloadRecord(workload_cmd_);
+  workload_cmd_.end();
   primary_cmd_.reset();
   primary_cmd_.begin(vk::CommandBufferBeginInfo{});
   primary_cmd_.executeCommands({workload_cmd_, barrier_cmd_});
