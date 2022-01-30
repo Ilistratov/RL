@@ -110,6 +110,7 @@ void Base::Init(BaseConfig config,
   InitBase(config);
   CreateWindow(vk::Extent2D{1280, 768});
   CreateContext(context_config);
+  VULKAN_HPP_DEFAULT_DISPATCHER.init(context_.GetDevice());
   CreateSwapchain();
 }
 
@@ -123,6 +124,10 @@ Window& Base::GetWindow() {
 
 Context& Base::GetContext() {
   return context_;
+}
+
+Swapchain& Base::GetSwapchain() {
+  return swapchain_;
 }
 
 Base::~Base() {

@@ -41,5 +41,11 @@ target_link_libraries(RL GpuExecuter)
 add_subdirectory(gpu_resources)
 target_link_libraries(RL GpuResources)
 
+add_subdirectory(pipeline_handler)
+target_link_libraries(RL PipelineHandler)
+
+add_subdirectory(shaders)
+add_dependencies(RL Shaders)
+
 add_subdirectory(utill)
 target_link_libraries(RL Utill)

@@ -15,7 +15,7 @@ vk::DeviceSize MemoryBlock::GetAlignedOffset(vk::DeviceSize alignment) const {
 MemoryBlock MemoryBlock::Suballocate(vk::DeviceSize block_size,
                                      vk::DeviceSize alignment) {
   vk::DeviceSize n_offset = GetAlignedOffset(alignment);
-  assert(n_offset + block_size < size);
+  assert(n_offset + block_size <= size);
   MemoryBlock result = {memory, block_size, n_offset, type_index};
   offset = n_offset + block_size;
   return result;

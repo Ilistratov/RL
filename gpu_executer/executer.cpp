@@ -11,8 +11,9 @@ void Executer::CreateCommandBuffers() {
   LOG(INFO) << "Creating gpu Executer command buffers";
   assert(task_primary_cmd_.empty());
   auto& context = base::Base::Get().GetContext();
-  cmd_pool_ = context.GetDevice().createCommandPool(
-      vk::CommandPoolCreateInfo({}, context.GetQueueFamilyIndex()));
+  cmd_pool_ = context.GetDevice().createCommandPool(vk::CommandPoolCreateInfo(
+      vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+      context.GetQueueFamilyIndex()));
   task_primary_cmd_ =
       context.GetDevice().allocateCommandBuffers(vk::CommandBufferAllocateInfo(
           cmd_pool_, vk::CommandBufferLevel::ePrimary, tasks_.size()));
@@ -129,8 +130,12 @@ Executer::~Executer() {
     task.task->WaitOnCompletion();
   }
   auto device = base::Base::Get().GetContext().GetDevice();
-  device.freeCommandBuffers(cmd_pool_, task_primary_cmd_);
-  device.freeCommandBuffers(cmd_pool_, task_secondary_cmd_);
+  if (!task_primary_cmd_.empty()) {
+    device.freeCommandBuffers(cmd_pool_, task_primary_cmd_);
+  }
+  if (!task_secondary_cmd_.empty()) {
+    device.freeCommandBuffers(cmd_pool_, task_secondary_cmd_);
+  }
   device.destroyCommandPool(cmd_pool_);
 }
 

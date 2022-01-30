@@ -14,10 +14,8 @@ TimelineSemaphore::TimelineSemaphore() {
 }
 
 vk::Result TimelineSemaphore::Wait(uint64_t timeout) const {
-  vk::SemaphoreWaitInfo wait_info;
-  wait_info.semaphoreCount = 1;
-  wait_info.pSemaphores = &semaphore_;
-  wait_info.pValues = &counter_;
+  assert(semaphore_);
+  vk::SemaphoreWaitInfo wait_info({}, semaphore_, counter_);
   auto device = base::Base::Get().GetContext().GetDevice();
   return device.waitSemaphores(wait_info, timeout);
 }
