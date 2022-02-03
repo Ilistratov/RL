@@ -89,7 +89,6 @@ Context::~Context() {
   if (!device_) {
     return;
   }
-  device_.waitIdle();
   device_.destroy();
 }
 

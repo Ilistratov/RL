@@ -132,7 +132,6 @@ Swapchain& Base::GetSwapchain() {
 
 Base::~Base() {
   LOG(INFO) << "Clearing Base";
-  context_.GetDevice().waitIdle();
   swapchain_.Destroy();
   context_ = Context();
   window_ = Window();

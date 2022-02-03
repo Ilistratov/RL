@@ -64,7 +64,7 @@ std::vector<vk::SemaphoreSubmitInfoKHR> Task::GetSemaphoresToSignal() {
 }
 
 void Task::WaitOnCompletion() {
-  auto res = on_complete_semaphore_.Wait(5'000'000);
+  auto res = on_complete_semaphore_.Wait(16'000'000);
   assert(res == vk::Result::eSuccess);
 }
 
