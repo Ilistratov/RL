@@ -1,6 +1,6 @@
 set(GpuExecuter_SRC
+  command_pool.cpp
   executer.cpp
-  task.cpp
   timeline_semaphore.cpp
 )
 

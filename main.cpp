@@ -9,6 +9,7 @@
 #include "pipeline_handler/compute.h"
 #include "utill/logger.h"
 
+/*
 using descriptor_handler::Pool;
 using gpu_resources::DeviceMemoryAllocator;
 using gpu_resources::ImageManager;
@@ -280,6 +281,7 @@ void Run() {
     }
   }
 }
+*/
 
 /* TODO apparently it is invalid to do layout transition with dst layout
  * being eUndefined. Image manager needs to be fixed. Temporal fix for now:
@@ -310,7 +312,7 @@ int main() {
   try {
     base::Base::Get().Init(base_config, vk::Extent2D{1280, 768},
                            context_config);
-    Run();
+    // Run();
   } catch (std::exception e) {
     LOG(ERROR) << e.what();
   }
