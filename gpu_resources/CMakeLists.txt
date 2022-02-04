@@ -1,4 +1,5 @@
 set(GpuResources_SRC
+  access_sync_manager.cpp
   buffer_manager.cpp
   buffer.cpp
   device_memory_allocator.cpp
