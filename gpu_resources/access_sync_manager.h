@@ -25,12 +25,15 @@ class AccessSyncManager {
     uint32_t user_id;
   };
   std::vector<UsageEntry> access_sequence_;
+  uint32_t first_user_id_;
 
  public:
   static bool IsDepNeeded(ResourceUsage src_usage, ResourceUsage dst_usage);
   void Clear();
   void AddUsage(uint32_t user_id, ResourceUsage usage);
 
+  uint32_t GetFirstUserId() const;
+  uint32_t GetLastUserId() const;
   ResourceUsage GetFirstAccess() const;
   ResourceUsage GetLastAccess() const;
   std::vector<AccessDependency> GetUserDeps() const;
