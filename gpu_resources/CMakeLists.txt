@@ -6,7 +6,6 @@ set(GpuResources_SRC
   logical_buffer.cpp
   memory_block.cpp
   physical_buffer.cpp
-  resource_manager.cpp
 )
 
 add_library(GpuResources ${GpuResources_SRC})
