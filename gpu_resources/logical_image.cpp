@@ -8,7 +8,7 @@ LogicalImage::LogicalImage(vk::Image image,
                            vk::Extent2D extent,
                            vk::Format format,
                            vk::MemoryPropertyFlags memory_flags)
-    : extent_(extent), format_(format_), memory_flags_(memory_flags) {
+    : extent_(extent), format_(format), memory_flags_(memory_flags) {
   if (image) {
     image_ = PhysicalImage(image, extent_, format_);
   }
@@ -29,10 +29,14 @@ LogicalImage LogicalImage::CreateSwapchainImage(uint32_t swapchain_image_ind) {
                       swapchain.GetExtent(), swapchain.GetFormat(), {});
 }
 
-void LogicalImage::CreateImage() {
+void LogicalImage::Create() {
   if (!image_.GetImage()) {
     image_ = PhysicalImage(extent_, format_, usage_flags_);
   }
+}
+
+void LogicalImage::SetDebugName(const std::string& debug_name) const {
+  image_.SetDebugName(debug_name);
 }
 
 void LogicalImage::RequestMemory(DeviceMemoryAllocator& allocator) {

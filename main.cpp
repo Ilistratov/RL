@@ -5,7 +5,6 @@
 #include "base/context.h"
 #include "descriptor_handler/pool.h"
 #include "gpu_executer/executer.h"
-#include "gpu_resources/image_manager.h"
 #include "pipeline_handler/compute.h"
 #include "utill/logger.h"
 

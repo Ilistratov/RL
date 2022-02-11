@@ -84,11 +84,18 @@ vk::ImageMemoryBarrier2KHR PhysicalImage::GetBarrier(
     vk::AccessFlags2KHR src_access_flags,
     vk::PipelineStageFlags2KHR dst_stage_flags,
     vk::AccessFlags2KHR dst_access_flags,
-    vk::ImageLayout src_layout = vk::ImageLayout::eUndefined,
-    vk::ImageLayout dst_layout = vk::ImageLayout::eUndefined) const {
+    vk::ImageLayout src_layout,
+    vk::ImageLayout dst_layout) const {
   return vk::ImageMemoryBarrier2KHR(
       src_stage_flags, src_access_flags, dst_stage_flags, dst_access_flags,
       src_layout, dst_layout, {}, {}, image_, GetSubresourceRange());
+}
+
+void PhysicalImage::SetDebugName(const std::string& debug_name) const {
+  assert(image_);
+  auto device = base::Base::Get().GetContext().GetDevice();
+  device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
+      image_.objectType, (uint64_t)(VkImage)image_, debug_name.c_str()));
 }
 
 PhysicalImage::~PhysicalImage() {

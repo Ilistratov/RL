@@ -1,5 +1,7 @@
 #include "gpu_resources/logical_buffer.h"
 
+#include "base/base.h"
+
 namespace gpu_resources {
 
 LogicalBuffer::LogicalBuffer(vk::DeviceSize size,
@@ -16,9 +18,13 @@ void LogicalBuffer::AddUsage(uint32_t user_ind,
       ResourceUsage{stage_flags, access_flags, vk::ImageLayout::eUndefined});
 }
 
-void LogicalBuffer::Create(std::string debug_name = {}) {
+void LogicalBuffer::Create() {
   assert(!buffer_.GetBuffer());
-  buffer_ = PhysicalBuffer(size_, usage_flags_, debug_name);
+  buffer_ = PhysicalBuffer(size_, usage_flags_);
+}
+
+void LogicalBuffer::SetDebugName(const std::string& debug_name) const {
+  buffer_.SetDebugName(debug_name);
 }
 
 void LogicalBuffer::RequestMemory(DeviceMemoryAllocator& allocator) {

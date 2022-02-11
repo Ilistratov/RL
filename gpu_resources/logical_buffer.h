@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "gpu_resources/access_sync_manager.h"
 #include "gpu_resources/device_memory_allocator.h"
 #include "gpu_resources/physical_buffer.h"
@@ -19,12 +21,16 @@ class LogicalBuffer {
  public:
   LogicalBuffer(vk::DeviceSize size, vk::MemoryPropertyFlags memory_flags);
 
+  LogicalBuffer(const LogicalBuffer&) = delete;
+  void operator=(const LogicalBuffer&) = delete;
+
   void AddUsage(uint32_t user_ind,
                 vk::BufferUsageFlags usage_flags,
                 vk::AccessFlags2KHR access_flags,
                 vk::PipelineStageFlags2KHR stage_flags);
 
-  void Create(std::string debug_name = {});
+  void Create();
+  void SetDebugName(const std::string& debug_name) const;
   void RequestMemory(DeviceMemoryAllocator& allocator);
   vk::BindBufferMemoryInfo GetBindMemoryInfo() const;
 

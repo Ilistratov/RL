@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <vulkan/vulkan.hpp>
 
 #include "gpu_resources/access_sync_manager.h"
@@ -22,24 +24,23 @@ class LogicalImage {
   LogicalImage(vk::Image image,
                vk::Extent2D extent,
                vk::Format format,
-               vk::MemoryPropertyFlags memory_properties);
+               vk::MemoryPropertyFlags memory_flags);
 
  public:
   LogicalImage() = default;
 
-  static LogicalImage CreateStorageImage(vk::Extent2D = {0, 0});
+  static LogicalImage CreateStorageImage(vk::Extent2D extent = {0, 0});
   static LogicalImage CreateSwapchainImage(uint32_t swapchain_image_ind);
 
   LogicalImage(const LogicalImage&) = delete;
   void operator=(const LogicalImage&) = delete;
 
-  LogicalImage(LogicalImage&& other) noexcept;
-  void operator=(LogicalImage&& other) noexcept;
-  void Swap(LogicalImage& other) noexcept;
-
-  void CreateImage();
+  void Create();
+  void SetDebugName(const std::string& debug_name) const;
   void RequestMemory(DeviceMemoryAllocator& allocator);
-  vk::BindBufferMemoryInfo GetBindMemoryInfo() const;
+  vk::BindImageMemoryInfo GetBindMemoryInfo() const;
+
+  vk::ImageMemoryBarrier2KHR GetPostPassBarrier(uint32_t user_ind);
 };
 
 }  // namespace gpu_resources

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <vulkan/vulkan.hpp>
 
 #include "gpu_resources/device_memory_allocator.h"
@@ -14,9 +16,7 @@ class PhysicalBuffer {
 
  public:
   PhysicalBuffer() = default;
-  PhysicalBuffer(vk::DeviceSize size,
-                 vk::BufferUsageFlags usage_flags,
-                 std::string debug_name = {});
+  PhysicalBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage_flags);
 
   PhysicalBuffer(const PhysicalBuffer&) = delete;
   void operator=(const PhysicalBuffer&) = delete;
@@ -36,6 +36,8 @@ class PhysicalBuffer {
       vk::AccessFlags2KHR src_access_flags,
       vk::PipelineStageFlags2KHR dst_stage_flags,
       vk::AccessFlags2KHR dst_access_flags) const;
+
+  void SetDebugName(const std::string& debug_name) const;
 
   ~PhysicalBuffer();
 };

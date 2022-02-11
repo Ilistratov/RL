@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <vulkan/vulkan.hpp>
 
 #include "gpu_resources/memory_block.h"
@@ -43,6 +45,8 @@ class PhysicalImage {
       vk::AccessFlags2KHR dst_access_flags,
       vk::ImageLayout src_layout = vk::ImageLayout::eUndefined,
       vk::ImageLayout dst_layout = vk::ImageLayout::eUndefined) const;
+
+  void SetDebugName(const std::string& debug_name) const;
 
   ~PhysicalImage();
 };

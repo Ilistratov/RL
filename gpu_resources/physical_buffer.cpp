@@ -5,15 +5,12 @@
 namespace gpu_resources {
 
 PhysicalBuffer::PhysicalBuffer(vk::DeviceSize size,
-                               vk::BufferUsageFlags usage_flags,
-                               std::string debug_name)
+                               vk::BufferUsageFlags usage_flags)
     : size_(size), usage_flags_(usage_flags) {
   assert(size > 0);
   auto device = base::Base::Get().GetContext().GetDevice();
   buffer_ = device.createBuffer(vk::BufferCreateInfo(
       {}, size, usage_flags, vk::SharingMode::eExclusive, {}));
-  device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
-      buffer_.objectType, (uint64_t)(VkBuffer)buffer_, debug_name.c_str()));
 }
 
 PhysicalBuffer::PhysicalBuffer(PhysicalBuffer&& other) noexcept {
@@ -65,6 +62,13 @@ vk::BufferMemoryBarrier2KHR PhysicalBuffer::GetBarrier(
   return vk::BufferMemoryBarrier2KHR(src_stage_flags, src_access_flags,
                                      dst_stage_flags, dst_access_flags, {}, {},
                                      buffer_, 0, size_);
+}
+
+void PhysicalBuffer::SetDebugName(const std::string& debug_name) const {
+  assert(buffer_);
+  auto device = base::Base::Get().GetContext().GetDevice();
+  device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
+      buffer_.objectType, (uint64_t)(VkBuffer)buffer_, debug_name.c_str()));
 }
 
 PhysicalBuffer::~PhysicalBuffer() {

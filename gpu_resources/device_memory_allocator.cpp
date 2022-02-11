@@ -34,7 +34,7 @@ uint32_t DeviceMemoryAllocator::FindTypeIndex(uint32_t type_bits) const {
       result = type_index;
       break;
     }
-    if (result == -1) {
+    if (result == uint32_t(-1)) {
       result = type_index;
     }
   }

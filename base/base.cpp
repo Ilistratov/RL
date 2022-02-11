@@ -108,7 +108,7 @@ void Base::Init(BaseConfig config,
                 vk::Extent2D window_extent,
                 ContextConfig context_config) {
   InitBase(config);
-  CreateWindow(vk::Extent2D{1280, 768});
+  CreateWindow(window_extent);
   CreateContext(context_config);
   VULKAN_HPP_DEFAULT_DISPATCHER.init(context_.GetDevice());
   CreateSwapchain();

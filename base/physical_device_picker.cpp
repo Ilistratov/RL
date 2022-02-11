@@ -53,8 +53,8 @@ bool PhysicalDevicePicker::CheckSurfaceSupport(vk::PhysicalDevice device) {
 
 bool PhysicalDevicePicker::IsDeviceSuitable(vk::PhysicalDevice device) {
   return CheckFeatures(device) && CheckPresentModes(device) &&
-         GetSuitableQueueFamilyIndex(device) != -1 && CheckExtensions(device) &&
-         CheckSurfaceSupport(device);
+         GetSuitableQueueFamilyIndex(device) != uint32_t(-1) &&
+         CheckExtensions(device) && CheckSurfaceSupport(device);
 }
 
 uint64_t PhysicalDevicePicker::calcDeviceMemSize(
@@ -100,7 +100,7 @@ void PhysicalDevicePicker::PickPhysicalDevice() {
   }
 
   assert(result_device_);
-  assert(result_queue_family_index_ != -1);
+  assert(result_queue_family_index_ != uint32_t(-1));
 
   LOG(DEBUG) << "Picked device: "
              << std::string(result_device_.getProperties().deviceName)
