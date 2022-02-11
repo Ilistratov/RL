@@ -33,34 +33,36 @@ void AccessSyncManager::Clear() {
   access_sequence_.clear();
 }
 
-void AccessSyncManager::AddUsage(uint32_t user_id, ResourceUsage usage) {
+void AccessSyncManager::AddUsage(uint32_t user_ind, ResourceUsage usage) {
+  assert(access_sequence_.empty() ||
+         access_sequence_.back().user_ind < user_ind);
   if (access_sequence_.empty() ||
       IsDepNeeded(access_sequence_.back().usage, usage)) {
-    access_sequence_.push_back({usage, user_id});
+    access_sequence_.push_back({usage, user_ind});
   } else {
     access_sequence_.back().usage |= usage;
-    access_sequence_.back().user_id = user_id;
+    access_sequence_.back().user_ind = user_ind;
   }
 }
 
-ResourceUsage AccessSyncManager::GetFirstAccess() const {
-  assert(!access_sequence_.empty());
-  return access_sequence_.front().usage;
+uint32_t AccessSyncManager::GetFirstUserInd() const {
+  return first_user_ind_;
 }
 
-ResourceUsage AccessSyncManager::GetLastAccess() const {
+AccessDependency AccessSyncManager::GetUserDeps(uint32_t user_ind) {
   assert(!access_sequence_.empty());
-  return access_sequence_.back().usage;
-}
-
-std::vector<AccessDependency> AccessSyncManager::GetUserDeps() const {
-  assert(!access_sequence_.empty());
-  std::vector<AccessDependency> res(access_sequence_.size() - 1);
-  for (uint32_t i = 0; i + 1 < access_sequence_.size(); i++) {
-    res[i] = {access_sequence_[i].usage, access_sequence_[i + 1].usage,
-              access_sequence_[i].user_id};
+  assert(next_dep_ind_ < access_sequence_.size());
+  if (access_sequence_[next_dep_ind_].user_ind > user_ind) {
+    return {};
   }
-  return res;
+  assert(access_sequence_[next_dep_ind_].user_ind == user_ind);
+  ResourceUsage src_usage = access_sequence_[next_dep_ind_].usage;
+  ++next_dep_ind_;
+  if (next_dep_ind_ == access_sequence_.size()) {
+    next_dep_ind_ = 0;
+  }
+  ResourceUsage dst_usage = access_sequence_[next_dep_ind_].usage;
+  return {src_usage, dst_usage};
 }
 
 }  // namespace gpu_resources

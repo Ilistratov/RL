@@ -11,15 +11,13 @@ class LogicalBuffer {
   AccessSyncManager access_manager_;
   std::vector<AccessDependency> dependencies_;
 
-  vk::DeviceSize required_size_;
-  vk::MemoryPropertyFlags required_memory_flags_;
-  vk::BufferUsageFlags required_usage_flags_;
-  MemoryBlock* requested_memory_ = nullptr;
-  uint32_t next_dep_ind_ = 0;
+  vk::DeviceSize size_;
+  vk::MemoryPropertyFlags memory_flags_;
+  vk::BufferUsageFlags usage_flags_;
+  MemoryBlock* memory_ = nullptr;
 
  public:
-  LogicalBuffer(vk::DeviceSize required_size,
-                vk::MemoryPropertyFlags required_memory_flags);
+  LogicalBuffer(vk::DeviceSize size, vk::MemoryPropertyFlags memory_flags);
 
   void AddUsage(uint32_t user_ind,
                 vk::BufferUsageFlags usage_flags,

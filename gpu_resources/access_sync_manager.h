@@ -14,29 +14,25 @@ struct ResourceUsage {
 };
 
 struct AccessDependency {
-  ResourceUsage src_usage;
-  ResourceUsage dst_usage;
-  uint32_t user_id;
+  ResourceUsage src_usage = {};
+  ResourceUsage dst_usage = {};
 };
 
 class AccessSyncManager {
   struct UsageEntry {
     ResourceUsage usage;
-    uint32_t user_id;
+    uint32_t user_ind;
   };
   std::vector<UsageEntry> access_sequence_;
-  uint32_t first_user_id_;
+  uint32_t first_user_ind_;
+  uint32_t next_dep_ind_ = 0;
 
  public:
   static bool IsDepNeeded(ResourceUsage src_usage, ResourceUsage dst_usage);
   void Clear();
-  void AddUsage(uint32_t user_id, ResourceUsage usage);
-
-  uint32_t GetFirstUserId() const;
-  uint32_t GetLastUserId() const;
-  ResourceUsage GetFirstAccess() const;
-  ResourceUsage GetLastAccess() const;
-  std::vector<AccessDependency> GetUserDeps() const;
+  void AddUsage(uint32_t user_ind, ResourceUsage usage);
+  uint32_t GetFirstUserInd() const;
+  AccessDependency GetUserDeps(uint32_t user_ind);
 };
 
 }  // namespace gpu_resources

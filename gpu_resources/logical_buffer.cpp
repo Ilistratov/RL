@@ -2,16 +2,15 @@
 
 namespace gpu_resources {
 
-LogicalBuffer::LogicalBuffer(vk::DeviceSize required_size,
-                             vk::MemoryPropertyFlags required_memory_flags)
-    : required_size_(required_size),
-      required_memory_flags_(required_memory_flags) {}
+LogicalBuffer::LogicalBuffer(vk::DeviceSize size,
+                             vk::MemoryPropertyFlags memory_flags)
+    : size_(size), memory_flags_(memory_flags) {}
 
 void LogicalBuffer::AddUsage(uint32_t user_ind,
                              vk::BufferUsageFlags usage_flags,
                              vk::AccessFlags2KHR access_flags,
                              vk::PipelineStageFlags2KHR stage_flags) {
-  required_usage_flags_ |= usage_flags;
+  usage_flags_ |= usage_flags;
   access_manager_.AddUsage(
       user_ind,
       ResourceUsage{stage_flags, access_flags, vk::ImageLayout::eUndefined});
@@ -19,40 +18,28 @@ void LogicalBuffer::AddUsage(uint32_t user_ind,
 
 void LogicalBuffer::Create(std::string debug_name = {}) {
   assert(!buffer_.GetBuffer());
-  buffer_ = PhysicalBuffer(required_size_, required_usage_flags_, debug_name);
+  buffer_ = PhysicalBuffer(size_, usage_flags_, debug_name);
 }
 
 void LogicalBuffer::RequestMemory(DeviceMemoryAllocator& allocator) {
-  requested_memory_ = allocator.RequestMemory(buffer_.GetMemoryRequierments(),
-                                              required_memory_flags_);
+  memory_ =
+      allocator.RequestMemory(buffer_.GetMemoryRequierments(), memory_flags_);
 }
 
 vk::BindBufferMemoryInfo LogicalBuffer::GetBindMemoryInfo() const {
-  assert(requested_memory_);
-  return buffer_.GetBindMemoryInfo(*requested_memory_);
+  assert(memory_);
+  return buffer_.GetBindMemoryInfo(*memory_);
 }
 
 vk::BufferMemoryBarrier2KHR LogicalBuffer::GetPostPassBarrier(
     uint32_t user_ind) {
-  if (dependencies_.empty()) {
-    dependencies_ = access_manager_.GetUserDeps();
-  }
-  assert(next_dep_ind_ < dependencies_.size());
-  if (dependencies_[next_dep_ind_].user_id > user_ind) {
+  auto [src_usage, dst_usage] = access_manager_.GetUserDeps(user_ind);
+  if (src_usage.stage == vk::PipelineStageFlagBits2KHR::eNone &&
+      dst_usage.stage == vk::PipelineStageFlagBits2KHR::eNone) {
     return {};
   }
-  assert(dependencies_[next_dep_ind_].user_id == user_ind);
-
-  auto src_usage = dependencies_[next_dep_ind_].src_usage;
-  auto dst_usage = dependencies_[next_dep_ind_].dst_usage;
-  auto result = buffer_.GetBarrier(src_usage.stage, src_usage.access,
-                                   dst_usage.stage, dst_usage.access);
-  ++next_dep_ind_;
-  if (next_dep_ind_ == dependencies_.size()) {
-    next_dep_ind_ = 0;
-    // when deps become dynamic, clear |dependencies_| here
-  }
-  return result;
+  return buffer_.GetBarrier(src_usage.stage, src_usage.access, dst_usage.stage,
+                            dst_usage.access);
 }
 
 }  // namespace gpu_resources
