@@ -1,6 +1,6 @@
-set(Utill_SRC
+set(SRC
   logger.cpp
 )
 
-add_library(Utill ${Utill_SRC})
-target_link_libraries(Utill RLCommon)
+add_library(utill ${SRC})
+target_link_libraries(utill rl_common)

@@ -1,4 +1,4 @@
-set(Base_SRC
+set(SRC
   base.cpp
   context.cpp
   physical_device_picker.cpp
@@ -6,5 +6,5 @@ set(Base_SRC
   window.cpp
 )
 
-add_library(Base ${Base_SRC})
-target_link_libraries(Base RLCommon)
+add_library(base ${SRC})
+target_link_libraries(base rl_common)

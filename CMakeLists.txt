@@ -6,11 +6,14 @@ include(BuildFlags.cmake)
 string(LENGTH "${PROJECT_SOURCE_DIR}/" SOURCE_PATH_SIZE)
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
-set(RL_SRC
+set(SRC
 	main.cpp
 )
 
-add_executable(RL_Executable ${RL_SRC})
+add_executable(renderer ${SRC})
+
+add_subdirectory(shaders)
+add_dependencies(renderer shaders)
 
 add_subdirectory(src)
-target_link_libraries(RL_Executable RL)
+target_link_libraries(renderer rl_lib)

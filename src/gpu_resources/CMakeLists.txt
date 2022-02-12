@@ -1,4 +1,4 @@
-set(GpuResources_SRC
+set(SRC
   access_sync_manager.cpp
   device_memory_allocator.cpp
   logical_buffer.cpp
@@ -8,5 +8,5 @@ set(GpuResources_SRC
   physical_image.cpp
 )
 
-add_library(GpuResources ${GpuResources_SRC})
-target_link_libraries(GpuResources RLCommon)
+add_library(gpu_resources ${SRC})
+target_link_libraries(gpu_resources rl_common)

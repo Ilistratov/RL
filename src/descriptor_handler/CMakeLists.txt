@@ -1,8 +1,8 @@
-set(DescriptorHandler_SRC
+set(SRC
   binding.cpp
   pool.cpp
   set.cpp
 )
 
-add_library(DescriptorHandler ${DescriptorHandler_SRC})
-target_link_libraries(DescriptorHandler RLCommon)
+add_library(descriptor_handler ${SRC})
+target_link_libraries(descriptor_handler rl_common)
