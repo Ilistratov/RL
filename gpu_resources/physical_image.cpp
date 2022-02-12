@@ -1,12 +1,12 @@
-#include "gpu_resources/image.h"
+#include "gpu_resources/physical_image.h"
 
 #include "base/base.h"
 
 namespace gpu_resources {
 
-Image::Image(vk::Extent2D extent,
-             vk::Format format,
-             vk::ImageUsageFlags image_usage)
+PhysicalImage::PhysicalImage(vk::Extent2D extent,
+                             vk::Format format,
+                             vk::ImageUsageFlags image_usage)
     : extent_(extent), format_(format), is_managed_(true) {
   assert(extent.height > 0 && extent.width > 0);
   auto device = base::Base::Get().GetContext().GetDevice();
@@ -16,51 +16,45 @@ Image::Image(vk::Extent2D extent,
       vk::SharingMode::eExclusive, {}, {}));
 }
 
-Image::Image(vk::Image image, vk::Extent2D extent, vk::Format format)
+PhysicalImage::PhysicalImage(vk::Image image,
+                             vk::Extent2D extent,
+                             vk::Format format)
     : image_(image), extent_(extent), format_(format), is_managed_(false) {}
 
-Image::Image(Image&& other) noexcept {
+PhysicalImage::PhysicalImage(PhysicalImage&& other) noexcept {
   Swap(other);
 }
 
-void Image::operator=(Image&& other) noexcept {
-  Image tmp;
+void PhysicalImage::operator=(PhysicalImage&& other) noexcept {
+  PhysicalImage tmp;
   tmp.Swap(other);
   Swap(tmp);
 }
 
-void Image::Swap(Image& other) noexcept {
+void PhysicalImage::Swap(PhysicalImage& other) noexcept {
   std::swap(image_, other.image_);
   std::swap(extent_, other.extent_);
   std::swap(format_, other.format_);
   std::swap(is_managed_, other.is_managed_);
 }
 
-vk::Image Image::GetImage() const {
+vk::Image PhysicalImage::GetImage() const {
   return image_;
 }
 
-vk::Extent2D Image::GetExtent() const {
+vk::Extent2D PhysicalImage::GetExtent() const {
   return extent_;
 }
 
-vk::Format Image::GetFormat() const {
+vk::Format PhysicalImage::GetFormat() const {
   return format_;
 }
 
-bool Image::IsManaged() const {
+bool PhysicalImage::IsManaged() const {
   return is_managed_;
 }
 
-vk::BindImageMemoryInfo Image::GetBindMemoryInfo(MemoryBlock memory) const {
-  assert(is_managed_);
-  auto requierments = GetMemoryRequierments();
-  assert(memory.size >= requierments.size);
-  assert(memory.offset % requierments.alignment == 0);
-  return vk::BindImageMemoryInfo(image_, memory.memory, memory.offset);
-}
-
-vk::MemoryRequirements Image::GetMemoryRequierments() const {
+vk::MemoryRequirements PhysicalImage::GetMemoryRequierments() const {
   if (!is_managed_) {
     return {};
   }
@@ -68,15 +62,24 @@ vk::MemoryRequirements Image::GetMemoryRequierments() const {
   return device.getImageMemoryRequirements(image_);
 }
 
-vk::ImageSubresourceRange Image::GetSubresourceRange() const {
+vk::BindImageMemoryInfo PhysicalImage::GetBindMemoryInfo(
+    MemoryBlock memory_block) const {
+  assert(is_managed_);
+  assert(image_);
+  assert(memory_block.memory);
+  return vk::BindImageMemoryInfo(image_, memory_block.memory,
+                                 memory_block.offset);
+}
+
+vk::ImageSubresourceRange PhysicalImage::GetSubresourceRange() const {
   return vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 }
 
-vk::ImageSubresourceLayers Image::GetSubresourceLayers() const {
+vk::ImageSubresourceLayers PhysicalImage::GetSubresourceLayers() const {
   return vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
 }
 
-vk::ImageMemoryBarrier2KHR Image::GetBarrier(
+vk::ImageMemoryBarrier2KHR PhysicalImage::GetBarrier(
     vk::PipelineStageFlags2KHR src_stage_flags,
     vk::AccessFlags2KHR src_access_flags,
     vk::PipelineStageFlags2KHR dst_stage_flags,
@@ -88,23 +91,14 @@ vk::ImageMemoryBarrier2KHR Image::GetBarrier(
       src_layout, dst_layout, {}, {}, image_, GetSubresourceRange());
 }
 
-void Image::RecordBlit(vk::CommandBuffer cmd,
-                       const Image& src,
-                       const Image& dst) {
-  vk::ImageBlit2KHR region(
-      src.GetSubresourceLayers(),
-      {vk::Offset3D(0, 0, 0),
-       vk::Offset3D(src.GetExtent().width, src.GetExtent().height, 1)},
-      dst.GetSubresourceLayers(),
-      {vk::Offset3D(0, 0, 0),
-       vk::Offset3D(dst.GetExtent().width, dst.GetExtent().height, 1)});
-  vk::BlitImageInfo2KHR blit_info(
-      src.GetImage(), vk::ImageLayout::eTransferSrcOptimal, dst.GetImage(),
-      vk::ImageLayout::eTransferDstOptimal, region);
-  cmd.blitImage2KHR(blit_info);
+void PhysicalImage::SetDebugName(const std::string& debug_name) const {
+  assert(image_);
+  auto device = base::Base::Get().GetContext().GetDevice();
+  device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
+      image_.objectType, (uint64_t)(VkImage)image_, debug_name.c_str()));
 }
 
-Image::~Image() {
+PhysicalImage::~PhysicalImage() {
   if (is_managed_) {
     auto device = base::Base::Get().GetContext().GetDevice();
     device.destroyImage(image_);

@@ -5,10 +5,10 @@
 #include "base/context.h"
 #include "descriptor_handler/pool.h"
 #include "gpu_executer/executer.h"
-#include "gpu_resources/image_manager.h"
 #include "pipeline_handler/compute.h"
 #include "utill/logger.h"
 
+/*
 using descriptor_handler::Pool;
 using gpu_resources::DeviceMemoryAllocator;
 using gpu_resources::ImageManager;
@@ -206,13 +206,56 @@ struct PerFrame {
   }
 };
 
+double g_CAMERA_POS_X = 0.0;
+double g_CAMERA_POS_Y = 0.0;
+double g_SCALE = 1.0;
+double g_TARGET_SCALE = 1.0;
+double g_SENSiTIVITY = 0.01;
+const int kSmoothingRate = 8;
+
+void CursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
+  g_CAMERA_POS_X += xpos * g_SCALE * g_SENSiTIVITY;
+  g_CAMERA_POS_Y += ypos * g_SCALE * g_SENSiTIVITY;
+  glfwSetCursorPos(window, 0.0, 0.0);
+}
+
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+  if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+    g_TARGET_SCALE *= 0.5;
+  } else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+    g_TARGET_SCALE *= 2;
+  }
+}
+
+void WindowFocusCallback(GLFWwindow* window, int focused) {
+  if (focused) {
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPos(window, 0.0, 0.0);
+    glfwSetCursorPosCallback(window, CursorPositionCallback);
+    glfwSetMouseButtonCallback(window, MouseButtonCallback);
+  } else {
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    glfwSetCursorPosCallback(window, nullptr);
+    glfwSetMouseButtonCallback(window, nullptr);
+  }
+}
+
+void InitInput() {
+  auto window = base::Base::Get().GetWindow().GetWindow();
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+  glfwSetCursorPos(window, 0.0, 0.0);
+  glfwSetCursorPosCallback(window, CursorPositionCallback);
+  glfwSetMouseButtonCallback(window, MouseButtonCallback);
+  // glfwSetWindowFocusCallback(window, WindowFocusCallback);
+}
+
 void Run() {
-  auto run_start = std::chrono::system_clock::now();
   auto& swapchain = base::Base::Get().GetSwapchain();
   std::vector<PerFrame> prt(swapchain.GetImageCount());
   for (uint32_t i = 0; i < prt.size(); i++) {
     prt[i].Init(i);
   }
+  InitInput();
   auto& window = base::Base::Get().GetWindow();
   LOG(INFO) << "Ready to render";
   while (!glfwWindowShouldClose(window.GetWindow())) {
@@ -222,16 +265,13 @@ void Run() {
       break;
     }
     uint64_t ind = swapchain.GetActiveImageInd();
-    auto current_time = std::chrono::system_clock::now();
     prt[ind].pc.s_width = swapchain.GetExtent().width;
     prt[ind].pc.s_height = swapchain.GetExtent().height;
-    double xpos, ypos;
-    glfwGetCursorPos(window.GetWindow(), &xpos, &ypos);
-    double rat = -1.0 / swapchain.GetExtent().height;
-    double aspect =
-        double(swapchain.GetExtent().width) / swapchain.GetExtent().height;
-    prt[ind].pc.center_x = (xpos * rat + aspect) * 2;
-    prt[ind].pc.center_y = (ypos * rat + 0.5) * 2;
+    prt[ind].pc.center_x = g_CAMERA_POS_X;
+    prt[ind].pc.center_y = g_CAMERA_POS_Y;
+    g_SCALE =
+        (g_SCALE * kSmoothingRate + g_TARGET_SCALE) / (kSmoothingRate + 1);
+    prt[ind].pc.scale = g_SCALE;
     prt[ind].executer.Execute();
     if (swapchain.Present(prt[ind].transfer_finished_semaphore) !=
         vk::Result::eSuccess) {
@@ -240,6 +280,7 @@ void Run() {
     }
   }
 }
+*/
 
 /* TODO apparently it is invalid to do layout transition with dst layout
  * being eUndefined. Image manager needs to be fixed. Temporal fix for now:
@@ -270,7 +311,7 @@ int main() {
   try {
     base::Base::Get().Init(base_config, vk::Extent2D{1280, 768},
                            context_config);
-    Run();
+    // Run();
   } catch (std::exception e) {
     LOG(ERROR) << e.what();
   }
