@@ -2,20 +2,20 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "descriptor_handler/binding.h"
-#include "descriptor_handler/pool.h"
+#include "pipeline_handler/binding.h"
+#include "pipeline_handler/pool.h"
 
 namespace pipeline_handler {
 
 class Compute {
   vk::Pipeline pipeline_ = {};
   vk::PipelineLayout layout_ = {};
-  descriptor_handler::Set* descriptor_set_ = nullptr;
+  Set* descriptor_set_ = nullptr;
 
  public:
   Compute() = default;
-  Compute(const std::vector<const descriptor_handler::Binding*>& bindings,
-          descriptor_handler::Pool& descriptor_pool,
+  Compute(const std::vector<const Binding*>& bindings,
+          Pool& descriptor_pool,
           const std::vector<vk::PushConstantRange>& push_constants,
           const std::string& shader_file_path,
           const std::string& shader_main);
@@ -27,8 +27,7 @@ class Compute {
   void operator=(Compute&& other) noexcept;
   void Swap(Compute& other) noexcept;
 
-  void UpdateDescriptorSet(
-      const std::vector<const descriptor_handler::Binding*>& bindings);
+  void UpdateDescriptorSet(const std::vector<const Binding*>& bindings);
   void RecordDispatch(vk::CommandBuffer& cmd,
                       uint32_t group_count_x,
                       uint32_t group_count_y,

@@ -1,8 +1,8 @@
-#include "descriptor_handler/pool.h"
+#include "pipeline_handler/pool.h"
 
 #include "base/base.h"
 
-namespace descriptor_handler {
+namespace pipeline_handler {
 
 void Pool::CreatePool() {
   std::vector<vk::DescriptorPoolSize> pool_sizes;
@@ -59,4 +59,4 @@ Pool::~Pool() {
   device.destroyDescriptorPool(pool_);
 }
 
-}  // namespace descriptor_handler
+}  // namespace pipeline_handler

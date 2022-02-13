@@ -6,10 +6,10 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "descriptor_handler/binding.h"
-#include "descriptor_handler/set.h"
+#include "pipeline_handler/binding.h"
+#include "pipeline_handler/set.h"
 
-namespace descriptor_handler {
+namespace pipeline_handler {
 
 class Pool {
   std::list<Set> managed_sets_;
@@ -31,4 +31,4 @@ class Pool {
   ~Pool();
 };
 
-}  // namespace descriptor_handler
+}  // namespace pipeline_handler

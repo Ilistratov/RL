@@ -3,7 +3,6 @@
 
 #include "base/base.h"
 #include "base/context.h"
-#include "descriptor_handler/pool.h"
 #include "gpu_executer/executer.h"
 #include "pipeline_handler/compute.h"
 #include "utill/logger.h"

@@ -16,4 +16,4 @@ foreach(HLSL ${HLSL_SOURCE_FILES})
 	list(APPEND SPIRV_BINARY_FILES ${SPIRV})
 endforeach(HLSL)
 
-add_custom_target(Shaders DEPENDS ${SPIRV_BINARY_FILES})
+add_custom_target(shaders DEPENDS ${SPIRV_BINARY_FILES})

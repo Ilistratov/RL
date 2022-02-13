@@ -4,9 +4,9 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "descriptor_handler/binding.h"
+#include "pipeline_handler/binding.h"
 
-namespace descriptor_handler {
+namespace pipeline_handler {
 
 class Set {
   vk::DescriptorSetLayout layout_;
@@ -28,4 +28,4 @@ class Set {
   ~Set();
 };
 
-}  // namespace descriptor_handler
+}  // namespace pipeline_handler
