@@ -1,8 +1,8 @@
-#include "descriptor_handler/binding.h"
+#include "pipeline_handler/binding.h"
 
 #include <cassert>
 
-namespace descriptor_handler {
+namespace pipeline_handler {
 
 vk::WriteDescriptorSet Write::ConvertToVkWrite(
     vk::DescriptorSet dst_set,
@@ -26,4 +26,4 @@ vk::WriteDescriptorSet Write::ConvertToVkWrite(
   return result;
 }
 
-}  // namespace descriptor_handler
+}  // namespace pipeline_handler

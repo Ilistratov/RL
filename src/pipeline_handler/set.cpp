@@ -1,10 +1,10 @@
-#include "descriptor_handler/set.h"
+#include "pipeline_handler/set.h"
 
 #include <map>
 
 #include "base/base.h"
 
-namespace descriptor_handler {
+namespace pipeline_handler {
 
 Set::Set(const std::vector<const Binding*>& bindings) {
   std::vector<vk::DescriptorSetLayoutBinding> vk_bindings(bindings.size());
@@ -43,4 +43,4 @@ Set::~Set() {
   device.destroyDescriptorSetLayout(layout_);
 }
 
-}  // namespace descriptor_handler
+}  // namespace pipeline_handler

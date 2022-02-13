@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-namespace descriptor_handler {
+namespace pipeline_handler {
 
 struct Write {
   uint32_t dst_array_element = {};
@@ -22,4 +22,4 @@ class Binding {
   virtual Write GetWrite() const noexcept = 0;
 };
 
-}  // namespace descriptor_handler
+}  // namespace pipeline_handler

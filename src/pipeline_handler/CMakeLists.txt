@@ -1,5 +1,8 @@
 set(SRC
+  binding.cpp
   compute.cpp
+  pool.cpp
+  set.cpp
 )
 
 add_library(pipeline_handler ${SRC})

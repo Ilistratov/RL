@@ -24,9 +24,6 @@ target_link_libraries(rl_lib rl_common)
 add_subdirectory(base)
 target_link_libraries(rl_lib base)
 
-add_subdirectory(descriptor_handler)
-target_link_libraries(rl_lib descriptor_handler)
-
 add_subdirectory(gpu_executer)
 target_link_libraries(rl_lib gpu_executer)
 

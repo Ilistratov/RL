@@ -28,12 +28,11 @@ vk::UniqueShaderModule LoadShaderModule(const std::string& file_path) {
 
 }  // namespace
 
-Compute::Compute(
-    const std::vector<const descriptor_handler::Binding*>& bindings,
-    descriptor_handler::Pool& descriptor_pool,
-    const std::vector<vk::PushConstantRange>& push_constants,
-    const std::string& shader_file_path,
-    const std::string& shader_main) {
+Compute::Compute(const std::vector<const Binding*>& bindings,
+                 Pool& descriptor_pool,
+                 const std::vector<vk::PushConstantRange>& push_constants,
+                 const std::string& shader_file_path,
+                 const std::string& shader_main) {
   auto device = base::Base::Get().GetContext().GetDevice();
   descriptor_set_ = descriptor_pool.ReserveDescriptorSet(bindings);
   std::vector<vk::DescriptorSetLayout> vk_layouts = {
@@ -69,8 +68,7 @@ void Compute::Swap(Compute& other) noexcept {
   std::swap(descriptor_set_, other.descriptor_set_);
 }
 
-void Compute::UpdateDescriptorSet(
-    const std::vector<const descriptor_handler::Binding*>& bindings) {
+void Compute::UpdateDescriptorSet(const std::vector<const Binding*>& bindings) {
   descriptor_set_->UpdateDescriptorSet(bindings);
 }
 
