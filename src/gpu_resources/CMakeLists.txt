@@ -9,4 +9,4 @@ set(SRC
 )
 
 add_library(gpu_resources ${SRC})
-target_link_libraries(gpu_resources rl_common)
+target_link_libraries(gpu_resources rl_common base)

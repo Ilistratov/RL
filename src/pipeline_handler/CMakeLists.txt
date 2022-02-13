@@ -6,4 +6,4 @@ set(SRC
 )
 
 add_library(pipeline_handler ${SRC})
-target_link_libraries(pipeline_handler rl_common)
+target_link_libraries(pipeline_handler rl_common base utill)

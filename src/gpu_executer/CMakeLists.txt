@@ -5,4 +5,4 @@ set(SRC
 )
 
 add_library(gpu_executer ${SRC})
-target_link_libraries(gpu_executer rl_common)
+target_link_libraries(gpu_executer rl_common base utill)
