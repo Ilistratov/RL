@@ -35,6 +35,7 @@ void PhysicalImage::Swap(PhysicalImage& other) noexcept {
   std::swap(image_, other.image_);
   std::swap(extent_, other.extent_);
   std::swap(format_, other.format_);
+  std::swap(image_view_, other.image_view_);
   std::swap(is_managed_, other.is_managed_);
 }
 
@@ -96,6 +97,24 @@ void PhysicalImage::SetDebugName(const std::string& debug_name) const {
   auto device = base::Base::Get().GetContext().GetDevice();
   device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
       image_.objectType, (uint64_t)(VkImage)image_, debug_name.c_str()));
+}
+
+void PhysicalImage::CreateImageView() {
+  if (image_view_) {
+    return;
+  }
+  assert(image_);
+  auto device = base::Base::Get().GetContext().GetDevice();
+  image_view_ = device.createImageView(vk::ImageViewCreateInfo(
+      {}, image_, vk::ImageViewType::e2D, format_,
+      vk::ComponentMapping{
+          vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity,
+          vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity},
+      GetSubresourceRange()));
+}
+
+vk::ImageView PhysicalImage::GetImageView() const {
+  return image_view_;
 }
 
 PhysicalImage::~PhysicalImage() {

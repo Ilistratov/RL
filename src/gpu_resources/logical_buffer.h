@@ -34,6 +34,8 @@ class LogicalBuffer {
   void RequestMemory(DeviceMemoryAllocator& allocator);
   vk::BindBufferMemoryInfo GetBindMemoryInfo() const;
 
+  PhysicalBuffer& GetPhysicalBuffer();
+
   // GetPostPassBarrier - returns Barrier that current user needs to insert
   // after it's commands in order to sync his acces with the following
   // passes Returns empty barrier if not needed. Assumed to be called in

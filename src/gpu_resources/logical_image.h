@@ -39,6 +39,7 @@ class LogicalImage {
   void SetDebugName(const std::string& debug_name) const;
   void RequestMemory(DeviceMemoryAllocator& allocator);
   vk::BindImageMemoryInfo GetBindMemoryInfo() const;
+  PhysicalImage& GetPhysicalImage();
 
   vk::ImageMemoryBarrier2KHR GetPostPassBarrier(uint32_t user_ind);
 };

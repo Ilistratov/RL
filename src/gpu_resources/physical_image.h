@@ -12,6 +12,7 @@ class PhysicalImage {
   vk::Image image_ = {};
   vk::Extent2D extent_ = {0, 0};
   vk::Format format_ = vk::Format::eUndefined;
+  vk::ImageView image_view_;
   bool is_managed_ = true;
 
  public:
@@ -47,6 +48,9 @@ class PhysicalImage {
       vk::ImageLayout dst_layout = vk::ImageLayout::eUndefined) const;
 
   void SetDebugName(const std::string& debug_name) const;
+
+  void CreateImageView();
+  vk::ImageView GetImageView() const;
 
   ~PhysicalImage();
 };

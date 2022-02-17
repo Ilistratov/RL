@@ -37,6 +37,10 @@ vk::BindBufferMemoryInfo LogicalBuffer::GetBindMemoryInfo() const {
   return buffer_.GetBindMemoryInfo(*memory_);
 }
 
+PhysicalBuffer& LogicalBuffer::GetPhysicalBuffer() {
+  return buffer_;
+}
+
 vk::BufferMemoryBarrier2KHR LogicalBuffer::GetPostPassBarrier(
     uint32_t user_ind) {
   auto [src_usage, dst_usage] = access_manager_.GetUserDeps(user_ind);

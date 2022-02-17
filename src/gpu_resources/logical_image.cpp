@@ -55,6 +55,10 @@ vk::BindImageMemoryInfo LogicalImage::GetBindMemoryInfo() const {
   return {};
 }
 
+PhysicalImage& LogicalImage::GetPhysicalImage() {
+  return image_;
+}
+
 vk::ImageMemoryBarrier2KHR LogicalImage::GetPostPassBarrier(uint32_t user_ind) {
   auto [src_usage, dst_usage] = access_manager_.GetUserDeps(user_ind);
   if (src_usage.stage == vk::PipelineStageFlagBits2KHR::eNone &&
