@@ -3,27 +3,28 @@
 namespace render_graph {
 
 BufferPassBind::BufferPassBind(gpu_resources::ResourceUsage usage,
-                               uint32_t user_ind,
                                vk::DescriptorType descriptor_type,
                                vk::ShaderStageFlags stage_flags)
     : buffer_usage_(usage),
-      user_ind_(user_ind),
       descriptor_type_(descriptor_type),
       descriptor_stage_flags_(stage_flags) {}
 
-void BufferPassBind::OnResourceBind(gpu_resources::LogicalBuffer* buffer) {
+void BufferPassBind::OnResourceBind(uint32_t user_ind,
+                                    gpu_resources::LogicalBuffer* buffer) {
   assert(!buffer_);
   assert(buffer);
   buffer_ = buffer;
+  buffer_->AddUsage(user_ind, buffer_usage_);
 }
 
 gpu_resources::LogicalBuffer* BufferPassBind::GetBoundBuffer() const {
   return buffer_;
 }
 
-vk::BufferMemoryBarrier2KHR BufferPassBind::GetBarrier() const {
+vk::BufferMemoryBarrier2KHR BufferPassBind::GetBarrier(
+    uint32_t user_ind) const {
   assert(buffer_);
-  return buffer_->GetPostPassBarrier(user_ind_);
+  return buffer_->GetPostPassBarrier(user_ind);
 }
 
 vk::DescriptorSetLayoutBinding BufferPassBind::GetVkBinding() const noexcept {

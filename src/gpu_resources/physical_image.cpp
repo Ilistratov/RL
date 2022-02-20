@@ -7,7 +7,7 @@ namespace gpu_resources {
 PhysicalImage::PhysicalImage(vk::Extent2D extent,
                              vk::Format format,
                              vk::ImageUsageFlags image_usage)
-    : extent_(extent), format_(format), is_managed_(true) {
+    : extent_(extent), format_(format) {
   assert(extent.height > 0 && extent.width > 0);
   auto device = base::Base::Get().GetContext().GetDevice();
   image_ = device.createImage(vk::ImageCreateInfo(
@@ -15,11 +15,6 @@ PhysicalImage::PhysicalImage(vk::Extent2D extent,
       vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal, image_usage,
       vk::SharingMode::eExclusive, {}, {}));
 }
-
-PhysicalImage::PhysicalImage(vk::Image image,
-                             vk::Extent2D extent,
-                             vk::Format format)
-    : image_(image), extent_(extent), format_(format), is_managed_(false) {}
 
 PhysicalImage::PhysicalImage(PhysicalImage&& other) noexcept {
   Swap(other);
@@ -36,7 +31,6 @@ void PhysicalImage::Swap(PhysicalImage& other) noexcept {
   std::swap(extent_, other.extent_);
   std::swap(format_, other.format_);
   std::swap(image_view_, other.image_view_);
-  std::swap(is_managed_, other.is_managed_);
 }
 
 vk::Image PhysicalImage::GetImage() const {
@@ -51,21 +45,13 @@ vk::Format PhysicalImage::GetFormat() const {
   return format_;
 }
 
-bool PhysicalImage::IsManaged() const {
-  return is_managed_;
-}
-
 vk::MemoryRequirements PhysicalImage::GetMemoryRequierments() const {
-  if (!is_managed_) {
-    return {};
-  }
   auto device = base::Base::Get().GetContext().GetDevice();
   return device.getImageMemoryRequirements(image_);
 }
 
 vk::BindImageMemoryInfo PhysicalImage::GetBindMemoryInfo(
     MemoryBlock memory_block) const {
-  assert(is_managed_);
   assert(image_);
   assert(memory_block.memory);
   return vk::BindImageMemoryInfo(image_, memory_block.memory,
@@ -118,10 +104,8 @@ vk::ImageView PhysicalImage::GetImageView() const {
 }
 
 PhysicalImage::~PhysicalImage() {
-  if (is_managed_) {
-    auto device = base::Base::Get().GetContext().GetDevice();
-    device.destroyImage(image_);
-  }
+  auto device = base::Base::Get().GetContext().GetDevice();
+  device.destroyImage(image_);
 }
 
 }  // namespace gpu_resources

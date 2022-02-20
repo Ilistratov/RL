@@ -41,6 +41,11 @@ PhysicalBuffer& LogicalBuffer::GetPhysicalBuffer() {
   return buffer_;
 }
 
+void LogicalBuffer::AddUsage(uint32_t user_ind, ResourceUsage usage) {
+  usage.layout = vk::ImageLayout::eUndefined;
+  access_manager_.AddUsage(user_ind, usage);
+}
+
 vk::BufferMemoryBarrier2KHR LogicalBuffer::GetPostPassBarrier(
     uint32_t user_ind) {
   auto [src_usage, dst_usage] = access_manager_.GetUserDeps(user_ind);

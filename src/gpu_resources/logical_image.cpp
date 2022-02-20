@@ -4,29 +4,17 @@
 
 namespace gpu_resources {
 
-LogicalImage::LogicalImage(vk::Image image,
-                           vk::Extent2D extent,
+LogicalImage::LogicalImage(vk::Extent2D extent,
                            vk::Format format,
                            vk::MemoryPropertyFlags memory_flags)
-    : extent_(extent), format_(format), memory_flags_(memory_flags) {
-  if (image) {
-    image_ = PhysicalImage(image, extent_, format_);
-  }
-}
+    : extent_(extent), format_(format), memory_flags_(memory_flags) {}
 
 LogicalImage LogicalImage::CreateStorageImage(vk::Extent2D extent) {
   if (extent == vk::Extent2D(0, 0)) {
     extent = base::Base::Get().GetSwapchain().GetExtent();
   }
   vk::Format format = base::Base::Get().GetSwapchain().GetFormat();
-  return LogicalImage({}, extent, format,
-                      vk::MemoryPropertyFlagBits::eDeviceLocal);
-}
-
-LogicalImage LogicalImage::CreateSwapchainImage(uint32_t swapchain_image_ind) {
-  auto& swapchain = base::Base::Get().GetSwapchain();
-  return LogicalImage(swapchain.GetImage(swapchain_image_ind),
-                      swapchain.GetExtent(), swapchain.GetFormat(), {});
+  return LogicalImage(extent, format, vk::MemoryPropertyFlagBits::eDeviceLocal);
 }
 
 void LogicalImage::Create() {
@@ -41,22 +29,21 @@ void LogicalImage::SetDebugName(const std::string& debug_name) const {
 
 void LogicalImage::RequestMemory(DeviceMemoryAllocator& allocator) {
   assert(image_.GetImage());
-  if (image_.IsManaged()) {
-    memory_ =
-        allocator.RequestMemory(image_.GetMemoryRequierments(), memory_flags_);
-  }
+  memory_ =
+      allocator.RequestMemory(image_.GetMemoryRequierments(), memory_flags_);
 }
 
 vk::BindImageMemoryInfo LogicalImage::GetBindMemoryInfo() const {
-  if (image_.IsManaged()) {
-    assert(memory_);
-    return image_.GetBindMemoryInfo(*memory_);
-  }
-  return {};
+  assert(memory_);
+  return image_.GetBindMemoryInfo(*memory_);
 }
 
 PhysicalImage& LogicalImage::GetPhysicalImage() {
   return image_;
+}
+
+void LogicalImage::AddUsage(uint32_t user_ind, ResourceUsage usage) {
+  access_manager_.AddUsage(user_ind, usage);
 }
 
 vk::ImageMemoryBarrier2KHR LogicalImage::GetPostPassBarrier(uint32_t user_ind) {

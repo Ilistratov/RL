@@ -21,16 +21,13 @@ class LogicalImage {
   vk::ImageUsageFlags usage_flags_;
   MemoryBlock* memory_ = nullptr;
 
-  LogicalImage(vk::Image image,
-               vk::Extent2D extent,
+ public:
+  LogicalImage() = default;
+  LogicalImage(vk::Extent2D extent,
                vk::Format format,
                vk::MemoryPropertyFlags memory_flags);
 
- public:
-  LogicalImage() = default;
-
   static LogicalImage CreateStorageImage(vk::Extent2D extent = {0, 0});
-  static LogicalImage CreateSwapchainImage(uint32_t swapchain_image_ind);
 
   LogicalImage(const LogicalImage&) = delete;
   void operator=(const LogicalImage&) = delete;
@@ -41,6 +38,7 @@ class LogicalImage {
   vk::BindImageMemoryInfo GetBindMemoryInfo() const;
   PhysicalImage& GetPhysicalImage();
 
+  void AddUsage(uint32_t user_ind, ResourceUsage usage);
   vk::ImageMemoryBarrier2KHR GetPostPassBarrier(uint32_t user_ind);
 };
 

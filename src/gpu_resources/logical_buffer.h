@@ -33,9 +33,9 @@ class LogicalBuffer {
   void SetDebugName(const std::string& debug_name) const;
   void RequestMemory(DeviceMemoryAllocator& allocator);
   vk::BindBufferMemoryInfo GetBindMemoryInfo() const;
-
   PhysicalBuffer& GetPhysicalBuffer();
 
+  void AddUsage(uint32_t user_ind, ResourceUsage usage);
   // GetPostPassBarrier - returns Barrier that current user needs to insert
   // after it's commands in order to sync his acces with the following
   // passes Returns empty barrier if not needed. Assumed to be called in
