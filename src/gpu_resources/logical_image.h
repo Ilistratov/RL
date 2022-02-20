@@ -13,7 +13,6 @@ namespace gpu_resources {
 class LogicalImage {
   PhysicalImage image_;
   AccessSyncManager access_manager_;
-  std::vector<AccessDependency> dependencies_;
 
   vk::Extent2D extent_;
   vk::Format format_;
@@ -27,6 +26,11 @@ class LogicalImage {
                vk::Format format,
                vk::MemoryPropertyFlags memory_flags);
 
+  LogicalImage(LogicalImage&& other) noexcept;
+  void operator=(LogicalImage&& other) noexcept;
+
+  void Swap(LogicalImage& other) noexcept;
+
   static LogicalImage CreateStorageImage(vk::Extent2D extent = {0, 0});
 
   LogicalImage(const LogicalImage&) = delete;
@@ -38,7 +42,9 @@ class LogicalImage {
   vk::BindImageMemoryInfo GetBindMemoryInfo() const;
   PhysicalImage& GetPhysicalImage();
 
-  void AddUsage(uint32_t user_ind, ResourceUsage usage);
+  void AddUsage(uint32_t user_ind,
+                ResourceUsage usage,
+                vk::ImageUsageFlags image_usage_flags);
   vk::ImageMemoryBarrier2KHR GetPostPassBarrier(uint32_t user_ind);
 };
 

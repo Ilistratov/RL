@@ -9,6 +9,26 @@ LogicalImage::LogicalImage(vk::Extent2D extent,
                            vk::MemoryPropertyFlags memory_flags)
     : extent_(extent), format_(format), memory_flags_(memory_flags) {}
 
+LogicalImage::LogicalImage(LogicalImage&& other) noexcept {
+  Swap(other);
+}
+
+void LogicalImage::operator=(LogicalImage&& other) noexcept {
+  LogicalImage tmp;
+  tmp.Swap(other);
+  Swap(tmp);
+}
+
+void LogicalImage::Swap(LogicalImage& other) noexcept {
+  image_.Swap(other.image_);
+  std::swap(access_manager_, other.access_manager_);
+  std::swap(extent_, other.extent_);
+  std::swap(format_, other.format_);
+  std::swap(memory_flags_, other.memory_flags_);
+  std::swap(usage_flags_, other.usage_flags_);
+  std::swap(memory_, other.memory_);
+}
+
 LogicalImage LogicalImage::CreateStorageImage(vk::Extent2D extent) {
   if (extent == vk::Extent2D(0, 0)) {
     extent = base::Base::Get().GetSwapchain().GetExtent();
@@ -42,8 +62,11 @@ PhysicalImage& LogicalImage::GetPhysicalImage() {
   return image_;
 }
 
-void LogicalImage::AddUsage(uint32_t user_ind, ResourceUsage usage) {
+void LogicalImage::AddUsage(uint32_t user_ind,
+                            ResourceUsage usage,
+                            vk::ImageUsageFlags image_usage_flags) {
   access_manager_.AddUsage(user_ind, usage);
+  usage_flags_ |= image_usage_flags;
 }
 
 vk::ImageMemoryBarrier2KHR LogicalImage::GetPostPassBarrier(uint32_t user_ind) {

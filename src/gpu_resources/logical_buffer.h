@@ -11,7 +11,6 @@ namespace gpu_resources {
 class LogicalBuffer {
   PhysicalBuffer buffer_;
   AccessSyncManager access_manager_;
-  std::vector<AccessDependency> dependencies_;
 
   vk::DeviceSize size_;
   vk::MemoryPropertyFlags memory_flags_;
@@ -19,15 +18,15 @@ class LogicalBuffer {
   MemoryBlock* memory_ = nullptr;
 
  public:
+  LogicalBuffer() = default;
   LogicalBuffer(vk::DeviceSize size, vk::MemoryPropertyFlags memory_flags);
 
   LogicalBuffer(const LogicalBuffer&) = delete;
   void operator=(const LogicalBuffer&) = delete;
 
-  void AddUsage(uint32_t user_ind,
-                vk::BufferUsageFlags usage_flags,
-                vk::AccessFlags2KHR access_flags,
-                vk::PipelineStageFlags2KHR stage_flags);
+  LogicalBuffer(LogicalBuffer&& other) noexcept;
+  void operator=(LogicalBuffer&& other) noexcept;
+  void Swap(LogicalBuffer& other) noexcept;
 
   void Create();
   void SetDebugName(const std::string& debug_name) const;
@@ -35,7 +34,9 @@ class LogicalBuffer {
   vk::BindBufferMemoryInfo GetBindMemoryInfo() const;
   PhysicalBuffer& GetPhysicalBuffer();
 
-  void AddUsage(uint32_t user_ind, ResourceUsage usage);
+  void AddUsage(uint32_t user_ind,
+                ResourceUsage usage,
+                vk::BufferUsageFlags buffer_usage_flags);
   // GetPostPassBarrier - returns Barrier that current user needs to insert
   // after it's commands in order to sync his acces with the following
   // passes Returns empty barrier if not needed. Assumed to be called in

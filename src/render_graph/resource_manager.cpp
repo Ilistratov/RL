@@ -10,7 +10,7 @@ void ResourceManager::AddBuffer(const std::string& name,
                                 vk::DeviceSize size,
                                 vk::MemoryPropertyFlags memory_flags) {
   assert(!buffers_.contains(name));
-  buffers_.emplace(name, size, memory_flags);
+  buffers_[name] = gpu_resources::LogicalBuffer(size, memory_flags);
 }
 
 void ResourceManager::AddImage(const std::string& name,
@@ -18,7 +18,7 @@ void ResourceManager::AddImage(const std::string& name,
                                vk::Format format,
                                vk::MemoryPropertyFlags memory_flags) {
   assert(!images_.contains(name));
-  images_.emplace(name, extent, format, memory_flags);
+  images_[name] = gpu_resources::LogicalImage(extent, format, memory_flags);
 }
 
 void ResourceManager::InitResources() {
@@ -53,13 +53,13 @@ void ResourceManager::InitResources() {
 gpu_resources::LogicalBuffer& ResourceManager::GetBuffer(
     const std::string& name) {
   assert(buffers_.contains(name));
-  return buffers_[name];
+  return buffers_.at(name);
 }
 
 gpu_resources::LogicalImage& ResourceManager::GetImage(
     const std::string& name) {
   assert(images_.contains(name));
-  return images_[name];
+  return images_.at(name);
 }
 
 }  // namespace render_graph

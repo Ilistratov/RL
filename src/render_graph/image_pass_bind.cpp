@@ -3,9 +3,11 @@
 namespace render_graph {
 
 ImagePassBind::ImagePassBind(gpu_resources::ResourceUsage usage,
+                             vk::ImageUsageFlags image_usage_flags,
                              vk::DescriptorType descriptor_type,
                              vk::ShaderStageFlags stage_flags)
     : image_usage_(usage),
+      image_usage_flags_(image_usage_flags),
       descriptor_type_(descriptor_type),
       descriptor_stage_flags_(stage_flags) {}
 
@@ -14,7 +16,7 @@ void ImagePassBind::OnResourceBind(uint32_t user_ind,
   assert(!image_);
   assert(image);
   image_ = image;
-  image_->AddUsage(user_ind, image_usage_);
+  image_->AddUsage(user_ind, image_usage_, image_usage_flags_);
 }
 
 gpu_resources::LogicalImage* ImagePassBind::GetBoundImage() const {

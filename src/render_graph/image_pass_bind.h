@@ -7,12 +7,14 @@ namespace render_graph {
 
 class ImagePassBind : public pipeline_handler::Binding {
   gpu_resources::ResourceUsage image_usage_;
+  vk::ImageUsageFlags image_usage_flags_;
   gpu_resources::LogicalImage* image_ = nullptr;
   vk::DescriptorType descriptor_type_;
   vk::ShaderStageFlags descriptor_stage_flags_;
 
  public:
   ImagePassBind(gpu_resources::ResourceUsage usage,
+                vk::ImageUsageFlags image_usage_flags,
                 vk::DescriptorType descriptor_type = {},
                 vk::ShaderStageFlags stage_flags = {});
 
