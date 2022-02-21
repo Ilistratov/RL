@@ -1,10 +1,10 @@
-#include "pipeline_handler/pool.h"
+#include "pipeline_handler/descriptor_pool.h"
 
 #include "base/base.h"
 
 namespace pipeline_handler {
 
-void Pool::CreatePool() {
+void DescriptorPool::CreatePool() {
   std::vector<vk::DescriptorPoolSize> pool_sizes;
   pool_sizes.reserve(descriptor_type_reserved_count_.size());
   for (auto [type, count] : descriptor_type_reserved_count_) {
@@ -16,7 +16,7 @@ void Pool::CreatePool() {
       {}, static_cast<uint32_t>(managed_sets_.size()), pool_sizes});
 }
 
-void Pool::AllocateSets() {
+void DescriptorPool::AllocateSets() {
   std::vector<vk::DescriptorSetLayout> managed_set_layouts;
   managed_set_layouts.reserve(managed_sets_.size());
   for (auto& set : managed_sets_) {
@@ -33,7 +33,8 @@ void Pool::AllocateSets() {
   }
 }
 
-Set* Pool::ReserveDescriptorSet(const std::vector<const Binding*>& bindings) {
+DescriptorSet* DescriptorPool::ReserveDescriptorSet(
+    const std::vector<const DescriptorBinding*>& bindings) {
   for (uint32_t binding_ind = 0; binding_ind < bindings.size(); binding_ind++) {
     auto vk_binding = bindings[binding_ind]->GetVkBinding();
     descriptor_type_reserved_count_[vk_binding.descriptorType] +=
@@ -43,13 +44,13 @@ Set* Pool::ReserveDescriptorSet(const std::vector<const Binding*>& bindings) {
   return &managed_sets_.back();
 }
 
-void Pool::Create() {
+void DescriptorPool::Create() {
   assert(!pool_);
   CreatePool();
   AllocateSets();
 }
 
-Pool::~Pool() {
+DescriptorPool::~DescriptorPool() {
   std::vector<vk::DescriptorSet> sets;
   sets.reserve(managed_sets_.size());
   for (auto& set : managed_sets_) {

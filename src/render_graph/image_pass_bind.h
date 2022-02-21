@@ -1,11 +1,11 @@
 #pragma once
 
 #include "gpu_resources/logical_image.h"
-#include "pipeline_handler/binding.h"
+#include "pipeline_handler/descriptor_binding.h"
 
 namespace render_graph {
 
-class ImagePassBind : public pipeline_handler::Binding {
+class ImagePassBind : public pipeline_handler::DescriptorBinding {
   gpu_resources::ResourceUsage image_usage_;
   vk::ImageUsageFlags image_usage_flags_;
   gpu_resources::LogicalImage* image_ = nullptr;

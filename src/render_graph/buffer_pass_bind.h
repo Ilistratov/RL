@@ -1,11 +1,11 @@
 #pragma once
 
 #include "gpu_resources/logical_buffer.h"
-#include "pipeline_handler/binding.h"
+#include "pipeline_handler/descriptor_binding.h"
 
 namespace render_graph {
 
-class BufferPassBind : public pipeline_handler::Binding {
+class BufferPassBind : public pipeline_handler::DescriptorBinding {
   gpu_resources::ResourceUsage buffer_usage_;
   vk::BufferUsageFlags buffer_usage_flags_;
   gpu_resources::LogicalBuffer* buffer_ = nullptr;

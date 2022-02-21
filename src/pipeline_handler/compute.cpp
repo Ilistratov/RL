@@ -28,8 +28,8 @@ vk::UniqueShaderModule LoadShaderModule(const std::string& file_path) {
 
 }  // namespace
 
-Compute::Compute(const std::vector<const Binding*>& bindings,
-                 Pool& descriptor_pool,
+Compute::Compute(const std::vector<const DescriptorBinding*>& bindings,
+                 DescriptorPool& descriptor_pool,
                  const std::vector<vk::PushConstantRange>& push_constants,
                  const std::string& shader_file_path,
                  const std::string& shader_main) {
@@ -68,7 +68,8 @@ void Compute::Swap(Compute& other) noexcept {
   std::swap(descriptor_set_, other.descriptor_set_);
 }
 
-void Compute::UpdateDescriptorSet(const std::vector<const Binding*>& bindings) {
+void Compute::UpdateDescriptorSet(
+    const std::vector<const DescriptorBinding*>& bindings) {
   descriptor_set_->UpdateDescriptorSet(bindings);
 }
 

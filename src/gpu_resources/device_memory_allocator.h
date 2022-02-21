@@ -1,7 +1,7 @@
 #pragma once
 
-#include <list>
 #include <map>
+#include <vector>
 
 #include <vulkan/vulkan.hpp>
 
@@ -12,7 +12,7 @@ namespace gpu_resources {
 class DeviceMemoryAllocator {
   std::map<uint32_t, MemoryBlock> memory_by_type_ind_;
   vk::PhysicalDeviceMemoryProperties device_memory_properties_;
-  std::list<MemoryBlock> allocations_;
+  std::vector<MemoryBlock> allocations_;
 
   uint32_t GetSuitableTypeBits(vk::MemoryRequirements requierments,
                                vk::MemoryPropertyFlags property_flags) const;
