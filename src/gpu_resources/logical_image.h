@@ -46,6 +46,7 @@ class LogicalImage {
                 ResourceUsage usage,
                 vk::ImageUsageFlags image_usage_flags);
   vk::ImageMemoryBarrier2KHR GetPostPassBarrier(uint32_t user_ind);
+  vk::ImageMemoryBarrier2KHR GetInitBarrier() const;
 };
 
 }  // namespace gpu_resources

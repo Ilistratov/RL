@@ -50,6 +50,16 @@ void ResourceManager::InitResources() {
   device.bindImageMemory2(image_bind_infos);
 }
 
+void ResourceManager::RecordInitBarriers(vk::CommandBuffer cmd) const {
+  std::vector<vk::ImageMemoryBarrier2KHR> image_barriers;
+  image_barriers.reserve(images_.size());
+  for (auto& [name, image] : images_) {
+    image_barriers.push_back(image.GetInitBarrier());
+  }
+  vk::DependencyInfoKHR dep_info({}, {}, {}, image_barriers);
+  cmd.pipelineBarrier2KHR(dep_info);
+}
+
 gpu_resources::LogicalBuffer& ResourceManager::GetBuffer(
     const std::string& name) {
   assert(buffers_.contains(name));

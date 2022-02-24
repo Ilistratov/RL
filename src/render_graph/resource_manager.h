@@ -28,6 +28,7 @@ class ResourceManager {
                 vk::Format format,
                 vk::MemoryPropertyFlags memory_flags);
   void InitResources();
+  void RecordInitBarriers(vk::CommandBuffer cmd) const;
 
   gpu_resources::LogicalBuffer& GetBuffer(const std::string& name);
   gpu_resources::LogicalImage& GetImage(const std::string& name);

@@ -80,4 +80,11 @@ vk::ImageMemoryBarrier2KHR LogicalImage::GetPostPassBarrier(uint32_t user_ind) {
                            dst_usage.layout);
 }
 
+vk::ImageMemoryBarrier2KHR LogicalImage::GetInitBarrier() const {
+  auto dst_usage = access_manager_.GetFirstUsage();
+  return image_.GetBarrier(vk::PipelineStageFlagBits2KHR::eBottomOfPipe, {},
+                           dst_usage.stage, dst_usage.access,
+                           vk::ImageLayout::eUndefined, dst_usage.layout);
+}
+
 }  // namespace gpu_resources

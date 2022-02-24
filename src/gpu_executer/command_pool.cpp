@@ -65,8 +65,15 @@ void CommandPool::RecycleCmd(
     const std::vector<vk::CommandBuffer>& primary_cmd,
     const std::vector<vk::CommandBuffer>& secondary_cmd,
     vk::Fence on_submit_finished) {
-  in_progress_batches_.push_back(
-      InProgressBatch{primary_cmd, secondary_cmd, on_submit_finished});
+  if (on_submit_finished) {
+    in_progress_batches_.push_back(
+        InProgressBatch{primary_cmd, secondary_cmd, on_submit_finished});
+  } else {
+    primary_cmd_.insert(primary_cmd_.begin(), primary_cmd.begin(),
+                        primary_cmd.end());
+    secondary_cmd_.insert(secondary_cmd_.begin(), secondary_cmd.begin(),
+                          secondary_cmd.end());
+  }
 }
 
 }  // namespace gpu_executer

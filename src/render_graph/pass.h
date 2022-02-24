@@ -16,9 +16,15 @@ class Pass : public gpu_executer::Task {
   uint32_t secondary_cmd_count_ = 0;
   vk::PipelineStageFlagBits2KHR stage_flags_ = {};
 
+  void RecordPostPassParriers(vk::CommandBuffer cmd);
+
  protected:
   std::map<std::string, BufferPassBind> buffer_binds_;
   std::map<std::string, ImagePassBind> image_binds_;
+
+  virtual void OnRecord(
+      vk::CommandBuffer primary_cmd,
+      const std::vector<vk::CommandBuffer>& secondary_cmd) noexcept;
 
  public:
   Pass(uint32_t secondary_cmd_count = 0,
@@ -29,10 +35,6 @@ class Pass : public gpu_executer::Task {
       pipeline_handler::DescriptorPool& pool) noexcept;
   virtual void OnResourcesInitialized() noexcept;
 
-  void RecordPostPassParriers(vk::CommandBuffer cmd);
-  virtual void OnRecord(
-      vk::CommandBuffer primary_cmd,
-      const std::vector<vk::CommandBuffer>& secondary_cmd) noexcept;
   void OnWorkloadRecord(
       vk::CommandBuffer primary_cmd,
       const std::vector<vk::CommandBuffer>& secondary_cmd) override;

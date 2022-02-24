@@ -11,13 +11,13 @@ bool Executer::TaskInfo::HasSemaphoreOperations() const {
   return external_wait || external_signal;
 }
 
-void Executer::ScheduleTask(std::unique_ptr<Task> task,
+void Executer::ScheduleTask(Task* task,
                             vk::PipelineStageFlags2KHR stage_flags,
                             vk::Semaphore external_signal,
                             vk::Semaphore external_wait,
                             uint32_t secondary_cmd_count) {
   tasks_.push_back({});
-  tasks_.back().task = std::move(task);
+  tasks_.back().task = task;
   tasks_.back().stage_flags = stage_flags;
   tasks_.back().external_signal = external_signal;
   tasks_.back().external_wait = external_wait;
@@ -105,6 +105,30 @@ void Executer::Execute() {
                              batch.secondary_cmd.end());
   }
   cmd_pool_.RecycleCmd(recycle_primary, recycle_secondary, fence);
+}
+
+void Executer::ExecuteOneTime(Task* task, uint32_t secondary_cmd_count) {
+  vk::CommandBuffer primary_cmd =
+      cmd_pool_.GetCmd(vk::CommandBufferLevel::ePrimary, 1)[0];
+  std::vector<vk::CommandBuffer> secondary_cmd =
+      cmd_pool_.GetCmd(vk::CommandBufferLevel::eSecondary, secondary_cmd_count);
+  primary_cmd.begin(vk::CommandBufferBeginInfo(
+      vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+  task->OnWorkloadRecord(primary_cmd, secondary_cmd);
+  primary_cmd.end();
+  vk::CommandBufferSubmitInfoKHR cmd_submit_info(primary_cmd);
+
+  vk::SubmitInfo2KHR submit_info({}, {}, cmd_submit_info, {});
+
+  auto& context = base::Base::Get().GetContext();
+  auto device = context.GetDevice();
+  auto fence = device.createFence({});
+
+  context.GetQueue(0).submit2KHR(submit_info, fence);
+  device.waitForFences(fence, true, 16'000'000);
+  device.destroyFence(fence);
+
+  cmd_pool_.RecycleCmd({primary_cmd}, secondary_cmd, {});
 }
 
 }  // namespace gpu_executer

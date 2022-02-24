@@ -2,6 +2,7 @@ set(SRC
   buffer_pass_bind.cpp
   image_pass_bind.cpp
   pass.cpp
+  render_graph.cpp
   resource_manager.cpp
 )
 
