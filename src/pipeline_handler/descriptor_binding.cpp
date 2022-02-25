@@ -1,4 +1,4 @@
-#include "pipeline_handler/binding.h"
+#include "pipeline_handler/descriptor_binding.h"
 
 #include <cassert>
 

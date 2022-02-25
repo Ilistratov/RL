@@ -12,14 +12,13 @@ class PhysicalImage {
   vk::Image image_ = {};
   vk::Extent2D extent_ = {0, 0};
   vk::Format format_ = vk::Format::eUndefined;
-  bool is_managed_ = true;
+  vk::ImageView image_view_;
 
  public:
   PhysicalImage() = default;
   PhysicalImage(vk::Extent2D extent,
                 vk::Format format,
                 vk::ImageUsageFlags image_usage);
-  PhysicalImage(vk::Image image, vk::Extent2D extent, vk::Format format);
 
   PhysicalImage(const PhysicalImage&) = delete;
   void operator=(const PhysicalImage&) = delete;
@@ -31,7 +30,6 @@ class PhysicalImage {
   vk::Image GetImage() const;
   vk::Extent2D GetExtent() const;
   vk::Format GetFormat() const;
-  bool IsManaged() const;
   vk::MemoryRequirements GetMemoryRequierments() const;
   vk::BindImageMemoryInfo GetBindMemoryInfo(MemoryBlock memory_block) const;
 
@@ -47,6 +45,9 @@ class PhysicalImage {
       vk::ImageLayout dst_layout = vk::ImageLayout::eUndefined) const;
 
   void SetDebugName(const std::string& debug_name) const;
+
+  void CreateImageView();
+  vk::ImageView GetImageView() const;
 
   ~PhysicalImage();
 };

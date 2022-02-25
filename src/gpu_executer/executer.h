@@ -15,7 +15,7 @@ namespace gpu_executer {
 
 class Executer {
   struct TaskInfo {
-    std::unique_ptr<Task> task;
+    Task* task;
     vk::PipelineStageFlags2KHR stage_flags = {};
     vk::Semaphore external_signal = {};
     vk::Semaphore external_wait = {};
@@ -42,11 +42,13 @@ class Executer {
   Executer(const Executer&) = delete;
   void operator=(const Executer&) = delete;
 
-  void ScheduleTask(std::unique_ptr<Task> task,
+  void ScheduleTask(Task* task,
                     vk::PipelineStageFlags2KHR stage_flags = {},
                     vk::Semaphore external_signal = {},
                     vk::Semaphore external_wait = {},
                     uint32_t secondary_cmd_count = 0);
+
+  void ExecuteOneTime(Task* task, uint32_t secondary_cmd_count = 0);
 
   void Execute();
 

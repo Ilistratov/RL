@@ -16,7 +16,7 @@ struct Write {
                                           uint32_t binding_id) const& noexcept;
 };
 
-class Binding {
+class DescriptorBinding {
  public:
   virtual vk::DescriptorSetLayoutBinding GetVkBinding() const noexcept = 0;
   virtual Write GetWrite() const noexcept = 0;

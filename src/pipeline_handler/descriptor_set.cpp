@@ -1,4 +1,4 @@
-#include "pipeline_handler/set.h"
+#include "pipeline_handler/descriptor_set.h"
 
 #include <map>
 
@@ -6,7 +6,8 @@
 
 namespace pipeline_handler {
 
-Set::Set(const std::vector<const Binding*>& bindings) {
+DescriptorSet::DescriptorSet(
+    const std::vector<const DescriptorBinding*>& bindings) {
   std::vector<vk::DescriptorSetLayoutBinding> vk_bindings(bindings.size());
   for (uint32_t binding_ind = 0; binding_ind < bindings.size(); binding_ind++) {
     vk_bindings[binding_ind] = bindings[binding_ind]->GetVkBinding();
@@ -17,16 +18,29 @@ Set::Set(const std::vector<const Binding*>& bindings) {
       vk::DescriptorSetLayoutCreateInfo({}, vk_bindings));
 }
 
-vk::DescriptorSetLayout Set::GetLayout() const {
+DescriptorSet::DescriptorSet(DescriptorSet&& other) noexcept {
+  Swap(other);
+}
+void DescriptorSet::operator=(DescriptorSet&& other) noexcept {
+  DescriptorSet tmp;
+  tmp.Swap(other);
+  Swap(tmp);
+}
+void DescriptorSet::Swap(DescriptorSet& other) noexcept {
+  std::swap(set_, other.set_);
+  std::swap(layout_, other.layout_);
+}
+
+vk::DescriptorSetLayout DescriptorSet::GetLayout() const {
   return layout_;
 }
 
-vk::DescriptorSet Set::GetSet() const {
+vk::DescriptorSet DescriptorSet::GetSet() const {
   return set_;
 }
 
-void Set::UpdateDescriptorSet(
-    const std::vector<const Binding*>& bindings) const {
+void DescriptorSet::UpdateDescriptorSet(
+    const std::vector<const DescriptorBinding*>& bindings) const {
   assert(set_);
   std::vector<Write> writes(bindings.size());
   std::vector<vk::WriteDescriptorSet> vk_writes(bindings.size());
@@ -38,7 +52,7 @@ void Set::UpdateDescriptorSet(
   device.updateDescriptorSets(vk_writes, {});
 }
 
-Set::~Set() {
+DescriptorSet::~DescriptorSet() {
   auto device = base::Base::Get().GetContext().GetDevice();
   device.destroyDescriptorSetLayout(layout_);
 }

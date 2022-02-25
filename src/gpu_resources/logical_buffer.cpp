@@ -8,14 +8,23 @@ LogicalBuffer::LogicalBuffer(vk::DeviceSize size,
                              vk::MemoryPropertyFlags memory_flags)
     : size_(size), memory_flags_(memory_flags) {}
 
-void LogicalBuffer::AddUsage(uint32_t user_ind,
-                             vk::BufferUsageFlags usage_flags,
-                             vk::AccessFlags2KHR access_flags,
-                             vk::PipelineStageFlags2KHR stage_flags) {
-  usage_flags_ |= usage_flags;
-  access_manager_.AddUsage(
-      user_ind,
-      ResourceUsage{stage_flags, access_flags, vk::ImageLayout::eUndefined});
+LogicalBuffer::LogicalBuffer(LogicalBuffer&& other) noexcept {
+  Swap(other);
+}
+
+void LogicalBuffer::operator=(LogicalBuffer&& other) noexcept {
+  LogicalBuffer tmp;
+  tmp.Swap(other);
+  Swap(tmp);
+}
+
+void LogicalBuffer::Swap(LogicalBuffer& other) noexcept {
+  buffer_.Swap(other.buffer_);
+  std::swap(access_manager_, other.access_manager_);
+  std::swap(size_, other.size_);
+  std::swap(memory_flags_, other.memory_flags_);
+  std::swap(usage_flags_, other.usage_flags_);
+  std::swap(memory_, other.memory_);
 }
 
 void LogicalBuffer::Create() {
@@ -35,6 +44,18 @@ void LogicalBuffer::RequestMemory(DeviceMemoryAllocator& allocator) {
 vk::BindBufferMemoryInfo LogicalBuffer::GetBindMemoryInfo() const {
   assert(memory_);
   return buffer_.GetBindMemoryInfo(*memory_);
+}
+
+PhysicalBuffer& LogicalBuffer::GetPhysicalBuffer() {
+  return buffer_;
+}
+
+void LogicalBuffer::AddUsage(uint32_t user_ind,
+                             ResourceUsage usage,
+                             vk::BufferUsageFlags buffer_usage_flags) {
+  usage.layout = vk::ImageLayout::eUndefined;
+  access_manager_.AddUsage(user_ind, usage);
+  usage_flags_ |= buffer_usage_flags;
 }
 
 vk::BufferMemoryBarrier2KHR LogicalBuffer::GetPostPassBarrier(

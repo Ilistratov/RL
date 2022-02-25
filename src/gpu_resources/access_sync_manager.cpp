@@ -45,8 +45,9 @@ void AccessSyncManager::AddUsage(uint32_t user_ind, ResourceUsage usage) {
   }
 }
 
-uint32_t AccessSyncManager::GetFirstUserInd() const {
-  return first_user_ind_;
+ResourceUsage AccessSyncManager::GetFirstUsage() const {
+  assert(!access_sequence_.empty());
+  return access_sequence_[0].usage;
 }
 
 AccessDependency AccessSyncManager::GetUserDeps(uint32_t user_ind) {

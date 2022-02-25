@@ -33,5 +33,8 @@ target_link_libraries(rl_lib gpu_resources)
 add_subdirectory(pipeline_handler)
 target_link_libraries(rl_lib pipeline_handler)
 
+add_subdirectory(render_graph)
+target_link_libraries(rl_lib render_graph)
+
 add_subdirectory(utill)
 target_link_libraries(rl_lib utill)

@@ -8,12 +8,12 @@
 #include "utill/logger.h"
 
 /*
-using descriptor_handler::Pool;
+using descriptor_handler::DescriptorPool;
 using gpu_resources::DeviceMemoryAllocator;
 using gpu_resources::ImageManager;
 using pipeline_handler::Compute;
 
-class RenderTargetImageAdapter : public descriptor_handler::Binding {
+class RenderTargetImageAdapter : public descriptor_handler::DescriptorBinding {
   gpu_resources::Image* image_ = nullptr;
   vk::ImageView image_view_;
 
@@ -76,7 +76,7 @@ struct PushConstants {
 };
 
 struct PerFrame {
-  Pool descriptor_pool;
+  DescriptorPool descriptor_pool;
   Compute pipeline;
   DeviceMemoryAllocator memory_allocator;
   ImageManager render_target;
