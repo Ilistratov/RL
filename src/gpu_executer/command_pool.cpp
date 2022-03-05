@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/logger.h"
+
 namespace gpu_executer {
 
 void CommandPool::CheckInprogressBatches() {
@@ -13,6 +15,7 @@ void CommandPool::CheckInprogressBatches() {
                           it->primary_cmd.end());
       secondary_cmd_.insert(secondary_cmd_.begin(), it->secondary_cmd.begin(),
                             it->secondary_cmd.end());
+      device.destroyFence(it->on_submit_finished);
       it = in_progress_batches_.erase(it);
     } else {
       ++it;
@@ -34,6 +37,12 @@ uint32_t& CommandPool::GetCmdAllocStep(vk::CommandBufferLevel cmd_level) {
   } else {
     return secondary_alloc_step_;
   }
+}
+
+CommandPool::CommandPool() {
+  auto device = base::Base::Get().GetContext().GetDevice();
+  cmd_pool_ = device.createCommandPool(vk::CommandPoolCreateInfo(
+      vk::CommandPoolCreateFlagBits::eResetCommandBuffer));
 }
 
 std::vector<vk::CommandBuffer> CommandPool::GetCmd(
@@ -74,6 +83,20 @@ void CommandPool::RecycleCmd(
     secondary_cmd_.insert(secondary_cmd_.begin(), secondary_cmd.begin(),
                           secondary_cmd.end());
   }
+}
+
+CommandPool::~CommandPool() {
+  auto device = base::Base::Get().GetContext().GetDevice();
+  CheckInprogressBatches();
+  if (!primary_cmd_.empty()) {
+    LOG(INFO) << "Freeing " << primary_cmd_.size() << " primary cmd's";
+    device.freeCommandBuffers(cmd_pool_, primary_cmd_);
+  }
+  if (!secondary_cmd_.empty()) {
+    LOG(INFO) << "Freeing " << secondary_cmd_.size() << " secondary cmd's";
+    device.freeCommandBuffers(cmd_pool_, secondary_cmd_);
+  }
+  device.destroyCommandPool(cmd_pool_);
 }
 
 }  // namespace gpu_executer

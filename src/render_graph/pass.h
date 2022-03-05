@@ -14,7 +14,7 @@ namespace render_graph {
 class Pass : public gpu_executer::Task {
   uint32_t user_ind_ = -1;
   uint32_t secondary_cmd_count_ = 0;
-  vk::PipelineStageFlagBits2KHR stage_flags_ = {};
+  vk::PipelineStageFlags2KHR stage_flags_ = {};
 
   void RecordPostPassParriers(vk::CommandBuffer cmd);
 
@@ -28,7 +28,7 @@ class Pass : public gpu_executer::Task {
 
  public:
   Pass(uint32_t secondary_cmd_count = 0,
-       vk::PipelineStageFlagBits2KHR stage_flags = {});
+       vk::PipelineStageFlags2KHR stage_flags = {});
 
   void BindResources(uint32_t user_ind, ResourceManager& resource_manager);
   virtual void ReserveDescriptorSets(
@@ -40,7 +40,7 @@ class Pass : public gpu_executer::Task {
       const std::vector<vk::CommandBuffer>& secondary_cmd) override;
 
   uint32_t GetSecondaryCmdCount() const;
-  vk::PipelineStageFlagBits2KHR GetStageFlags() const;
+  vk::PipelineStageFlags2KHR GetStageFlags() const;
 };
 
 }  // namespace render_graph

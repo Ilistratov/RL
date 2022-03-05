@@ -1,6 +1,7 @@
 #include "gpu_executer/executer.h"
 
 #include <algorithm>
+#include <list>
 
 #include "base/base.h"
 #include "utill/logger.h"
@@ -50,13 +51,13 @@ Executer::SubmitInfo Executer::RecordCmdBatch(uint32_t batch_start,
     tasks_[i].task->OnWorkloadRecord(primary_cmd, task_secondary_cmd);
     if (tasks_[i].external_signal) {
       assert(batch_end - batch_start == 1);
-      res.semaphore_to_signal = vk::SemaphoreSubmitInfoKHR(
-          tasks_[i].external_signal, 0, tasks_[i].stage_flags);
+      res.semaphore_to_signal.push_back(vk::SemaphoreSubmitInfoKHR(
+          tasks_[i].external_signal, 0, tasks_[i].stage_flags));
     }
     if (tasks_[i].external_wait) {
       assert(batch_end - batch_start == 1);
-      res.semaphore_to_wait = vk::SemaphoreSubmitInfoKHR(
-          tasks_[i].external_wait, 0, tasks_[i].stage_flags);
+      res.semaphore_to_wait.push_back(vk::SemaphoreSubmitInfoKHR(
+          tasks_[i].external_wait, 0, tasks_[i].stage_flags));
     }
   }
   primary_cmd.end();
@@ -65,7 +66,7 @@ Executer::SubmitInfo Executer::RecordCmdBatch(uint32_t batch_start,
 }
 
 void Executer::Execute() {
-  std::vector<SubmitInfo> batches;
+  std::list<SubmitInfo> batches;
   std::vector<vk::SubmitInfo2KHR> batch_submit_info;
   size_t primary_cmd_count = 0;
   size_t secondary_cmd_count = 0;
@@ -74,7 +75,7 @@ void Executer::Execute() {
   while (batch_start_ind < tasks_.size()) {
     uint32_t batch_end_ind = batch_start_ind;
     while (batch_end_ind + 1 < tasks_.size() &&
-           !tasks_[batch_end_ind].HasSemaphoreOperations()) {
+           !tasks_[batch_end_ind + 1].HasSemaphoreOperations()) {
       ++batch_end_ind;
     }
     ++batch_end_ind;
@@ -87,6 +88,7 @@ void Executer::Execute() {
     batch_submit_info.push_back(vk::SubmitInfo2KHR(
         {}, batches.back().semaphore_to_wait, batches.back().cmd_to_execute,
         batches.back().semaphore_to_signal));
+    batch_start_ind = batch_end_ind;
   }
 
   auto& context = base::Base::Get().GetContext();

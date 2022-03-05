@@ -18,7 +18,15 @@ void ResourceManager::AddImage(const std::string& name,
                                vk::Format format,
                                vk::MemoryPropertyFlags memory_flags) {
   assert(!images_.contains(name));
+  auto& swapchain = base::Base::Get().GetSwapchain();
+  if (extent.width == 0 || extent.height == 0) {
+    extent = swapchain.GetExtent();
+  }
+  if (format == vk::Format::eUndefined) {
+    format = swapchain.GetFormat();
+  }
   images_[name] = gpu_resources::LogicalImage(extent, format, memory_flags);
+  assert(images_.contains(name));
 }
 
 void ResourceManager::InitResources() {
@@ -40,14 +48,18 @@ void ResourceManager::InitResources() {
     buffer_bind_infos.push_back(buffer.GetBindMemoryInfo());
   }
   auto device = base::Base::Get().GetContext().GetDevice();
-  device.bindBufferMemory2(buffer_bind_infos);
+  if (!buffer_bind_infos.empty()) {
+    device.bindBufferMemory2(buffer_bind_infos);
+  }
 
   std::vector<vk::BindImageMemoryInfo> image_bind_infos;
   image_bind_infos.reserve(images_.size());
   for (auto& [name, image] : images_) {
     image_bind_infos.push_back(image.GetBindMemoryInfo());
   }
-  device.bindImageMemory2(image_bind_infos);
+  if (!image_bind_infos.empty()) {
+    device.bindImageMemory2(image_bind_infos);
+  }
 }
 
 void ResourceManager::RecordInitBarriers(vk::CommandBuffer cmd) const {

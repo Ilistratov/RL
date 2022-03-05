@@ -14,11 +14,14 @@ class PhysicalImage {
   vk::Format format_ = vk::Format::eUndefined;
   vk::ImageView image_view_;
 
+  friend class LogicalImage;
+
  public:
   PhysicalImage() = default;
   PhysicalImage(vk::Extent2D extent,
                 vk::Format format,
                 vk::ImageUsageFlags image_usage);
+  PhysicalImage(vk::Image image, vk::Extent2D extent, vk::Format format);
 
   PhysicalImage(const PhysicalImage&) = delete;
   void operator=(const PhysicalImage&) = delete;
@@ -26,6 +29,7 @@ class PhysicalImage {
   PhysicalImage(PhysicalImage&& other) noexcept;
   void operator=(PhysicalImage&& other) noexcept;
   void Swap(PhysicalImage& other) noexcept;
+  vk::Image Release();
 
   vk::Image GetImage() const;
   vk::Extent2D GetExtent() const;
@@ -48,6 +52,10 @@ class PhysicalImage {
 
   void CreateImageView();
   vk::ImageView GetImageView() const;
+
+  static void RecordBlit(vk::CommandBuffer cmd,
+                         const PhysicalImage& src,
+                         const PhysicalImage& dst);
 
   ~PhysicalImage();
 };

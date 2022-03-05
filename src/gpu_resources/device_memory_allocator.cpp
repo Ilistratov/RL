@@ -81,7 +81,7 @@ MemoryBlock* DeviceMemoryAllocator::RequestMemory(
   ExtendPreallocBlock(type_index, requierments.alignment, requierments.size);
   // store info for actual allocation for future use
   MemoryBlock result;
-  result.type_index = type_bits;
+  result.type_index = type_index;
   result.offset = requierments.alignment;
   result.size = requierments.size;
   allocations_.push_back(result);

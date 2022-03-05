@@ -28,10 +28,10 @@ class Executer {
   std::vector<TaskInfo> tasks_;
 
   struct SubmitInfo {
-    vk::SemaphoreSubmitInfoKHR semaphore_to_wait;
+    std::vector<vk::SemaphoreSubmitInfoKHR> semaphore_to_wait;
     vk::CommandBufferSubmitInfoKHR cmd_to_execute;
     std::vector<vk::CommandBuffer> secondary_cmd;
-    vk::SemaphoreSubmitInfoKHR semaphore_to_signal;
+    std::vector<vk::SemaphoreSubmitInfoKHR> semaphore_to_signal;
   };
 
   SubmitInfo RecordCmdBatch(uint32_t batch_start, uint32_t batch_end);
@@ -51,8 +51,6 @@ class Executer {
   void ExecuteOneTime(Task* task, uint32_t secondary_cmd_count = 0);
 
   void Execute();
-
-  ~Executer();
 };
 
 }  // namespace gpu_executer

@@ -16,6 +16,11 @@ PhysicalImage::PhysicalImage(vk::Extent2D extent,
       vk::SharingMode::eExclusive, {}, {}));
 }
 
+PhysicalImage::PhysicalImage(vk::Image image,
+                             vk::Extent2D extent,
+                             vk::Format format)
+    : image_(image), extent_(extent), format_(format) {}
+
 PhysicalImage::PhysicalImage(PhysicalImage&& other) noexcept {
   Swap(other);
 }
@@ -31,6 +36,14 @@ void PhysicalImage::Swap(PhysicalImage& other) noexcept {
   std::swap(extent_, other.extent_);
   std::swap(format_, other.format_);
   std::swap(image_view_, other.image_view_);
+}
+
+vk::Image PhysicalImage::Release() {
+  PhysicalImage tmp;
+  Swap(tmp);
+  auto image = tmp.image_;
+  tmp.image_ = vk::Image{};
+  return image;
 }
 
 vk::Image PhysicalImage::GetImage() const {
@@ -103,8 +116,25 @@ vk::ImageView PhysicalImage::GetImageView() const {
   return image_view_;
 }
 
+void PhysicalImage::RecordBlit(vk::CommandBuffer cmd,
+                               const PhysicalImage& src,
+                               const PhysicalImage& dst) {
+  vk::ImageBlit2KHR region(
+      src.GetSubresourceLayers(),
+      {vk::Offset3D(0, 0, 0),
+       vk::Offset3D(src.GetExtent().width, src.GetExtent().height, 1)},
+      dst.GetSubresourceLayers(),
+      {vk::Offset3D(0, 0, 0),
+       vk::Offset3D(dst.GetExtent().width, dst.GetExtent().height, 1)});
+  vk::BlitImageInfo2KHR blit_info(
+      src.GetImage(), vk::ImageLayout::eTransferSrcOptimal, dst.GetImage(),
+      vk::ImageLayout::eTransferDstOptimal, region);
+  cmd.blitImage2KHR(blit_info);
+}
+
 PhysicalImage::~PhysicalImage() {
   auto device = base::Base::Get().GetContext().GetDevice();
+  device.destroyImageView(image_view_);
   device.destroyImage(image_);
 }
 

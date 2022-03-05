@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.8)
 
 set(HLSL_SOURCE_FILES
-	${CMAKE_CURRENT_SOURCE_DIR}/plain_color.hlsl
+	${CMAKE_CURRENT_SOURCE_DIR}/mandelbrot.hlsl
 )
 
 foreach(HLSL ${HLSL_SOURCE_FILES})
