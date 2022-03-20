@@ -1,4 +1,5 @@
 set(SRC
+  input_manager.cpp
   logger.cpp
 )
 

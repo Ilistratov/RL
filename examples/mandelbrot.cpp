@@ -130,6 +130,10 @@ Mandelbrot::Mandelbrot() {
 bool Mandelbrot::Draw() {
   UpdatePushConstants();
   auto& swapchain = base::Base::Get().GetSwapchain();
+  if (!swapchain.AcquireNextImage()) {
+    LOG(ERROR) << "Failed to acquire next image";
+    return false;
+  }
   swapchain.GetActiveImageInd();
   render_graph_.RenderFrame();
   if (swapchain.Present(ready_to_present_) != vk::Result::eSuccess) {

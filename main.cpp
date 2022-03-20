@@ -11,14 +11,9 @@
 
 void Run() {
   examples::Mandelbrot renderer;
-  auto& swapchain = base::Base::Get().GetSwapchain();
   auto& window = base::Base::Get().GetWindow();
   while (!glfwWindowShouldClose(window.GetWindow())) {
     glfwPollEvents();
-    if (!swapchain.AcquireNextImage()) {
-      LOG(ERROR) << "Failed to acquire next image";
-      break;
-    }
     if (!renderer.Draw()) {
       LOG(ERROR) << "Failed to draw";
       break;
