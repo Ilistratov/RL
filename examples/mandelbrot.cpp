@@ -4,6 +4,7 @@
 
 #include "base/base.h"
 
+#include "utill/input_manager.h"
 #include "utill/logger.h"
 
 namespace examples {
@@ -95,18 +96,28 @@ void SwapchainPresentPass::OnRecord(
 }
 
 void Mandelbrot::UpdatePushConstants() {
+  utill::MouseState mouse_state = utill::InputManager::GetMouseState();
+  if (mouse_state.lmb_state.action == GLFW_PRESS) {
+    vel_x_ = mouse_state.pos_x - mouse_state.prv_x;
+    vel_y_ = mouse_state.pos_y - mouse_state.prv_y;
+  }
+
   auto& swapchain = base::Base::Get().GetSwapchain();
-  auto& window = base::Base::Get().GetWindow();
   PushConstants& pc = draw_.GetPushConstants();
+  if (utill::InputManager::GetKeyState(GLFW_KEY_Z).action == GLFW_PRESS) {
+    pc.scale *= 0.5;
+  }
+  if (utill::InputManager::GetKeyState(GLFW_KEY_X).action == GLFW_PRESS) {
+    pc.scale *= 2;
+  }
+
   pc.s_width = swapchain.GetExtent().width;
   pc.s_height = swapchain.GetExtent().height;
-  double xpos, ypos;
-  glfwGetCursorPos(window.GetWindow(), &xpos, &ypos);
-  double rat = -1.0 / swapchain.GetExtent().height;
-  double aspect =
-      double(swapchain.GetExtent().width) / swapchain.GetExtent().height;
-  pc.center_x = (xpos * rat + aspect) * 2;
-  pc.center_y = (ypos * rat + 0.5) * 2;
+  pc.center_x -= vel_x_ * pc.scale / (pc.s_width * 0.2);
+  pc.center_y -= vel_y_ * pc.scale / (pc.s_height * 0.2);
+
+  vel_x_ *= 0.7;
+  vel_y_ *= 0.7;
 }
 
 Mandelbrot::Mandelbrot() {

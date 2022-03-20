@@ -23,8 +23,21 @@ void KeyCallback(GLFWwindow* window,
 }
 
 static void CursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+  g_input_state.mouse.prv_x = g_input_state.mouse.pos_x;
+  g_input_state.mouse.prv_y = g_input_state.mouse.pos_y;
   g_input_state.mouse.pos_x = xpos;
   g_input_state.mouse.pos_y = ypos;
+}
+
+static void MouseButtonCallbeck(GLFWwindow* window,
+                                int button,
+                                int action,
+                                int mods) {
+  if (button == GLFW_MOUSE_BUTTON_LEFT) {
+    g_input_state.mouse.lmb_state = {action, mods};
+  } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+    g_input_state.mouse.rmb_state = {action, mods};
+  }
 }
 
 }  // namespace
@@ -33,9 +46,10 @@ void InputManager::Init() {
   GLFWwindow* window = base::Base::Get().GetWindow().GetWindow();
   glfwSetKeyCallback(window, KeyCallback);
   glfwSetCursorPosCallback(window, CursorPosCallback);
+  glfwSetMouseButtonCallback(window, MouseButtonCallbeck);
 }
 
-const KeyState& InputManager::GetKeyState(int key) {
+KeyState InputManager::GetKeyState(int key) {
   if (key == GLFW_KEY_UNKNOWN || key >= GLFW_KEY_LAST) {
     return {};
   }

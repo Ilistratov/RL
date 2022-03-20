@@ -42,6 +42,8 @@ class Mandelbrot {
   MandelbrotDrawPass draw_;
   SwapchainPresentPass present_;
   vk::Semaphore ready_to_present_;
+  double vel_x_ = 0;
+  double vel_y_ = 0;
 
   void UpdatePushConstants();
 

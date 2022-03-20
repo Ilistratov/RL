@@ -7,6 +7,7 @@
 #include "base/context.h"
 #include "gpu_executer/executer.h"
 #include "pipeline_handler/compute.h"
+#include "utill/input_manager.h"
 #include "utill/logger.h"
 
 void Run() {
@@ -44,6 +45,7 @@ int main() {
   try {
     base::Base::Get().Init(base_config, vk::Extent2D{1280, 768},
                            context_config);
+    utill::InputManager::Init();
     Run();
   } catch (std::exception e) {
     LOG(ERROR) << e.what();

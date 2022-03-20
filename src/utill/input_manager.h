@@ -10,8 +10,10 @@ struct KeyState {
 struct MouseState {
   KeyState lmb_state;
   KeyState rmb_state;
-  double pos_x;
-  double pos_y;
+  double pos_x = 0;
+  double pos_y = 0;
+  double prv_x = 0;
+  double prv_y = 0;
 };
 
 class InputManager {
@@ -22,7 +24,7 @@ class InputManager {
   void operator=(const InputManager&) = delete;
 
   static void Init();
-  static const KeyState& GetKeyState(int key);
+  static KeyState GetKeyState(int key);
   static const MouseState& GetMouseState();
 };
 
