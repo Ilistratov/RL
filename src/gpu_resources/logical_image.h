@@ -14,8 +14,6 @@ class LogicalImage {
   PhysicalImage image_;
   AccessSyncManager access_manager_;
 
-  vk::Extent2D extent_;
-  vk::Format format_;
   vk::MemoryPropertyFlags memory_flags_;
   vk::ImageUsageFlags usage_flags_;
   MemoryBlock* memory_ = nullptr;
@@ -28,7 +26,6 @@ class LogicalImage {
 
   LogicalImage(LogicalImage&& other) noexcept;
   void operator=(LogicalImage&& other) noexcept;
-
   void Swap(LogicalImage& other) noexcept;
 
   static LogicalImage CreateStorageImage(vk::Extent2D extent = {0, 0});

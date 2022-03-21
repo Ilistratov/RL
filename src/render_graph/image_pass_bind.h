@@ -13,6 +13,7 @@ class ImagePassBind : public pipeline_handler::DescriptorBinding {
   vk::ShaderStageFlags descriptor_stage_flags_;
 
  public:
+  ImagePassBind() = default;
   ImagePassBind(gpu_resources::ResourceUsage usage,
                 vk::ImageUsageFlags image_usage_flags,
                 vk::DescriptorType descriptor_type = {},

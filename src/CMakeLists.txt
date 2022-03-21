@@ -14,7 +14,6 @@ target_link_directories(rl_common INTERFACE $ENV{VULKAN_SDK}/Lib)
 
 target_link_libraries(rl_common INTERFACE vulkan-1)
 target_link_libraries(rl_common INTERFACE glfw3)
-add_compile_definitions(VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
 
 target_compile_options(rl_common INTERFACE -Wall)
 

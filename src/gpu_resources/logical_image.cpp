@@ -7,7 +7,10 @@ namespace gpu_resources {
 LogicalImage::LogicalImage(vk::Extent2D extent,
                            vk::Format format,
                            vk::MemoryPropertyFlags memory_flags)
-    : extent_(extent), format_(format), memory_flags_(memory_flags) {}
+    : memory_flags_(memory_flags) {
+  image_.extent_ = extent;
+  image_.format_ = format;
+}
 
 LogicalImage::LogicalImage(LogicalImage&& other) noexcept {
   Swap(other);
@@ -22,8 +25,6 @@ void LogicalImage::operator=(LogicalImage&& other) noexcept {
 void LogicalImage::Swap(LogicalImage& other) noexcept {
   image_.Swap(other.image_);
   std::swap(access_manager_, other.access_manager_);
-  std::swap(extent_, other.extent_);
-  std::swap(format_, other.format_);
   std::swap(memory_flags_, other.memory_flags_);
   std::swap(usage_flags_, other.usage_flags_);
   std::swap(memory_, other.memory_);
@@ -39,7 +40,7 @@ LogicalImage LogicalImage::CreateStorageImage(vk::Extent2D extent) {
 
 void LogicalImage::Create() {
   if (!image_.GetImage()) {
-    image_ = PhysicalImage(extent_, format_, usage_flags_);
+    image_ = PhysicalImage(image_.extent_, image_.format_, usage_flags_);
   }
 }
 

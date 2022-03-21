@@ -14,7 +14,7 @@ class RenderGraph {
   ResourceManager resource_manager_;
   gpu_executer::Executer executer_;
   pipeline_handler::DescriptorPool descriptor_pool_;
-  std::vector<std::unique_ptr<Pass>> passes_;
+  std::vector<Pass*> passes_;
 
  public:
   RenderGraph() = default;
@@ -22,7 +22,7 @@ class RenderGraph {
   RenderGraph(const RenderGraph&) = delete;
   void operator=(const RenderGraph&) = delete;
 
-  void AddPass(std::unique_ptr<Pass> pass,
+  void AddPass(Pass* pass,
                vk::Semaphore external_signal = {},
                vk::Semaphore external_wait = {});
   ResourceManager& GetResourceManager();

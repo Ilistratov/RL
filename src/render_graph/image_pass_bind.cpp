@@ -29,7 +29,7 @@ vk::ImageMemoryBarrier2KHR ImagePassBind::GetBarrier(uint32_t user_ind) const {
 }
 
 vk::DescriptorSetLayoutBinding ImagePassBind::GetVkBinding() const noexcept {
-  return vk::DescriptorSetLayoutBinding(0, descriptor_type_,
+  return vk::DescriptorSetLayoutBinding(0, descriptor_type_, 1,
                                         descriptor_stage_flags_, {});
 }
 

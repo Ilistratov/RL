@@ -14,7 +14,7 @@ void Pass::RecordPostPassParriers(vk::CommandBuffer cmd) {
   std::vector<vk::ImageMemoryBarrier2KHR> image_barriers_;
   for (auto& [name, image] : image_binds_) {
     vk::ImageMemoryBarrier2KHR barrier = image.GetBarrier(user_ind_);
-    if (!barrier.image) {
+    if (barrier.image) {
       image_barriers_.push_back(barrier);
     }
   }
@@ -26,8 +26,7 @@ void Pass::RecordPostPassParriers(vk::CommandBuffer cmd) {
 void Pass::OnRecord(vk::CommandBuffer,
                     const std::vector<vk::CommandBuffer>&) noexcept {}
 
-Pass::Pass(uint32_t secondary_cmd_count,
-           vk::PipelineStageFlagBits2KHR stage_flags)
+Pass::Pass(uint32_t secondary_cmd_count, vk::PipelineStageFlags2KHR stage_flags)
     : secondary_cmd_count_(secondary_cmd_count), stage_flags_(stage_flags) {}
 
 void Pass::BindResources(uint32_t user_ind, ResourceManager& resource_manager) {
@@ -51,6 +50,13 @@ void Pass::OnWorkloadRecord(
   assert(user_ind_ != uint32_t(-1));
   OnRecord(primary_cmd, secondary_cmd);
   RecordPostPassParriers(primary_cmd);
+}
+
+uint32_t Pass::GetSecondaryCmdCount() const {
+  return secondary_cmd_count_;
+}
+vk::PipelineStageFlags2KHR Pass::GetStageFlags() const {
+  return stage_flags_;
 }
 
 }  // namespace render_graph

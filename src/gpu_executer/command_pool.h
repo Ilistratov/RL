@@ -28,7 +28,7 @@ class CommandPool {
   uint32_t& GetCmdAllocStep(vk::CommandBufferLevel cmd_level);
 
  public:
-  CommandPool() = default;
+  CommandPool();
 
   CommandPool(const CommandPool&) = delete;
   void operator=(const CommandPool&) = delete;
