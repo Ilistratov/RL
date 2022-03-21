@@ -96,28 +96,32 @@ void SwapchainPresentPass::OnRecord(
 }
 
 void Mandelbrot::UpdatePushConstants() {
-  utill::MouseState mouse_state = utill::InputManager::GetMouseState();
-  if (mouse_state.lmb_state.action == GLFW_PRESS) {
-    vel_x_ = mouse_state.pos_x - mouse_state.prv_x;
-    vel_y_ = mouse_state.pos_y - mouse_state.prv_y;
-  }
-
+  auto mouse_state = utill::InputManager::GetMouseState();
   auto& swapchain = base::Base::Get().GetSwapchain();
-  PushConstants& pc = draw_.GetPushConstants();
-  if (utill::InputManager::GetKeyState(GLFW_KEY_Z).action == GLFW_PRESS) {
-    pc.scale *= 0.5;
+  auto& pc = draw_.GetPushConstants();
+
+  if (mouse_state.lmb_state.action == GLFW_PRESS) {
+    float dx = mouse_state.pos_x / swapchain.GetExtent().width;
+    float dy = mouse_state.pos_y / swapchain.GetExtent().height;
+    float aspect =
+        (float)(swapchain.GetExtent().width) / swapchain.GetExtent().height;
+    dx = dx - 0.5;
+    dy = (dy - 0.5) / aspect;
+    dst_x_ = pc.center_x + dx * pc.scale;
+    dst_y_ = pc.center_y + dy * pc.scale;
   }
-  if (utill::InputManager::GetKeyState(GLFW_KEY_X).action == GLFW_PRESS) {
-    pc.scale *= 2;
+  if (utill::InputManager::IsKeyPressed(GLFW_KEY_Z)) {
+    dst_scale_ = pc.scale * 0.5;
+  }
+  if (utill::InputManager::IsKeyPressed(GLFW_KEY_X)) {
+    dst_scale_ = pc.scale * 2;
   }
 
   pc.s_width = swapchain.GetExtent().width;
   pc.s_height = swapchain.GetExtent().height;
-  pc.center_x -= vel_x_ * pc.scale / (pc.s_width * 0.2);
-  pc.center_y -= vel_y_ * pc.scale / (pc.s_height * 0.2);
-
-  vel_x_ *= 0.7;
-  vel_y_ *= 0.7;
+  pc.center_x = pc.center_x * 0.8 + dst_x_ * 0.2;
+  pc.center_y = pc.center_y * 0.8 + dst_y_ * 0.2;
+  pc.scale = pc.scale * 0.8 + dst_scale_ * 0.2;
 }
 
 Mandelbrot::Mandelbrot() {

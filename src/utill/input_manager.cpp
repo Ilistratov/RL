@@ -42,6 +42,10 @@ static void MouseButtonCallbeck(GLFWwindow* window,
 
 }  // namespace
 
+bool InputManager::IsValidKey(int key) {
+  return key != GLFW_KEY_UNKNOWN && key < GLFW_KEY_LAST;
+}
+
 void InputManager::Init() {
   GLFWwindow* window = base::Base::Get().GetWindow().GetWindow();
   glfwSetKeyCallback(window, KeyCallback);
@@ -50,10 +54,17 @@ void InputManager::Init() {
 }
 
 KeyState InputManager::GetKeyState(int key) {
-  if (key == GLFW_KEY_UNKNOWN || key >= GLFW_KEY_LAST) {
+  if (!IsValidKey(key)) {
     return {};
   }
   return g_input_state.keys[key];
+}
+
+bool InputManager::IsKeyPressed(int key) {
+  if (!IsValidKey(key)) {
+    return false;
+  }
+  return g_input_state.keys[key].action == GLFW_PRESS;
 }
 
 const MouseState& InputManager::GetMouseState() {

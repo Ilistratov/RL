@@ -19,12 +19,15 @@ struct MouseState {
 class InputManager {
   InputManager();
 
+  static bool IsValidKey(int key);
+
  public:
   InputManager(const InputManager&) = delete;
   void operator=(const InputManager&) = delete;
 
   static void Init();
   static KeyState GetKeyState(int key);
+  static bool IsKeyPressed(int key);
   static const MouseState& GetMouseState();
 };
 
