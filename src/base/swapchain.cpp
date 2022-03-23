@@ -19,7 +19,7 @@ vk::Format Swapchain::PickFormat(vk::SurfaceKHR surface) const {
       return format.format;
     }
   }
-  LOG(ERROR) << "Failed to pick swapchain format";
+  LOG << "Failed to pick swapchain format";
   assert(false);
   return vk::Format::eUndefined;
 }
@@ -84,8 +84,8 @@ const static uint64_t SWAPCHAIN_PRESENT_TIMEOUT_NSEC = 5'000'000'000;
 
 bool Swapchain::AcquireNextImage() {
   if (active_image_ind_ != UINT32_MAX) {
-    LOG(WARNING) << "acquireNextImage called before previously acquired image "
-                    "was presented, keeping old activeImageInd";
+    LOG << "acquireNextImage called before previously acquired image "
+           "was presented, keeping old activeImageInd";
     return true;
   }
 
@@ -100,7 +100,7 @@ bool Swapchain::AcquireNextImage() {
     return false;
   }
 
-  LOG(ERROR) << "Failed to acquire swapchain image: " << vk::to_string(res);
+  LOG << "Failed to acquire swapchain image: " << vk::to_string(res);
   assert(false);
   return false;
 }
@@ -122,7 +122,7 @@ vk::Result Swapchain::Present(vk::Semaphore semaphore_to_wait) {
   } catch (const vk::OutOfDateKHRError& e) {
     return vk::Result::eErrorOutOfDateKHR;
   } catch (const std::exception& e) {
-    LOG(ERROR) << "Exception during present: " << e.what();
+    LOG << "Exception during present: " << e.what();
     return vk::Result::eErrorUnknown;
   }
 
@@ -133,7 +133,7 @@ vk::Result Swapchain::Present(vk::Semaphore semaphore_to_wait) {
     return vk::Result::eSuboptimalKHR;
   }
 
-  LOG(ERROR) << "Unexpected error " << vk::to_string(res);
+  LOG << "Unexpected error " << vk::to_string(res);
   return vk::Result::eErrorUnknown;
 }
 

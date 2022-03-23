@@ -17,7 +17,7 @@ void Base::InitInstance(BaseConfig& config) {
   bool glfw_init_result = glfwInit();
   assert(glfw_init_result);
 
-  LOG(INFO) << "Initialized GLFW";
+  LOG << "Initialized GLFW";
 
   uint32_t glfw_ext_cnt = 0;
   auto glfw_ext_names_ptr = glfwGetRequiredInstanceExtensions(&glfw_ext_cnt);
@@ -32,9 +32,8 @@ void Base::InitInstance(BaseConfig& config) {
       config.instance_layers.size(), config.instance_layers.data(),
       config.instance_extensions.size(), config.instance_extensions.data());
 
-  LOG(INFO) << "Initializing vk::Instance with\nextensions: "
-            << config.instance_extensions
-            << "\nlayers: " << config.instance_layers;
+  LOG << "Initializing vk::Instance with\nextensions: "
+      << config.instance_extensions << "\nlayers: " << config.instance_layers;
 
   instance_ = vk::createInstanceUnique(instance_info);
   assert(instance_);
@@ -46,23 +45,15 @@ debugMessageFunc(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                  VkDebugUtilsMessengerCallbackDataEXT const* pCallbackData,
                  void* /*pUserData*/) {
   if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-    LOG(ERROR) << pCallbackData->pMessage;
+    LOG << pCallbackData->pMessage;
     return VK_TRUE;
-  } else if (messageSeverity >=
-             VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-    LOG(WARNING) << pCallbackData->pMessage;
-    return VK_FALSE;
-  } else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-    LOG(INFO) << pCallbackData->pMessage;
-    return VK_FALSE;
-  } else {
-    LOG(DEBUG) << pCallbackData->pMessage;
-    return VK_FALSE;
   }
+  LOG << pCallbackData->pMessage;
+  return VK_FALSE;
 }
 
 void Base::InitDebugLogger() {
-  LOG(INFO) << "Initializing Vulkan debug logger";
+  LOG << "Initializing Vulkan debug logger";
   using SeverityFlags = vk::DebugUtilsMessageSeverityFlagBitsEXT;
   vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(
       SeverityFlags::eVerbose | SeverityFlags::eInfo | SeverityFlags::eWarning |
@@ -76,7 +67,7 @@ void Base::InitDebugLogger() {
 }
 
 void Base::InitBase(BaseConfig& config) {
-  LOG(INFO) << "Initializing Base";
+  LOG << "Initializing Base";
   VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
   InitInstance(config);
   VULKAN_HPP_DEFAULT_DISPATCHER.init(instance_.get());
@@ -84,13 +75,13 @@ void Base::InitBase(BaseConfig& config) {
 }
 
 void Base::CreateWindow(vk::Extent2D window_extent) {
-  LOG(INFO) << "Creating window";
+  LOG << "Creating window";
   assert(!window_.GetWindow());
   window_ = Window(window_extent);
 }
 
 void Base::CreateContext(ContextConfig& config) {
-  LOG(INFO) << "Creating context";
+  LOG << "Creating context";
   assert(!context_.GetDevice());
   context_ = Context(config);
 }
@@ -131,7 +122,7 @@ Swapchain& Base::GetSwapchain() {
 }
 
 Base::~Base() {
-  LOG(INFO) << "Clearing Base";
+  LOG << "Clearing Base";
   swapchain_.Destroy();
   context_ = Context();
   window_ = Window();

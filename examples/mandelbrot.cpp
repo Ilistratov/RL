@@ -23,7 +23,7 @@ void MandelbrotDrawPass::OnRecord(
 
 MandelbrotDrawPass::MandelbrotDrawPass()
     : Pass(0, vk::PipelineStageFlagBits2KHR::eComputeShader) {
-  LOG(INFO) << "Initializing MandelbrotDrawPass";
+  LOG << "Initializing MandelbrotDrawPass";
   gpu_resources::ResourceUsage rt_usage;
   rt_usage.access = vk::AccessFlagBits2KHR::eShaderWrite;
   rt_usage.stage = vk::PipelineStageFlagBits2KHR::eComputeShader;
@@ -32,7 +32,7 @@ MandelbrotDrawPass::MandelbrotDrawPass()
   image_binds_[kRT_NAME] = render_graph::ImagePassBind(
       rt_usage, vk::ImageUsageFlagBits::eStorage,
       vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
-  LOG(INFO) << "Image binds count " << image_binds_.size();
+  LOG << "Image binds count " << image_binds_.size();
 }
 
 void MandelbrotDrawPass::ReserveDescriptorSets(
@@ -55,13 +55,13 @@ PushConstants& MandelbrotDrawPass::GetPushConstants() {
 
 SwapchainPresentPass::SwapchainPresentPass()
     : Pass(0, vk::PipelineStageFlagBits2KHR::eTransfer) {
-  LOG(INFO) << "Initializing SwapchainPresentPass";
+  LOG << "Initializing SwapchainPresentPass";
   image_binds_[kRT_NAME] = render_graph::ImagePassBind(
       gpu_resources::ResourceUsage{vk::PipelineStageFlagBits2KHR::eTransfer,
                                    vk::AccessFlagBits2KHR::eTransferRead,
                                    vk::ImageLayout::eTransferSrcOptimal},
       vk::ImageUsageFlagBits::eTransferSrc);
-  LOG(INFO) << "Image binds count " << image_binds_.size();
+  LOG << "Image binds count " << image_binds_.size();
 }
 
 void SwapchainPresentPass::OnRecord(
@@ -125,34 +125,34 @@ void Mandelbrot::UpdatePushConstants() {
 }
 
 Mandelbrot::Mandelbrot() {
-  LOG(INFO) << "Initializing Renderer";
+  LOG << "Initializing Renderer";
   auto device = base::Base::Get().GetContext().GetDevice();
   auto& swapchain = base::Base::Get().GetSwapchain();
   ready_to_present_ = device.createSemaphore({});
 
-  LOG(INFO) << "Adding resources to RenderGraph";
+  LOG << "Adding resources to RenderGraph";
   render_graph_.GetResourceManager().AddImage(
       kRT_NAME, {}, {}, vk::MemoryPropertyFlagBits::eDeviceLocal);
-  LOG(INFO) << "Adding draw pass";
+  LOG << "Adding draw pass";
   render_graph_.AddPass(&draw_, {}, {});
-  LOG(INFO) << "Adding present pass";
+  LOG << "Adding present pass";
   render_graph_.AddPass(&present_, ready_to_present_,
                         swapchain.GetImageAvaliableSemaphore());
   render_graph_.Init();
-  LOG(INFO) << "Renderer initized";
+  LOG << "Renderer initized";
 }
 
 bool Mandelbrot::Draw() {
   UpdatePushConstants();
   auto& swapchain = base::Base::Get().GetSwapchain();
   if (!swapchain.AcquireNextImage()) {
-    LOG(ERROR) << "Failed to acquire next image";
+    LOG << "Failed to acquire next image";
     return false;
   }
   swapchain.GetActiveImageInd();
   render_graph_.RenderFrame();
   if (swapchain.Present(ready_to_present_) != vk::Result::eSuccess) {
-    LOG(ERROR) << "Failed to present";
+    LOG << "Failed to present";
     return false;
   }
   return true;

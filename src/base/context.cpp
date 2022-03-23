@@ -30,8 +30,8 @@ void Context::CreateDevice(ContextConfig& config) {
       info_chain(device_info, timeline_semaphore_features,
                  synchronization2_features);
 
-  LOG(DEBUG) << "Creating device with:\nExt: " << config.device_extensions
-             << "\nLayers: " << config.device_layers;
+  LOG << "Creating device with:\nExt: " << config.device_extensions
+      << "\nLayers: " << config.device_layers;
 
   device_ = physical_device_.createDevice(info_chain.get());
   assert(device_);
@@ -44,11 +44,11 @@ void Context::CreateDevice(ContextConfig& config) {
 }
 
 Context::Context(ContextConfig config) {
-  LOG(DEBUG) << "Picking physical device";
+  LOG << "Picking physical device";
   PickPhysicalDevice(config);
-  LOG(DEBUG) << "Creating device";
+  LOG << "Creating device";
   CreateDevice(config);
-  LOG(DEBUG) << "Initialized context";
+  LOG << "Initialized context";
 }
 
 Context::Context(Context&& other) noexcept {

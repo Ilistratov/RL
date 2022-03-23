@@ -89,11 +89,11 @@ CommandPool::~CommandPool() {
   auto device = base::Base::Get().GetContext().GetDevice();
   CheckInprogressBatches();
   if (!primary_cmd_.empty()) {
-    LOG(INFO) << "Freeing " << primary_cmd_.size() << " primary cmd's";
+    LOG << "Freeing " << primary_cmd_.size() << " primary cmd's";
     device.freeCommandBuffers(cmd_pool_, primary_cmd_);
   }
   if (!secondary_cmd_.empty()) {
-    LOG(INFO) << "Freeing " << secondary_cmd_.size() << " secondary cmd's";
+    LOG << "Freeing " << secondary_cmd_.size() << " secondary cmd's";
     device.freeCommandBuffers(cmd_pool_, secondary_cmd_);
   }
   device.destroyCommandPool(cmd_pool_);

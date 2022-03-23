@@ -25,7 +25,7 @@ uint32_t PhysicalDevicePicker::GetSuitableQueueFamilyIndex(
     }
     ++family_index;
   }
-  LOG(DEBUG) << "No suitable queue family found";
+  LOG << "No suitable queue family found";
   return -1;
 }
 
@@ -39,7 +39,7 @@ bool PhysicalDevicePicker::CheckExtensions(vk::PhysicalDevice device) {
   }
   for (const auto& [ext_name, is_available] : extension_availability_) {
     if (!is_available) {
-      LOG(DEBUG) << "Extension " << ext_name << " is not available";
+      LOG << "Extension " << ext_name << " is not available";
       return false;
     }
   }
@@ -89,8 +89,8 @@ void PhysicalDevicePicker::PickPhysicalDevice() {
   auto instance = Base::Get().GetInstance();
   auto physical_devices = instance.enumeratePhysicalDevices();
   for (auto& current_device : physical_devices) {
-    LOG(DEBUG) << "Checking "
-               << std::string(current_device.getProperties().deviceName);
+    LOG << "Checking "
+        << std::string(current_device.getProperties().deviceName);
 
     if (IsDeviceSuitable(current_device) &&
         DeviceCmp(result_device_, current_device)) {
@@ -102,9 +102,9 @@ void PhysicalDevicePicker::PickPhysicalDevice() {
   assert(result_device_);
   assert(result_queue_family_index_ != uint32_t(-1));
 
-  LOG(DEBUG) << "Picked device: "
-             << std::string(result_device_.getProperties().deviceName)
-             << " With queue family: " << result_queue_family_index_;
+  LOG << "Picked device: "
+      << std::string(result_device_.getProperties().deviceName)
+      << " With queue family: " << result_queue_family_index_;
 }
 
 PhysicalDevicePicker::PhysicalDevicePicker(const ContextConfig* config,

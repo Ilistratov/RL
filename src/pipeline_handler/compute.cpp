@@ -12,7 +12,7 @@ namespace {
 vk::UniqueShaderModule LoadShaderModule(const std::string& file_path) {
   std::ifstream file(file_path, std::ios::binary | std::ios::ate);
   if (!file.good()) {
-    LOG(ERROR) << "Failed to open " << file_path;
+    LOG << "Failed to open " << file_path;
     return {};
   }
   size_t file_size = file.tellg();
