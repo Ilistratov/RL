@@ -1,5 +1,6 @@
 #include "render_graph/render_graph.h"
 
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace render_graph {
@@ -7,7 +8,7 @@ namespace render_graph {
 void RenderGraph::AddPass(Pass* pass,
                           vk::Semaphore external_signal,
                           vk::Semaphore external_wait) {
-  assert(pass);
+  DCHECK(pass) << "Can't add null";
   pass->BindResources(passes_.size(), resource_manager_);
   pass->ReserveDescriptorSets(descriptor_pool_);
   executer_.ScheduleTask(pass, pass->GetStageFlags(), external_signal,

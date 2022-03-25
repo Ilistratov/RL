@@ -4,20 +4,24 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+#include "utill/logger.h"
+
 namespace render_graph {
 
 void ResourceManager::AddBuffer(const std::string& name,
                                 vk::DeviceSize size,
                                 vk::MemoryPropertyFlags memory_flags) {
-  assert(!buffers_.contains(name));
+  DCHECK(!buffers_.contains(name)) << "Already have buffer named: " << name;
   buffers_[name] = gpu_resources::LogicalBuffer(size, memory_flags);
+  LOG << "Added buffer named: " << name;
 }
 
 void ResourceManager::AddImage(const std::string& name,
                                vk::Extent2D extent,
                                vk::Format format,
                                vk::MemoryPropertyFlags memory_flags) {
-  assert(!images_.contains(name));
+  DCHECK(!images_.contains(name)) << "Already have image named: " << name;
   auto& swapchain = base::Base::Get().GetSwapchain();
   if (extent.width == 0 || extent.height == 0) {
     extent = swapchain.GetExtent();
@@ -26,7 +30,7 @@ void ResourceManager::AddImage(const std::string& name,
     format = swapchain.GetFormat();
   }
   images_[name] = gpu_resources::LogicalImage(extent, format, memory_flags);
-  assert(images_.contains(name));
+  LOG << "Added image named: " << name;
 }
 
 void ResourceManager::InitResources() {
@@ -49,7 +53,8 @@ void ResourceManager::InitResources() {
   }
   auto device = base::Base::Get().GetContext().GetDevice();
   if (!buffer_bind_infos.empty()) {
-    device.bindBufferMemory2(buffer_bind_infos);
+    auto vk_res = device.bindBufferMemory2(buffer_bind_infos);
+    CHECK_VK_RESULT(vk_res) << "Failed to bind buffer memory";
   }
 
   std::vector<vk::BindImageMemoryInfo> image_bind_infos;
@@ -58,7 +63,8 @@ void ResourceManager::InitResources() {
     image_bind_infos.push_back(image.GetBindMemoryInfo());
   }
   if (!image_bind_infos.empty()) {
-    device.bindImageMemory2(image_bind_infos);
+    auto vk_res = device.bindImageMemory2(image_bind_infos);
+    CHECK_VK_RESULT(vk_res) << "Failed to bind image memory";
   }
 }
 
@@ -74,13 +80,13 @@ void ResourceManager::RecordInitBarriers(vk::CommandBuffer cmd) const {
 
 gpu_resources::LogicalBuffer& ResourceManager::GetBuffer(
     const std::string& name) {
-  assert(buffers_.contains(name));
+  DCHECK(buffers_.contains(name)) << "No buffer named: " << name;
   return buffers_.at(name);
 }
 
 gpu_resources::LogicalImage& ResourceManager::GetImage(
     const std::string& name) {
-  assert(images_.contains(name));
+  DCHECK(images_.contains(name)) << "No image named: " << name;
   return images_.at(name);
 }
 

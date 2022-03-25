@@ -1,5 +1,7 @@
 #include "render_graph/buffer_pass_bind.h"
 
+#include "utill/error_handling.h"
+
 namespace render_graph {
 
 BufferPassBind::BufferPassBind(gpu_resources::ResourceUsage usage,
@@ -13,8 +15,8 @@ BufferPassBind::BufferPassBind(gpu_resources::ResourceUsage usage,
 
 void BufferPassBind::OnResourceBind(uint32_t user_ind,
                                     gpu_resources::LogicalBuffer* buffer) {
-  assert(!buffer_);
-  assert(buffer);
+  DCHECK(!buffer_) << "Resource already bound";
+  DCHECK(buffer) << "Can't bind null";
   buffer_ = buffer;
   buffer_->AddUsage(user_ind, buffer_usage_, buffer_usage_flags_);
 }
@@ -25,7 +27,7 @@ gpu_resources::LogicalBuffer* BufferPassBind::GetBoundBuffer() const {
 
 vk::BufferMemoryBarrier2KHR BufferPassBind::GetBarrier(
     uint32_t user_ind) const {
-  assert(buffer_);
+  DCHECK(buffer_) << "Resource must be bound to use this method";
   return buffer_->GetPostPassBarrier(user_ind);
 }
 
@@ -35,7 +37,7 @@ vk::DescriptorSetLayoutBinding BufferPassBind::GetVkBinding() const noexcept {
 }
 
 pipeline_handler::Write BufferPassBind::GetWrite() const noexcept {
-  assert(buffer_);
+  DCHECK(buffer_) << "Resource must be bound to use this method";
   return pipeline_handler::Write{
       0,
       descriptor_type_,

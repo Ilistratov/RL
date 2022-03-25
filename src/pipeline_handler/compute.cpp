@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include "base/base.h"
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace pipeline_handler {
@@ -21,9 +22,12 @@ vk::UniqueShaderModule LoadShaderModule(const std::string& file_path) {
   file.read(shader_binary_data.data(), file_size);
   file.close();
   auto device = base::Base::Get().GetContext().GetDevice();
-  return device.createShaderModuleUnique(vk::ShaderModuleCreateInfo(
+  auto create_res = device.createShaderModuleUnique(vk::ShaderModuleCreateInfo(
       vk::ShaderModuleCreateFlags{}, shader_binary_data.size(),
       (const uint32_t*)shader_binary_data.data()));
+  CHECK_VK_RESULT(create_res.result)
+      << "Failed to create shader module from: " << file_path;
+  return std::move(create_res.value);
 }
 
 }  // namespace
@@ -35,21 +39,24 @@ Compute::Compute(const std::vector<const DescriptorBinding*>& bindings,
                  const std::string& shader_main) {
   auto device = base::Base::Get().GetContext().GetDevice();
   descriptor_set_ = descriptor_pool.ReserveDescriptorSet(bindings);
+  DCHECK(descriptor_set_) << "Failed to reserve descriptor set";
   std::vector<vk::DescriptorSetLayout> vk_layouts = {
       descriptor_set_->GetLayout()};
-  layout_ = device.createPipelineLayout(
+  auto layout_create_res = device.createPipelineLayout(
       vk::PipelineLayoutCreateInfo({}, vk_layouts, push_constants));
+  CHECK_VK_RESULT(layout_create_res.result)
+      << "Failed to create pipeline layout";
+  layout_ = layout_create_res.value;
   vk::UniqueShaderModule shader_module = LoadShaderModule(shader_file_path);
-  assert(shader_module);
-  auto res = device.createComputePipeline(
+  auto pipeline_create_res = device.createComputePipeline(
       {}, vk::ComputePipelineCreateInfo(
               {},
               vk::PipelineShaderStageCreateInfo(
                   {}, vk::ShaderStageFlagBits::eCompute, shader_module.get(),
                   shader_main.c_str(), {}),
               layout_));
-  assert(res.result == vk::Result::eSuccess);
-  pipeline_ = res.value;
+  CHECK_VK_RESULT(pipeline_create_res.result) << "Failed to create pipeline";
+  pipeline_ = pipeline_create_res.value;
 }
 
 Compute::Compute(Compute&& other) noexcept {

@@ -11,9 +11,9 @@ struct InputState {
   MouseState mouse;
 } g_input_state;
 
-void KeyCallback(GLFWwindow* window,
+void KeyCallback(GLFWwindow* /*window*/,
                  int key,
-                 int scancode,
+                 int /*scancode*/,
                  int action,
                  int mods) {
   if (key == GLFW_KEY_UNKNOWN || key >= GLFW_KEY_LAST) {
@@ -22,14 +22,16 @@ void KeyCallback(GLFWwindow* window,
   g_input_state.keys[key] = {action, mods};
 }
 
-static void CursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+static void CursorPosCallback(GLFWwindow* /*window*/,
+                              double xpos,
+                              double ypos) {
   g_input_state.mouse.prv_x = g_input_state.mouse.pos_x;
   g_input_state.mouse.prv_y = g_input_state.mouse.pos_y;
   g_input_state.mouse.pos_x = xpos;
   g_input_state.mouse.pos_y = ypos;
 }
 
-static void MouseButtonCallbeck(GLFWwindow* window,
+static void MouseButtonCallbeck(GLFWwindow* /*window*/,
                                 int button,
                                 int action,
                                 int mods) {

@@ -1,11 +1,11 @@
 #include "base/base.h"
 
-#include <cassert>
 #include <iostream>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
@@ -13,9 +13,9 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 namespace base {
 
 void Base::InitInstance(BaseConfig& config) {
-  assert(!instance_);
+  DCHECK(!instance_) << "non-null vk::Instance at base initialization";
   bool glfw_init_result = glfwInit();
-  assert(glfw_init_result);
+  CHECK(glfw_init_result) << "failed to init glfw";
 
   LOG << "Initialized GLFW";
 
@@ -35,13 +35,14 @@ void Base::InitInstance(BaseConfig& config) {
   LOG << "Initializing vk::Instance with\nextensions: "
       << config.instance_extensions << "\nlayers: " << config.instance_layers;
 
-  instance_ = vk::createInstanceUnique(instance_info);
-  assert(instance_);
+  auto create_res = vk::createInstanceUnique(instance_info);
+  CHECK_VK_RESULT(create_res.result) << "failed to create vk::Instance.";
+  instance_ = std::move(create_res.value);
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
 debugMessageFunc(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                 VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                 VkDebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
                  VkDebugUtilsMessengerCallbackDataEXT const* pCallbackData,
                  void* /*pUserData*/) {
   if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
@@ -61,9 +62,11 @@ void Base::InitDebugLogger() {
   using TypeFlags = vk::DebugUtilsMessageTypeFlagBitsEXT;
   vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags(TypeFlags::ePerformance |
                                                      TypeFlags::eValidation);
-  debug_messenger_ = instance_.get().createDebugUtilsMessengerEXTUnique(
+  auto create_res = instance_.get().createDebugUtilsMessengerEXTUnique(
       vk::DebugUtilsMessengerCreateInfoEXT({}, severityFlags, messageTypeFlags,
                                            &debugMessageFunc));
+  CHECK_VK_RESULT(create_res.result) << "Failed to create debug messenger";
+  debug_messenger_ = std::move(create_res.value);
 }
 
 void Base::InitBase(BaseConfig& config) {
@@ -76,17 +79,18 @@ void Base::InitBase(BaseConfig& config) {
 
 void Base::CreateWindow(vk::Extent2D window_extent) {
   LOG << "Creating window";
-  assert(!window_.GetWindow());
+  DCHECK(!window_.GetWindow()) << "non-null window during base initialization";
   window_ = Window(window_extent);
 }
 
 void Base::CreateContext(ContextConfig& config) {
   LOG << "Creating context";
-  assert(!context_.GetDevice());
+  DCHECK(!context_.GetDevice()) << "non-null device during base initialization";
   context_ = Context(config);
 }
 
 void Base::CreateSwapchain() {
+  LOG << "Creating swapchain";
   swapchain_.Create();
 }
 

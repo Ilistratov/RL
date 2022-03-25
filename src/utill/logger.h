@@ -29,7 +29,8 @@ class LogEntry {
 
  public:
   LogEntry(std::string_view source_location);
-  LogEntry(LogEntry&& other);
+  LogEntry(const LogEntry&) = delete;
+  void operator=(const LogEntry&) = delete;
 
   template <typename T>
   LogEntry& operator<<(const T& entry_contents) {
@@ -56,6 +57,8 @@ class Logger {
 
   std::chrono::system_clock::time_point GetStartTime() const;
   void Log(const std::string& message);
+  static void AddInitialLogTag(std::ostringstream& out,
+                               const std::string_view source_location);
 };
 
 extern Logger GlobalLogger;

@@ -2,18 +2,22 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace gpu_resources {
 
 PhysicalImage::PhysicalImage(vk::Extent2D extent,
                              vk::Format format,
                              vk::ImageUsageFlags image_usage)
     : extent_(extent), format_(format) {
-  assert(extent.height > 0 && extent.width > 0);
+  CHECK(extent.height > 0 && extent.width > 0) << "Invalid image extent";
   auto device = base::Base::Get().GetContext().GetDevice();
-  image_ = device.createImage(vk::ImageCreateInfo(
+  auto create_res = device.createImage(vk::ImageCreateInfo(
       {}, vk::ImageType::e2D, format_, vk::Extent3D(extent_, 1), 1, 1,
       vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal, image_usage,
       vk::SharingMode::eExclusive, {}, {}));
+  CHECK_VK_RESULT(create_res.result) << "Failed to create image";
+  image_ = create_res.value;
 }
 
 PhysicalImage::PhysicalImage(vk::Image image,
@@ -59,14 +63,15 @@ vk::Format PhysicalImage::GetFormat() const {
 }
 
 vk::MemoryRequirements PhysicalImage::GetMemoryRequierments() const {
+  DCHECK(image_) << "Resource must be created to use this method";
   auto device = base::Base::Get().GetContext().GetDevice();
   return device.getImageMemoryRequirements(image_);
 }
 
 vk::BindImageMemoryInfo PhysicalImage::GetBindMemoryInfo(
     MemoryBlock memory_block) const {
-  assert(image_);
-  assert(memory_block.memory);
+  DCHECK(image_) << "Resource must be created to use this method";
+  DCHECK(memory_block.memory) << "Expected non-null memory at bind time";
   return vk::BindImageMemoryInfo(image_, memory_block.memory,
                                  memory_block.offset);
 }
@@ -92,24 +97,30 @@ vk::ImageMemoryBarrier2KHR PhysicalImage::GetBarrier(
 }
 
 void PhysicalImage::SetDebugName(const std::string& debug_name) const {
-  assert(image_);
+  DCHECK(image_) << "Resource must be created to use this method";
   auto device = base::Base::Get().GetContext().GetDevice();
-  device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
-      image_.objectType, (uint64_t)(VkImage)image_, debug_name.c_str()));
+  auto vk_res =
+      device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
+          image_.objectType, (uint64_t)(VkImage)image_, debug_name.c_str()));
+  if (vk_res != vk::Result::eSuccess) {
+    LOG << "Failed to set debug name for buffer named: " << debug_name;
+  }
 }
 
 void PhysicalImage::CreateImageView() {
   if (image_view_) {
     return;
   }
-  assert(image_);
+  DCHECK(image_) << "Resource must be created to use this method";
   auto device = base::Base::Get().GetContext().GetDevice();
-  image_view_ = device.createImageView(vk::ImageViewCreateInfo(
+  auto create_res = device.createImageView(vk::ImageViewCreateInfo(
       {}, image_, vk::ImageViewType::e2D, format_,
       vk::ComponentMapping{
           vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity,
           vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity},
       GetSubresourceRange()));
+  CHECK_VK_RESULT(create_res.result) << "Failed to create image_view";
+  image_view_ = create_res.value;
 }
 
 vk::ImageView PhysicalImage::GetImageView() const {
@@ -119,6 +130,8 @@ vk::ImageView PhysicalImage::GetImageView() const {
 void PhysicalImage::RecordBlit(vk::CommandBuffer cmd,
                                const PhysicalImage& src,
                                const PhysicalImage& dst) {
+  DCHECK(src.image_) << "src image must be created to use this method";
+  DCHECK(dst.image_) << "dst image must be created to use this method";
   vk::ImageBlit2KHR region(
       src.GetSubresourceLayers(),
       {vk::Offset3D(0, 0, 0),

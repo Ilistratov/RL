@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace gpu_resources {
 
 uint32_t DeviceMemoryAllocator::GetSuitableTypeBits(
@@ -63,8 +65,10 @@ void DeviceMemoryAllocator::Allocate() {
     block.size = block.offset;
     block.offset = 0;
     block.type_index = type_ind;
-    block.memory = device.allocateMemory(
+    auto alloc_result = device.allocateMemory(
         vk::MemoryAllocateInfo{block.size, block.type_index});
+    CHECK_VK_RESULT(alloc_result.result) << "Failed to allocate device memory.";
+    block.memory = alloc_result.value;
   }
   for (auto& allocation : allocations_) {
     // info for actual allocation stored in RequestMemory is used here

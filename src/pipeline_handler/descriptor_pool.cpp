@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace pipeline_handler {
 
 void DescriptorPool::CreatePool() {
@@ -12,8 +14,10 @@ void DescriptorPool::CreatePool() {
   }
   descriptor_type_reserved_count_.clear();
   auto device = base::Base::Get().GetContext().GetDevice();
-  pool_ = device.createDescriptorPool(vk::DescriptorPoolCreateInfo{
+  auto create_res = device.createDescriptorPool(vk::DescriptorPoolCreateInfo{
       {}, static_cast<uint32_t>(managed_sets_.size()), pool_sizes});
+  CHECK_VK_RESULT(create_res.result) << "Failed to create descriptor pool";
+  pool_ = create_res.value;
 }
 
 void DescriptorPool::AllocateSets() {
@@ -23,8 +27,11 @@ void DescriptorPool::AllocateSets() {
     managed_set_layouts.push_back(set.GetLayout());
   }
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto sets = device.allocateDescriptorSets(
+  auto sets_alloc_res = device.allocateDescriptorSets(
       vk::DescriptorSetAllocateInfo(pool_, managed_set_layouts));
+  CHECK_VK_RESULT(sets_alloc_res.result)
+      << "Failed to allocate descriptor sets";
+  std::vector<vk::DescriptorSet> sets(std::move(sets_alloc_res.value));
   uint32_t set_ind = 0;
   for (auto& set : managed_sets_) {
     assert(!set.set_);
@@ -45,7 +52,7 @@ DescriptorSet* DescriptorPool::ReserveDescriptorSet(
 }
 
 void DescriptorPool::Create() {
-  assert(!pool_);
+  DCHECK(!pool_) << "Expected null pool during creation";
   CreatePool();
   AllocateSets();
 }

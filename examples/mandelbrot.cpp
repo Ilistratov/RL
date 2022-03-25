@@ -4,6 +4,7 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
 
@@ -128,7 +129,9 @@ Mandelbrot::Mandelbrot() {
   LOG << "Initializing Renderer";
   auto device = base::Base::Get().GetContext().GetDevice();
   auto& swapchain = base::Base::Get().GetSwapchain();
-  ready_to_present_ = device.createSemaphore({});
+  auto create_res = device.createSemaphore({});
+  CHECK_VK_RESULT(create_res.result) << "Failed to create semaphore";
+  ready_to_present_ = create_res.value;
 
   LOG << "Adding resources to RenderGraph";
   render_graph_.GetResourceManager().AddImage(
@@ -160,7 +163,8 @@ bool Mandelbrot::Draw() {
 
 Mandelbrot::~Mandelbrot() {
   auto device = base::Base::Get().GetContext().GetDevice();
-  device.waitIdle();
+  auto vk_res = device.waitIdle();
+  CHECK_VK_RESULT(vk_res) << "Failed to waitIdle";
   device.destroySemaphore(ready_to_present_);
 }
 

@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace gpu_executer {
 
 TimelineSemaphore::TimelineSemaphore() {
@@ -10,7 +12,9 @@ TimelineSemaphore::TimelineSemaphore() {
   vk::SemaphoreCreateInfo semaphore_create_info{};
   semaphore_create_info.pNext = &timeline_create_info;
   auto device = base::Base::Get().GetContext().GetDevice();
-  semaphore_ = device.createSemaphore(semaphore_create_info);
+  auto create_res = device.createSemaphore(semaphore_create_info);
+  CHECK_VK_RESULT(create_res.result) << "Failed to create semaphore";
+  semaphore_ = create_res.value;
 }
 
 vk::Result TimelineSemaphore::Wait(uint64_t timeout) const {

@@ -1,14 +1,16 @@
 #include "pipeline_handler/descriptor_binding.h"
 
-#include <cassert>
+#include "utill/error_handling.h"
 
 namespace pipeline_handler {
 
 vk::WriteDescriptorSet Write::ConvertToVkWrite(
     vk::DescriptorSet dst_set,
     uint32_t binding_id) const& noexcept {
-  assert(image_info.empty() || buffer_info.empty());
-  assert(!image_info.empty() || !buffer_info.empty());
+  DCHECK(image_info.empty() || buffer_info.empty())
+      << "One and only one resource_info must be presented";
+  DCHECK(!image_info.empty() || !buffer_info.empty())
+      << "One and only one resource_info must be presented";
 
   vk::WriteDescriptorSet result;
   result.dstSet = dst_set;

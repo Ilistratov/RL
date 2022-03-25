@@ -4,6 +4,7 @@
 #include <list>
 
 #include "base/base.h"
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace gpu_executer {
@@ -38,8 +39,9 @@ Executer::SubmitInfo Executer::RecordCmdBatch(uint32_t batch_start,
   res.secondary_cmd =
       cmd_pool_.GetCmd(vk::CommandBufferLevel::eSecondary, secondary_cmd_count);
 
-  primary_cmd.begin(vk::CommandBufferBeginInfo(
+  auto vk_res = primary_cmd.begin(vk::CommandBufferBeginInfo(
       vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+  CHECK_VK_RESULT(vk_res) << "Failed to begin cmd";
   uint32_t used_cmd_count = 0;
   for (uint32_t i = batch_start; i < batch_end; i++) {
     uint32_t n_used_cmd_count = used_cmd_count + tasks_[i].secondary_cmd_count;
@@ -50,17 +52,20 @@ Executer::SubmitInfo Executer::RecordCmdBatch(uint32_t batch_start,
 
     tasks_[i].task->OnWorkloadRecord(primary_cmd, task_secondary_cmd);
     if (tasks_[i].external_signal) {
-      assert(batch_end - batch_start == 1);
+      DCHECK(batch_end - batch_start == 1)
+          << "Batch with semaphore deps must have only 1 primary cmd";
       res.semaphore_to_signal.push_back(vk::SemaphoreSubmitInfoKHR(
           tasks_[i].external_signal, 0, tasks_[i].stage_flags));
     }
     if (tasks_[i].external_wait) {
-      assert(batch_end - batch_start == 1);
+      DCHECK(batch_end - batch_start == 1)
+          << "Batch with semaphore deps must have only 1 primary cmd";
       res.semaphore_to_wait.push_back(vk::SemaphoreSubmitInfoKHR(
           tasks_[i].external_wait, 0, tasks_[i].stage_flags));
     }
   }
-  primary_cmd.end();
+  vk_res = primary_cmd.end();
+  CHECK_VK_RESULT(vk_res) << "Failed to end cmd";
 
   return res;
 }
@@ -93,8 +98,11 @@ void Executer::Execute() {
 
   auto& context = base::Base::Get().GetContext();
   auto device = context.GetDevice();
-  auto fence = device.createFence({});
-  context.GetQueue(0).submit2KHR(batch_submit_info, fence);
+  auto fence_create_result = device.createFence({});
+  CHECK_VK_RESULT(fence_create_result.result) << "Failed to create fence.";
+  auto fence = fence_create_result.value;
+  auto vk_res = context.GetQueue(0).submit2KHR(batch_submit_info, fence);
+  CHECK_VK_RESULT(vk_res) << "Failed to submit cmd";
 
   std::vector<vk::CommandBuffer> recycle_primary;
   std::vector<vk::CommandBuffer> recycle_secondary;
@@ -114,21 +122,35 @@ void Executer::ExecuteOneTime(Task* task, uint32_t secondary_cmd_count) {
       cmd_pool_.GetCmd(vk::CommandBufferLevel::ePrimary, 1)[0];
   std::vector<vk::CommandBuffer> secondary_cmd =
       cmd_pool_.GetCmd(vk::CommandBufferLevel::eSecondary, secondary_cmd_count);
-  primary_cmd.begin(vk::CommandBufferBeginInfo(
+  auto vk_res = primary_cmd.begin(vk::CommandBufferBeginInfo(
       vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+  CHECK_VK_RESULT(vk_res) << "Failed to begin cmd";
   task->OnWorkloadRecord(primary_cmd, secondary_cmd);
-  primary_cmd.end();
+  vk_res = primary_cmd.end();
+  CHECK_VK_RESULT(vk_res) << "Failed to end cmd";
   vk::CommandBufferSubmitInfoKHR cmd_submit_info(primary_cmd);
 
   vk::SubmitInfo2KHR submit_info({}, {}, cmd_submit_info, {});
 
   auto& context = base::Base::Get().GetContext();
   auto device = context.GetDevice();
-  auto fence = device.createFence({});
+  auto fence_create_result = device.createFence({});
+  auto fence = fence_create_result.value;
 
-  context.GetQueue(0).submit2KHR(submit_info, fence);
-  device.waitForFences(fence, true, 16'000'000);
-  device.destroyFence(fence);
+  if (fence_create_result.result != vk::Result::eSuccess) {
+    LOG << "Failed to create fence, waiting for device idle. Error: "
+        << vk::to_string(fence_create_result.result);
+    auto submit_res = context.GetQueue(0).submit2KHR(submit_info, {});
+    CHECK_VK_RESULT(submit_res) << "Failed to submit cmd";
+    vk_res = device.waitIdle();
+    CHECK_VK_RESULT(vk_res) << "Failed to waitIdle";
+  } else {
+    auto submit_res = context.GetQueue(0).submit2KHR(submit_info, fence);
+    CHECK_VK_RESULT(submit_res) << "Failed to submit cmd";
+    vk_res = device.waitForFences(fence, true, 16'000'000);
+    CHECK_VK_RESULT(vk_res) << "Failed to wait for fences";
+    device.destroyFence(fence);
+  }
 
   cmd_pool_.RecycleCmd({primary_cmd}, secondary_cmd, {});
 }

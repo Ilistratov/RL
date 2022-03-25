@@ -2,6 +2,7 @@
 
 #include "base/base.h"
 #include "base/physical_device_picker.h"
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace base {
@@ -33,13 +34,15 @@ void Context::CreateDevice(ContextConfig& config) {
   LOG << "Creating device with:\nExt: " << config.device_extensions
       << "\nLayers: " << config.device_layers;
 
-  device_ = physical_device_.createDevice(info_chain.get());
-  assert(device_);
+  auto result = physical_device_.createDevice(info_chain.get());
+  CHECK_VK_RESULT(result.result) << "failed to create vk::Device";
+  device_ = result.value;
 
   device_queues_.resize(config.queue_count);
   for (uint32_t q_ind = 0; q_ind < device_queues_.size(); q_ind++) {
     device_queues_[q_ind] = device_.getQueue(queue_family_index_, q_ind);
-    assert(device_queues_[q_ind]);
+    CHECK(device_queues_[q_ind])
+        << "failed to retrive " << q_ind << "'th device queue";
   }
 }
 
@@ -81,7 +84,8 @@ uint32_t Context::GetQueueFamilyIndex() const {
 }
 
 vk::Queue Context::GetQueue(uint32_t queue_ind) const {
-  assert(queue_ind < device_queues_.size());
+  DCHECK(queue_ind < device_queues_.size())
+      << "queue_ind " << queue_ind << "out of range.";
   return device_queues_[queue_ind];
 }
 
