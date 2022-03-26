@@ -42,10 +42,8 @@ uint32_t& CommandPool::GetCmdAllocStep(vk::CommandBufferLevel cmd_level) {
 
 CommandPool::CommandPool() {
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto create_res = device.createCommandPool(vk::CommandPoolCreateInfo(
+  cmd_pool_ = device.createCommandPool(vk::CommandPoolCreateInfo(
       vk::CommandPoolCreateFlagBits::eResetCommandBuffer));
-  CHECK_VK_RESULT(create_res.result) << "Failed to create command pool.";
-  cmd_pool_ = create_res.value;
 }
 
 std::vector<vk::CommandBuffer> CommandPool::GetCmd(
@@ -61,12 +59,8 @@ std::vector<vk::CommandBuffer> CommandPool::GetCmd(
     DCHECK(alloc_step < kCmdPoolMaxAllocStep) << "Command buffer overuse";
 
     auto device = base::Base::Get().GetContext().GetDevice();
-    auto cmd_alloc_res = device.allocateCommandBuffers(
+    auto n_cmd = device.allocateCommandBuffers(
         vk::CommandBufferAllocateInfo(cmd_pool_, cmd_level, alloc_step));
-    CHECK_VK_RESULT(cmd_alloc_res.result)
-        << "Failed to allocate " << cmd_count << " " << vk::to_string(cmd_level)
-        << " command buffers.";
-    auto n_cmd = std::move(cmd_alloc_res.value);
     cmd_vec.insert(cmd_vec.end(), n_cmd.begin(), n_cmd.end());
     alloc_step *= 2;
   }

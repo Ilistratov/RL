@@ -8,10 +8,7 @@ namespace base {
 
 vk::Format Swapchain::PickFormat(vk::SurfaceKHR surface) const {
   auto device = base::Base::Get().GetContext().GetPhysicalDevice();
-  auto get_result = device.getSurfaceFormatsKHR(surface);
-  CHECK_VK_RESULT(get_result.result)
-      << "Failed to get supported surface formats.";
-  auto formats = get_result.value;
+  auto formats = device.getSurfaceFormatsKHR(surface);
   if (formats.size() == 1 && formats[0].format == vk::Format::eUndefined) {
     return formats[0].format;
   }
@@ -39,9 +36,8 @@ vk::Extent2D Swapchain::PickExtent(
 vk::SwapchainCreateInfoKHR Swapchain::GetCreateInfo() const {
   auto surface = Base::Get().GetWindow().GetSurface();
   auto physical_device = Base::Get().GetContext().GetPhysicalDevice();
-  auto get_result = physical_device.getSurfaceCapabilitiesKHR(surface);
-  CHECK_VK_RESULT(get_result.result) << "Failed to get surface capabilities.";
-  auto surface_capabilities = get_result.value;
+  auto surface_capabilities =
+      physical_device.getSurfaceCapabilitiesKHR(surface);
   vk::SwapchainCreateInfoKHR swapchain_info(
       vk::SwapchainCreateFlagsKHR{}, surface, 2, PickFormat(surface),
       vk::ColorSpaceKHR::eSrgbNonlinear, PickExtent(surface_capabilities), 1,
@@ -56,20 +52,11 @@ void Swapchain::Create() {
   DCHECK(!swapchain_) << "non-null swapchain during swapchain creation";
   auto device = Base::Get().GetContext().GetDevice();
   auto swapchain_info = GetCreateInfo();
-  auto swapchain_create_result = device.createSwapchainKHR(swapchain_info);
-  CHECK_VK_RESULT(swapchain_create_result.result)
-      << "Failed to create swapchain.";
-  swapchain_ = swapchain_create_result.value;
+  swapchain_ = device.createSwapchainKHR(swapchain_info);
   format_ = swapchain_info.imageFormat;
   extent_ = swapchain_info.imageExtent;
-  auto image_get_res = device.getSwapchainImagesKHR(swapchain_);
-  CHECK_VK_RESULT(image_get_res.result) << "Failed to get swapchain images";
-  images_ = std::move(image_get_res.value);
-  auto semaphore_create_result =
-      device.createSemaphore(vk::SemaphoreCreateInfo{});
-  CHECK_VK_RESULT(semaphore_create_result.result)
-      << "Failed to create image_available semaphore.";
-  image_avaliable_ = semaphore_create_result.value;
+  images_ = device.getSwapchainImagesKHR(swapchain_);
+  image_avaliable_ = device.createSemaphore(vk::SemaphoreCreateInfo{});
 }
 
 void Swapchain::Destroy() {
@@ -105,17 +92,19 @@ bool Swapchain::AcquireNextImage() {
   }
 
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto res =
-      device.acquireNextImageKHR(swapchain_, SWAPCHAIN_PRESENT_TIMEOUT_NSEC,
-                                 image_avaliable_, {}, &active_image_ind_);
-  if (res == vk::Result::eSuccess) {
+  vk::AcquireNextImageInfoKHR image_aquire_info(
+      swapchain_, SWAPCHAIN_PRESENT_TIMEOUT_NSEC, image_avaliable_, {}, 1);
+  auto acquire_res = device.acquireNextImage2KHR(image_aquire_info);
+  active_image_ind_ = acquire_res.value;
+  if (acquire_res.result == vk::Result::eSuccess) {
     return true;
-  } else if (res == vk::Result::eSuboptimalKHR) {
+  } else if (acquire_res.result == vk::Result::eSuboptimalKHR) {
     active_image_ind_ = UINT32_MAX;
     return false;
   }
 
-  CHECK(false) << "Failed to acquire swapchain image: " << vk::to_string(res);
+  CHECK(false) << "Failed to acquire swapchain image: "
+               << vk::to_string(acquire_res.result);
   return false;
 }
 

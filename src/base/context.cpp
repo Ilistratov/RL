@@ -34,9 +34,7 @@ void Context::CreateDevice(ContextConfig& config) {
   LOG << "Creating device with:\nExt: " << config.device_extensions
       << "\nLayers: " << config.device_layers;
 
-  auto result = physical_device_.createDevice(info_chain.get());
-  CHECK_VK_RESULT(result.result) << "failed to create vk::Device";
-  device_ = result.value;
+  device_ = physical_device_.createDevice(info_chain.get());
 
   device_queues_.resize(config.queue_count);
   for (uint32_t q_ind = 0; q_ind < device_queues_.size(); q_ind++) {

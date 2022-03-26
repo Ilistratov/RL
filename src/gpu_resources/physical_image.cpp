@@ -12,12 +12,10 @@ PhysicalImage::PhysicalImage(vk::Extent2D extent,
     : extent_(extent), format_(format) {
   CHECK(extent.height > 0 && extent.width > 0) << "Invalid image extent";
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto create_res = device.createImage(vk::ImageCreateInfo(
+  image_ = device.createImage(vk::ImageCreateInfo(
       {}, vk::ImageType::e2D, format_, vk::Extent3D(extent_, 1), 1, 1,
       vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal, image_usage,
       vk::SharingMode::eExclusive, {}, {}));
-  CHECK_VK_RESULT(create_res.result) << "Failed to create image";
-  image_ = create_res.value;
 }
 
 PhysicalImage::PhysicalImage(vk::Image image,
@@ -99,12 +97,8 @@ vk::ImageMemoryBarrier2KHR PhysicalImage::GetBarrier(
 void PhysicalImage::SetDebugName(const std::string& debug_name) const {
   DCHECK(image_) << "Resource must be created to use this method";
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto vk_res =
-      device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
-          image_.objectType, (uint64_t)(VkImage)image_, debug_name.c_str()));
-  if (vk_res != vk::Result::eSuccess) {
-    LOG << "Failed to set debug name for buffer named: " << debug_name;
-  }
+  device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
+      image_.objectType, (uint64_t)(VkImage)image_, debug_name.c_str()));
 }
 
 void PhysicalImage::CreateImageView() {
@@ -113,14 +107,12 @@ void PhysicalImage::CreateImageView() {
   }
   DCHECK(image_) << "Resource must be created to use this method";
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto create_res = device.createImageView(vk::ImageViewCreateInfo(
+  image_view_ = device.createImageView(vk::ImageViewCreateInfo(
       {}, image_, vk::ImageViewType::e2D, format_,
       vk::ComponentMapping{
           vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity,
           vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity},
       GetSubresourceRange()));
-  CHECK_VK_RESULT(create_res.result) << "Failed to create image_view";
-  image_view_ = create_res.value;
 }
 
 vk::ImageView PhysicalImage::GetImageView() const {

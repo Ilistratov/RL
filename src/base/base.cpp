@@ -13,7 +13,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 namespace base {
 
 void Base::InitInstance(BaseConfig& config) {
-  DCHECK(!instance_) << "non-null vk::Instance at base initialization";
+  DCHECK(!instance_) << "Instance already initialized";
   bool glfw_init_result = glfwInit();
   CHECK(glfw_init_result) << "failed to init glfw";
 
@@ -35,9 +35,7 @@ void Base::InitInstance(BaseConfig& config) {
   LOG << "Initializing vk::Instance with\nextensions: "
       << config.instance_extensions << "\nlayers: " << config.instance_layers;
 
-  auto create_res = vk::createInstanceUnique(instance_info);
-  CHECK_VK_RESULT(create_res.result) << "failed to create vk::Instance.";
-  instance_ = std::move(create_res.value);
+  instance_ = vk::createInstanceUnique(instance_info);
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -62,11 +60,9 @@ void Base::InitDebugLogger() {
   using TypeFlags = vk::DebugUtilsMessageTypeFlagBitsEXT;
   vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags(TypeFlags::ePerformance |
                                                      TypeFlags::eValidation);
-  auto create_res = instance_.get().createDebugUtilsMessengerEXTUnique(
+  debug_messenger_ = instance_.get().createDebugUtilsMessengerEXTUnique(
       vk::DebugUtilsMessengerCreateInfoEXT({}, severityFlags, messageTypeFlags,
                                            &debugMessageFunc));
-  CHECK_VK_RESULT(create_res.result) << "Failed to create debug messenger";
-  debug_messenger_ = std::move(create_res.value);
 }
 
 void Base::InitBase(BaseConfig& config) {

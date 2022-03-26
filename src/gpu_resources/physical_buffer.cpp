@@ -11,10 +11,8 @@ PhysicalBuffer::PhysicalBuffer(vk::DeviceSize size,
     : size_(size), usage_flags_(usage_flags) {
   assert(size > 0);
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto create_res = device.createBuffer(vk::BufferCreateInfo(
+  buffer_ = device.createBuffer(vk::BufferCreateInfo(
       {}, size, usage_flags, vk::SharingMode::eExclusive, {}));
-  CHECK_VK_RESULT(create_res.result) << "Failed to create buffer";
-  buffer_ = create_res.value;
 }
 
 PhysicalBuffer::PhysicalBuffer(PhysicalBuffer&& other) noexcept {
@@ -71,12 +69,8 @@ vk::BufferMemoryBarrier2KHR PhysicalBuffer::GetBarrier(
 void PhysicalBuffer::SetDebugName(const std::string& debug_name) const {
   DCHECK(buffer_) << "Resource must be created to use this method";
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto vk_res =
-      device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
-          buffer_.objectType, (uint64_t)(VkBuffer)buffer_, debug_name.c_str()));
-  if (vk_res != vk::Result::eSuccess) {
-    LOG << "Failed to set debug name for buffer named: " << debug_name;
-  }
+  device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
+      buffer_.objectType, (uint64_t)(VkBuffer)buffer_, debug_name.c_str()));
 }
 
 PhysicalBuffer::~PhysicalBuffer() {

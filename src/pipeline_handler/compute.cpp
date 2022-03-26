@@ -11,6 +11,7 @@ namespace pipeline_handler {
 namespace {
 
 vk::UniqueShaderModule LoadShaderModule(const std::string& file_path) {
+  DLOG << "Loading shader module from " << file_path;
   std::ifstream file(file_path, std::ios::binary | std::ios::ate);
   if (!file.good()) {
     LOG << "Failed to open " << file_path;
@@ -22,12 +23,9 @@ vk::UniqueShaderModule LoadShaderModule(const std::string& file_path) {
   file.read(shader_binary_data.data(), file_size);
   file.close();
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto create_res = device.createShaderModuleUnique(vk::ShaderModuleCreateInfo(
+  return device.createShaderModuleUnique(vk::ShaderModuleCreateInfo(
       vk::ShaderModuleCreateFlags{}, shader_binary_data.size(),
       (const uint32_t*)shader_binary_data.data()));
-  CHECK_VK_RESULT(create_res.result)
-      << "Failed to create shader module from: " << file_path;
-  return std::move(create_res.value);
 }
 
 }  // namespace
@@ -42,11 +40,8 @@ Compute::Compute(const std::vector<const DescriptorBinding*>& bindings,
   DCHECK(descriptor_set_) << "Failed to reserve descriptor set";
   std::vector<vk::DescriptorSetLayout> vk_layouts = {
       descriptor_set_->GetLayout()};
-  auto layout_create_res = device.createPipelineLayout(
+  layout_ = device.createPipelineLayout(
       vk::PipelineLayoutCreateInfo({}, vk_layouts, push_constants));
-  CHECK_VK_RESULT(layout_create_res.result)
-      << "Failed to create pipeline layout";
-  layout_ = layout_create_res.value;
   vk::UniqueShaderModule shader_module = LoadShaderModule(shader_file_path);
   auto pipeline_create_res = device.createComputePipeline(
       {}, vk::ComputePipelineCreateInfo(

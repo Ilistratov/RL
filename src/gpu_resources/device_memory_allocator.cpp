@@ -46,8 +46,9 @@ uint32_t DeviceMemoryAllocator::FindTypeIndex(uint32_t type_bits) const {
 void DeviceMemoryAllocator::ExtendPreallocBlock(uint32_t type_index,
                                                 vk::DeviceSize alignment,
                                                 vk::DeviceSize size) {
-  assert(type_index < device_memory_properties_.memoryTypeCount);
-  assert(size > 0);
+  DCHECK(type_index < device_memory_properties_.memoryTypeCount)
+      << "Invalid type index";
+  DCHECK(size > 0) << "Invalid alloc size";
   auto new_block_size =
       memory_by_type_ind_[type_index].GetAlignedOffset(alignment);
   new_block_size += size;
@@ -65,10 +66,8 @@ void DeviceMemoryAllocator::Allocate() {
     block.size = block.offset;
     block.offset = 0;
     block.type_index = type_ind;
-    auto alloc_result = device.allocateMemory(
+    block.memory = device.allocateMemory(
         vk::MemoryAllocateInfo{block.size, block.type_index});
-    CHECK_VK_RESULT(alloc_result.result) << "Failed to allocate device memory.";
-    block.memory = alloc_result.value;
   }
   for (auto& allocation : allocations_) {
     // info for actual allocation stored in RequestMemory is used here

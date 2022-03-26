@@ -16,11 +16,8 @@ DescriptorSet::DescriptorSet(
     vk_bindings[binding_ind].binding = binding_ind;
   }
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto create_res = device.createDescriptorSetLayout(
+  layout_ = device.createDescriptorSetLayout(
       vk::DescriptorSetLayoutCreateInfo({}, vk_bindings));
-  CHECK_VK_RESULT(create_res.result)
-      << "Failed to create descriptor set lauout";
-  layout_ = create_res.value;
 }
 
 DescriptorSet::DescriptorSet(DescriptorSet&& other) noexcept {

@@ -12,9 +12,7 @@ TimelineSemaphore::TimelineSemaphore() {
   vk::SemaphoreCreateInfo semaphore_create_info{};
   semaphore_create_info.pNext = &timeline_create_info;
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto create_res = device.createSemaphore(semaphore_create_info);
-  CHECK_VK_RESULT(create_res.result) << "Failed to create semaphore";
-  semaphore_ = create_res.value;
+  semaphore_ = device.createSemaphore(semaphore_create_info);
 }
 
 vk::Result TimelineSemaphore::Wait(uint64_t timeout) const {

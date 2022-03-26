@@ -13,15 +13,7 @@ bool PhysicalDevicePicker::CheckFeatures(vk::PhysicalDevice device) const {
 bool PhysicalDevicePicker::CheckPresentModes(vk::PhysicalDevice device) const {
   auto present_modes = device.getSurfacePresentModesKHR(surface_);
   auto surface_formats = device.getSurfaceFormatsKHR(surface_);
-  if (present_modes.result != vk::Result::eSuccess) {
-    LOG << "Failed to get supported present modes";
-    return false;
-  }
-  if (surface_formats.result != vk::Result::eSuccess) {
-    LOG << "Failed to get supported surface formats";
-    return false;
-  }
-  return !present_modes.value.empty() && !surface_formats.value.empty();
+  return !present_modes.empty() && !surface_formats.empty();
 }
 
 uint32_t PhysicalDevicePicker::GetSuitableQueueFamilyIndex(
@@ -44,12 +36,8 @@ bool PhysicalDevicePicker::CheckExtensions(vk::PhysicalDevice device) {
     is_available = false;
   }
   auto available_ext = device.enumerateDeviceExtensionProperties();
-  if (available_ext.result != vk::Result::eSuccess) {
-    LOG << "Failed to get available device extensions";
-    return false;
-  }
 
-  for (const auto& ext : available_ext.value) {
+  for (const auto& ext : available_ext) {
     extension_availability_[std::string(ext.extensionName)] = true;
   }
   for (const auto& [ext_name, is_available] : extension_availability_) {
@@ -62,10 +50,8 @@ bool PhysicalDevicePicker::CheckExtensions(vk::PhysicalDevice device) {
 }
 
 bool PhysicalDevicePicker::CheckSurfaceSupport(vk::PhysicalDevice device) {
-  auto get_res = device.getSurfaceSupportKHR(
-      GetSuitableQueueFamilyIndex(device), surface_);
-  CHECK_VK_RESULT(get_res.result) << "Failed to get surface support for device";
-  return get_res.value;
+  return device.getSurfaceSupportKHR(GetSuitableQueueFamilyIndex(device),
+                                     surface_);
 }
 
 bool PhysicalDevicePicker::IsDeviceSuitable(vk::PhysicalDevice device) {
@@ -105,9 +91,7 @@ bool PhysicalDevicePicker::DeviceCmp(vk::PhysicalDevice lhs,
 void PhysicalDevicePicker::PickPhysicalDevice() {
   auto instance = Base::Get().GetInstance();
   auto physical_devices = instance.enumeratePhysicalDevices();
-  CHECK_VK_RESULT(physical_devices.result)
-      << "Failed to enumerate physical devices";
-  for (auto& current_device : physical_devices.value) {
+  for (auto& current_device : physical_devices) {
     LOG << "Checking "
         << std::string(current_device.getProperties().deviceName);
 

@@ -129,9 +129,7 @@ Mandelbrot::Mandelbrot() {
   LOG << "Initializing Renderer";
   auto device = base::Base::Get().GetContext().GetDevice();
   auto& swapchain = base::Base::Get().GetSwapchain();
-  auto create_res = device.createSemaphore({});
-  CHECK_VK_RESULT(create_res.result) << "Failed to create semaphore";
-  ready_to_present_ = create_res.value;
+  ready_to_present_ = device.createSemaphore({});
 
   LOG << "Adding resources to RenderGraph";
   render_graph_.GetResourceManager().AddImage(
@@ -163,8 +161,7 @@ bool Mandelbrot::Draw() {
 
 Mandelbrot::~Mandelbrot() {
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto vk_res = device.waitIdle();
-  CHECK_VK_RESULT(vk_res) << "Failed to waitIdle";
+  device.waitIdle();
   device.destroySemaphore(ready_to_present_);
 }
 

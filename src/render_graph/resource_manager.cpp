@@ -53,8 +53,7 @@ void ResourceManager::InitResources() {
   }
   auto device = base::Base::Get().GetContext().GetDevice();
   if (!buffer_bind_infos.empty()) {
-    auto vk_res = device.bindBufferMemory2(buffer_bind_infos);
-    CHECK_VK_RESULT(vk_res) << "Failed to bind buffer memory";
+    device.bindBufferMemory2(buffer_bind_infos);
   }
 
   std::vector<vk::BindImageMemoryInfo> image_bind_infos;
@@ -63,8 +62,7 @@ void ResourceManager::InitResources() {
     image_bind_infos.push_back(image.GetBindMemoryInfo());
   }
   if (!image_bind_infos.empty()) {
-    auto vk_res = device.bindImageMemory2(image_bind_infos);
-    CHECK_VK_RESULT(vk_res) << "Failed to bind image memory";
+    device.bindImageMemory2(image_bind_infos);
   }
 }
 
