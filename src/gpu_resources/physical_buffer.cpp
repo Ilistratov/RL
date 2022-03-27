@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace gpu_resources {
 
 PhysicalBuffer::PhysicalBuffer(vk::DeviceSize size,
@@ -41,15 +43,15 @@ vk::BufferUsageFlags PhysicalBuffer::GetUsageFlags() const {
 }
 
 vk::MemoryRequirements PhysicalBuffer::GetMemoryRequierments() const {
-  assert(buffer_);
+  DCHECK(buffer_) << "Resource already created";
   auto device = base::Base::Get().GetContext().GetDevice();
   return device.getBufferMemoryRequirements(buffer_);
 }
 
 vk::BindBufferMemoryInfo PhysicalBuffer::GetBindMemoryInfo(
     MemoryBlock memory_block) const {
-  assert(buffer_);
-  assert(memory_block.memory);
+  DCHECK(buffer_) << "Resource must be created to use this method";
+  DCHECK(memory_block.memory) << "Expected non-null memory at bind time";
   return vk::BindBufferMemoryInfo(buffer_, memory_block.memory,
                                   memory_block.offset);
 }
@@ -65,7 +67,7 @@ vk::BufferMemoryBarrier2KHR PhysicalBuffer::GetBarrier(
 }
 
 void PhysicalBuffer::SetDebugName(const std::string& debug_name) const {
-  assert(buffer_);
+  DCHECK(buffer_) << "Resource must be created to use this method";
   auto device = base::Base::Get().GetContext().GetDevice();
   device.setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT(
       buffer_.objectType, (uint64_t)(VkBuffer)buffer_, debug_name.c_str()));

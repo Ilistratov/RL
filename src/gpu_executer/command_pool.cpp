@@ -2,6 +2,7 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace gpu_executer {
@@ -55,7 +56,7 @@ std::vector<vk::CommandBuffer> CommandPool::GetCmd(
     if (alloc_step + cmd_vec.size() < cmd_count) {
       alloc_step = cmd_count - cmd_vec.size();
     }
-    assert(alloc_step < kCmdPoolMaxAllocStep);
+    DCHECK(alloc_step < kCmdPoolMaxAllocStep) << "Command buffer overuse";
 
     auto device = base::Base::Get().GetContext().GetDevice();
     auto n_cmd = device.allocateCommandBuffers(
@@ -89,11 +90,11 @@ CommandPool::~CommandPool() {
   auto device = base::Base::Get().GetContext().GetDevice();
   CheckInprogressBatches();
   if (!primary_cmd_.empty()) {
-    LOG(INFO) << "Freeing " << primary_cmd_.size() << " primary cmd's";
+    LOG << "Freeing " << primary_cmd_.size() << " primary cmd's";
     device.freeCommandBuffers(cmd_pool_, primary_cmd_);
   }
   if (!secondary_cmd_.empty()) {
-    LOG(INFO) << "Freeing " << secondary_cmd_.size() << " secondary cmd's";
+    LOG << "Freeing " << secondary_cmd_.size() << " secondary cmd's";
     device.freeCommandBuffers(cmd_pool_, secondary_cmd_);
   }
   device.destroyCommandPool(cmd_pool_);

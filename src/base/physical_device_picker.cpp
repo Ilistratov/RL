@@ -1,6 +1,7 @@
 #include "base/physical_device_picker.h"
 
 #include "base/base.h"
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace base {
@@ -10,8 +11,9 @@ bool PhysicalDevicePicker::CheckFeatures(vk::PhysicalDevice device) const {
 }
 
 bool PhysicalDevicePicker::CheckPresentModes(vk::PhysicalDevice device) const {
-  return !device.getSurfacePresentModesKHR(surface_).empty() &&
-         !device.getSurfaceFormatsKHR(surface_).empty();
+  auto present_modes = device.getSurfacePresentModesKHR(surface_);
+  auto surface_formats = device.getSurfaceFormatsKHR(surface_);
+  return !present_modes.empty() && !surface_formats.empty();
 }
 
 uint32_t PhysicalDevicePicker::GetSuitableQueueFamilyIndex(
@@ -25,7 +27,7 @@ uint32_t PhysicalDevicePicker::GetSuitableQueueFamilyIndex(
     }
     ++family_index;
   }
-  LOG(DEBUG) << "No suitable queue family found";
+  LOG << "No suitable queue family found";
   return -1;
 }
 
@@ -34,12 +36,13 @@ bool PhysicalDevicePicker::CheckExtensions(vk::PhysicalDevice device) {
     is_available = false;
   }
   auto available_ext = device.enumerateDeviceExtensionProperties();
+
   for (const auto& ext : available_ext) {
     extension_availability_[std::string(ext.extensionName)] = true;
   }
   for (const auto& [ext_name, is_available] : extension_availability_) {
     if (!is_available) {
-      LOG(DEBUG) << "Extension " << ext_name << " is not available";
+      LOG << "Extension " << ext_name << " is not available";
       return false;
     }
   }
@@ -89,8 +92,8 @@ void PhysicalDevicePicker::PickPhysicalDevice() {
   auto instance = Base::Get().GetInstance();
   auto physical_devices = instance.enumeratePhysicalDevices();
   for (auto& current_device : physical_devices) {
-    LOG(DEBUG) << "Checking "
-               << std::string(current_device.getProperties().deviceName);
+    LOG << "Checking "
+        << std::string(current_device.getProperties().deviceName);
 
     if (IsDeviceSuitable(current_device) &&
         DeviceCmp(result_device_, current_device)) {
@@ -99,12 +102,13 @@ void PhysicalDevicePicker::PickPhysicalDevice() {
     }
   }
 
-  assert(result_device_);
-  assert(result_queue_family_index_ != uint32_t(-1));
+  CHECK(result_device_) << "failed to pick physical device";
+  CHECK(result_queue_family_index_ != uint32_t(-1))
+      << "invalid device queue family index";
 
-  LOG(DEBUG) << "Picked device: "
-             << std::string(result_device_.getProperties().deviceName)
-             << " With queue family: " << result_queue_family_index_;
+  LOG << "Picked device: "
+      << std::string(result_device_.getProperties().deviceName)
+      << " With queue family: " << result_queue_family_index_;
 }
 
 PhysicalDevicePicker::PhysicalDevicePicker(const ContextConfig* config,

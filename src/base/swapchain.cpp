@@ -1,6 +1,7 @@
 #include "base/swapchain.h"
 
 #include "base/base.h"
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace base {
@@ -19,15 +20,16 @@ vk::Format Swapchain::PickFormat(vk::SurfaceKHR surface) const {
       return format.format;
     }
   }
-  LOG(ERROR) << "Failed to pick swapchain format";
-  assert(false);
+  CHECK(false) << "Failed to pick swapchain format";
   return vk::Format::eUndefined;
 }
 
 vk::Extent2D Swapchain::PickExtent(
     vk::SurfaceCapabilitiesKHR surface_capabilities) const {
-  assert(surface_capabilities.currentExtent.width != UINT32_MAX);
-  assert(surface_capabilities.currentExtent.height != UINT32_MAX);
+  CHECK(surface_capabilities.currentExtent.width != UINT32_MAX)
+      << "unsupported/invalid present surface";
+  CHECK(surface_capabilities.currentExtent.height != UINT32_MAX)
+      << "unsupported/invalid present surface";
   return surface_capabilities.currentExtent;
 }
 
@@ -47,7 +49,7 @@ vk::SwapchainCreateInfoKHR Swapchain::GetCreateInfo() const {
 }
 
 void Swapchain::Create() {
-  assert(!swapchain_);
+  DCHECK(!swapchain_) << "non-null swapchain during swapchain creation";
   auto device = Base::Get().GetContext().GetDevice();
   auto swapchain_info = GetCreateInfo();
   swapchain_ = device.createSwapchainKHR(swapchain_info);
@@ -84,24 +86,25 @@ const static uint64_t SWAPCHAIN_PRESENT_TIMEOUT_NSEC = 5'000'000'000;
 
 bool Swapchain::AcquireNextImage() {
   if (active_image_ind_ != UINT32_MAX) {
-    LOG(WARNING) << "acquireNextImage called before previously acquired image "
-                    "was presented, keeping old activeImageInd";
+    LOG << "acquireNextImage called before previously acquired image "
+           "was presented, keeping old activeImageInd";
     return true;
   }
 
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto res =
-      device.acquireNextImageKHR(swapchain_, SWAPCHAIN_PRESENT_TIMEOUT_NSEC,
-                                 image_avaliable_, {}, &active_image_ind_);
-  if (res == vk::Result::eSuccess) {
+  vk::AcquireNextImageInfoKHR image_aquire_info(
+      swapchain_, SWAPCHAIN_PRESENT_TIMEOUT_NSEC, image_avaliable_, {}, 1);
+  auto acquire_res = device.acquireNextImage2KHR(image_aquire_info);
+  active_image_ind_ = acquire_res.value;
+  if (acquire_res.result == vk::Result::eSuccess) {
     return true;
-  } else if (res == vk::Result::eSuboptimalKHR) {
+  } else if (acquire_res.result == vk::Result::eSuboptimalKHR) {
     active_image_ind_ = UINT32_MAX;
     return false;
   }
 
-  LOG(ERROR) << "Failed to acquire swapchain image: " << vk::to_string(res);
-  assert(false);
+  CHECK(false) << "Failed to acquire swapchain image: "
+               << vk::to_string(acquire_res.result);
   return false;
 }
 
@@ -114,26 +117,18 @@ vk::Semaphore Swapchain::GetImageAvaliableSemaphore() const noexcept {
 }
 
 vk::Result Swapchain::Present(vk::Semaphore semaphore_to_wait) {
-  vk::Result res;
   vk::Queue present_queue = Base::Get().GetContext().GetQueue(0);
-  try {
-    res = present_queue.presentKHR(vk::PresentInfoKHR(
-        semaphore_to_wait, swapchain_, active_image_ind_, {}));
-  } catch (const vk::OutOfDateKHRError& e) {
-    return vk::Result::eErrorOutOfDateKHR;
-  } catch (const std::exception& e) {
-    LOG(ERROR) << "Exception during present: " << e.what();
-    return vk::Result::eErrorUnknown;
+  vk::Result res = present_queue.presentKHR(
+      vk::PresentInfoKHR(semaphore_to_wait, swapchain_, active_image_ind_, {}));
+  if (res != vk::Result::eSuboptimalKHR && res != vk::Result::eSuccess) {
+    LOG << "Error during present: " << vk::to_string(res);
+    return res;
   }
 
-  if (res == vk::Result::eSuccess) {
-    active_image_ind_ = UINT32_MAX;
-    return vk::Result::eSuccess;
-  } else if (res == vk::Result::eSuboptimalKHR) {
-    return vk::Result::eSuboptimalKHR;
-  }
+  active_image_ind_ = UINT32_MAX;
+  return res;
 
-  LOG(ERROR) << "Unexpected error " << vk::to_string(res);
+  LOG << "Unexpected error " << vk::to_string(res);
   return vk::Result::eErrorUnknown;
 }
 

@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace pipeline_handler {
 
 void DescriptorPool::CreatePool() {
@@ -45,7 +47,7 @@ DescriptorSet* DescriptorPool::ReserveDescriptorSet(
 }
 
 void DescriptorPool::Create() {
-  assert(!pool_);
+  DCHECK(!pool_) << "Expected null pool during creation";
   CreatePool();
   AllocateSets();
 }

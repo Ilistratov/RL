@@ -25,12 +25,12 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& vec) {
 class Logger;
 
 class LogEntry {
-  Logger* dst_logger_ = nullptr;
   std::ostringstream message_;
 
  public:
-  LogEntry(Logger* dst_logger, std::string_view source_location);
-  LogEntry(LogEntry&& other);
+  LogEntry(std::string_view source_location);
+  LogEntry(const LogEntry&) = delete;
+  void operator=(const LogEntry&) = delete;
 
   template <typename T>
   LogEntry& operator<<(const T& entry_contents) {
@@ -41,23 +41,36 @@ class LogEntry {
   ~LogEntry();
 };
 
+class EmptyEntry {
+ public:
+  template <typename T>
+  LogEntry& operator<<(const T&) {
+    return *this;
+  }
+};
+
 class Logger {
   std::chrono::system_clock::time_point start_;
 
  public:
   Logger();
 
-  LogEntry NewEntry(std::string_view location_string);
   std::chrono::system_clock::time_point GetStartTime() const;
   void Log(const std::string& message);
+  static void AddInitialLogTag(std::ostringstream& out,
+                               const std::string_view source_location);
 };
 
 extern Logger GlobalLogger;
 
 }  // namespace utill
 
-#define LOG(TAG)                                             \
-  utill::GlobalLogger.NewEntry(                              \
-      std::string(__FILE__).substr(SOURCE_PATH_SIZE) + ":" + \
-      std::to_string(__LINE__))                              \
-      << "[" #TAG "] "
+#define LOG                                                              \
+  utill::LogEntry(std::string(__FILE__).substr(SOURCE_PATH_SIZE) + ":" + \
+                  std::to_string(__LINE__))
+
+#ifdef NDEBUG
+#define DLOG utill::EmptyEntry()
+#else
+#define DLOG LOG
+#endif

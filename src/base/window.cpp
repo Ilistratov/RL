@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace base {
 
 Window::Window(vk::Extent2D extent) {
@@ -9,11 +11,11 @@ Window::Window(vk::Extent2D extent) {
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   window_ = glfwCreateWindow(extent.width, extent.height,
                              "RL2_WND_Name_Configure_TBD", nullptr, nullptr);
-  assert(window_);
+  CHECK(window_) << "Failed to create window";
   VkSurfaceKHR surface = VK_NULL_HANDLE;
   auto res = glfwCreateWindowSurface(Base::Get().GetInstance(), window_,
                                      nullptr, &surface);
-  assert(res == VK_SUCCESS);
+  CHECK_VK_RESULT(vk::Result(res)) << "Failed to create VkSurface";
   surface_ = vk::SurfaceKHR(surface);
 }
 

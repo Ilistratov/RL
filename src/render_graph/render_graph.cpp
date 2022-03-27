@@ -1,5 +1,6 @@
 #include "render_graph/render_graph.h"
 
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace render_graph {
@@ -7,7 +8,7 @@ namespace render_graph {
 void RenderGraph::AddPass(Pass* pass,
                           vk::Semaphore external_signal,
                           vk::Semaphore external_wait) {
-  assert(pass);
+  DCHECK(pass) << "Can't add null";
   pass->BindResources(passes_.size(), resource_manager_);
   pass->ReserveDescriptorSets(descriptor_pool_);
   executer_.ScheduleTask(pass, pass->GetStageFlags(), external_signal,
@@ -20,12 +21,12 @@ ResourceManager& RenderGraph::GetResourceManager() {
 }
 
 void RenderGraph::Init() {
-  LOG(INFO) << "Initializing resources";
+  LOG << "Initializing resources";
   resource_manager_.InitResources();
-  LOG(INFO) << "Creating descriptor pool";
+  LOG << "Creating descriptor pool";
   descriptor_pool_.Create();
 
-  LOG(INFO) << "Performing initial layout transitions";
+  LOG << "Performing initial layout transitions";
   auto init_barriers_record = [this](vk::CommandBuffer primary_cmd,
                                      const std::vector<vk::CommandBuffer>&) {
     resource_manager_.RecordInitBarriers(primary_cmd);
@@ -34,11 +35,11 @@ void RenderGraph::Init() {
       init_barriers_record);
   executer_.ExecuteOneTime(&init_task);
 
-  LOG(INFO) << "Notifying passes";
+  LOG << "Notifying passes";
   for (auto& pass : passes_) {
     pass->OnResourcesInitialized();
   }
-  LOG(INFO) << "RenderGraph initialized";
+  LOG << "RenderGraph initialized";
 }
 
 void RenderGraph::RenderFrame() {

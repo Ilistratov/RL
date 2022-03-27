@@ -4,6 +4,7 @@
 #include <list>
 
 #include "base/base.h"
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace gpu_executer {
@@ -50,12 +51,14 @@ Executer::SubmitInfo Executer::RecordCmdBatch(uint32_t batch_start,
 
     tasks_[i].task->OnWorkloadRecord(primary_cmd, task_secondary_cmd);
     if (tasks_[i].external_signal) {
-      assert(batch_end - batch_start == 1);
+      DCHECK(batch_end - batch_start == 1)
+          << "Batch with semaphore deps must have only 1 primary cmd";
       res.semaphore_to_signal.push_back(vk::SemaphoreSubmitInfoKHR(
           tasks_[i].external_signal, 0, tasks_[i].stage_flags));
     }
     if (tasks_[i].external_wait) {
-      assert(batch_end - batch_start == 1);
+      DCHECK(batch_end - batch_start == 1)
+          << "Batch with semaphore deps must have only 1 primary cmd";
       res.semaphore_to_wait.push_back(vk::SemaphoreSubmitInfoKHR(
           tasks_[i].external_wait, 0, tasks_[i].stage_flags));
     }
@@ -114,12 +117,13 @@ void Executer::ExecuteOneTime(Task* task, uint32_t secondary_cmd_count) {
       cmd_pool_.GetCmd(vk::CommandBufferLevel::ePrimary, 1)[0];
   std::vector<vk::CommandBuffer> secondary_cmd =
       cmd_pool_.GetCmd(vk::CommandBufferLevel::eSecondary, secondary_cmd_count);
+
   primary_cmd.begin(vk::CommandBufferBeginInfo(
       vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
   task->OnWorkloadRecord(primary_cmd, secondary_cmd);
   primary_cmd.end();
-  vk::CommandBufferSubmitInfoKHR cmd_submit_info(primary_cmd);
 
+  vk::CommandBufferSubmitInfoKHR cmd_submit_info(primary_cmd);
   vk::SubmitInfo2KHR submit_info({}, {}, cmd_submit_info, {});
 
   auto& context = base::Base::Get().GetContext();

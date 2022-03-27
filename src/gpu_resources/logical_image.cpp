@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace gpu_resources {
 
 LogicalImage::LogicalImage(vk::Extent2D extent,
@@ -49,13 +51,13 @@ void LogicalImage::SetDebugName(const std::string& debug_name) const {
 }
 
 void LogicalImage::RequestMemory(DeviceMemoryAllocator& allocator) {
-  assert(image_.GetImage());
+  DCHECK(image_.GetImage()) << "Resource must be created to use this method";
   memory_ =
       allocator.RequestMemory(image_.GetMemoryRequierments(), memory_flags_);
 }
 
 vk::BindImageMemoryInfo LogicalImage::GetBindMemoryInfo() const {
-  assert(memory_);
+  DCHECK(memory_) << "Expected non-null memory at bind time";
   return image_.GetBindMemoryInfo(*memory_);
 }
 

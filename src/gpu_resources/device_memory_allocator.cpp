@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace gpu_resources {
 
 uint32_t DeviceMemoryAllocator::GetSuitableTypeBits(
@@ -44,8 +46,9 @@ uint32_t DeviceMemoryAllocator::FindTypeIndex(uint32_t type_bits) const {
 void DeviceMemoryAllocator::ExtendPreallocBlock(uint32_t type_index,
                                                 vk::DeviceSize alignment,
                                                 vk::DeviceSize size) {
-  assert(type_index < device_memory_properties_.memoryTypeCount);
-  assert(size > 0);
+  DCHECK(type_index < device_memory_properties_.memoryTypeCount)
+      << "Invalid type index";
+  DCHECK(size > 0) << "Invalid alloc size";
   auto new_block_size =
       memory_by_type_ind_[type_index].GetAlignedOffset(alignment);
   new_block_size += size;

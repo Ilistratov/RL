@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace gpu_executer {
 
 TimelineSemaphore::TimelineSemaphore() {

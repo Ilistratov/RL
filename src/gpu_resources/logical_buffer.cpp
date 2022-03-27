@@ -2,6 +2,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace gpu_resources {
 
 LogicalBuffer::LogicalBuffer(vk::DeviceSize size,
@@ -28,7 +30,7 @@ void LogicalBuffer::Swap(LogicalBuffer& other) noexcept {
 }
 
 void LogicalBuffer::Create() {
-  assert(!buffer_.GetBuffer());
+  DCHECK(!buffer_.GetBuffer()) << "Resource already created";
   buffer_ = PhysicalBuffer(size_, usage_flags_);
 }
 
@@ -37,12 +39,13 @@ void LogicalBuffer::SetDebugName(const std::string& debug_name) const {
 }
 
 void LogicalBuffer::RequestMemory(DeviceMemoryAllocator& allocator) {
+  DCHECK(buffer_.GetBuffer()) << "Resource must be created to use this method";
   memory_ =
       allocator.RequestMemory(buffer_.GetMemoryRequierments(), memory_flags_);
 }
 
 vk::BindBufferMemoryInfo LogicalBuffer::GetBindMemoryInfo() const {
-  assert(memory_);
+  DCHECK(memory_) << "Expected non-null memory at bind time";
   return buffer_.GetBindMemoryInfo(*memory_);
 }
 

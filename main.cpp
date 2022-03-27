@@ -7,6 +7,7 @@
 #include "base/context.h"
 #include "gpu_executer/executer.h"
 #include "pipeline_handler/compute.h"
+#include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
 
@@ -16,14 +17,14 @@ void Run() {
   while (!glfwWindowShouldClose(window.GetWindow())) {
     glfwPollEvents();
     if (!renderer.Draw()) {
-      LOG(ERROR) << "Failed to draw";
+      LOG << "Failed to draw";
       break;
     }
   }
 }
 
 int main() {
-  LOG(INFO) << "RL start";
+  LOG << "RL start";
 
   base::BaseConfig base_config = {
       {VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
@@ -43,12 +44,12 @@ int main() {
       vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eGraphics};
 
   try {
-    base::Base::Get().Init(base_config, vk::Extent2D{1280, 768},
+    base::Base::Get().Init(base_config, vk::Extent2D{1366, 768},
                            context_config);
     utill::InputManager::Init();
     Run();
   } catch (std::exception e) {
-    LOG(ERROR) << e.what();
+    LOG << e.what();
   }
-  LOG(INFO) << "RL end";
+  LOG << "RL end";
 }

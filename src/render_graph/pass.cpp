@@ -1,5 +1,7 @@
 #include "render_graph/pass.h"
 
+#include "utill/error_handling.h"
+
 namespace render_graph {
 
 void Pass::RecordPostPassParriers(vk::CommandBuffer cmd) {
@@ -30,7 +32,7 @@ Pass::Pass(uint32_t secondary_cmd_count, vk::PipelineStageFlags2KHR stage_flags)
     : secondary_cmd_count_(secondary_cmd_count), stage_flags_(stage_flags) {}
 
 void Pass::BindResources(uint32_t user_ind, ResourceManager& resource_manager) {
-  assert(user_ind_ == (uint32_t)(-1));
+  DCHECK(user_ind_ == (uint32_t)(-1)) << "Resources already bound";
   user_ind_ = user_ind;
   for (auto& [name, buffer] : buffer_binds_) {
     buffer.OnResourceBind(user_ind_, &resource_manager.GetBuffer(name));
@@ -47,7 +49,8 @@ void Pass::OnResourcesInitialized() noexcept {}
 void Pass::OnWorkloadRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer>& secondary_cmd) {
-  assert(user_ind_ != uint32_t(-1));
+  DCHECK(user_ind_ != uint32_t(-1))
+      << "Resources must be bound to use this method";
   OnRecord(primary_cmd, secondary_cmd);
   RecordPostPassParriers(primary_cmd);
 }

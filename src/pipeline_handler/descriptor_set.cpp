@@ -4,6 +4,8 @@
 
 #include "base/base.h"
 
+#include "utill/error_handling.h"
+
 namespace pipeline_handler {
 
 DescriptorSet::DescriptorSet(
@@ -41,7 +43,7 @@ vk::DescriptorSet DescriptorSet::GetSet() const {
 
 void DescriptorSet::UpdateDescriptorSet(
     const std::vector<const DescriptorBinding*>& bindings) const {
-  assert(set_);
+  DCHECK(set_) << "Descriptor set must be created to use this method";
   std::vector<Write> writes(bindings.size());
   std::vector<vk::WriteDescriptorSet> vk_writes(bindings.size());
   for (uint32_t i = 0; i < bindings.size(); i++) {
