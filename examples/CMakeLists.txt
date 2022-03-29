@@ -4,6 +4,8 @@ project(Examples)
 
 set(SRC
   mandelbrot.cpp
+  raytracer.cpp
+  swapchain_present_pass.cpp
 )
 
 add_library(examples ${SRC})

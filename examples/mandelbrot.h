@@ -2,6 +2,7 @@
 
 #include "pipeline_handler/compute.h"
 #include "render_graph/render_graph.h"
+#include "swapchain_present_pass.h"
 
 namespace examples {
 
@@ -28,13 +29,6 @@ class MandelbrotDrawPass : public render_graph::Pass {
   void OnResourcesInitialized() noexcept override;
 
   PushConstants& GetPushConstants();
-};
-
-class SwapchainPresentPass : public render_graph::Pass {
- public:
-  SwapchainPresentPass();
-  void OnRecord(vk::CommandBuffer primary_cmd,
-                const std::vector<vk::CommandBuffer>&) noexcept override;
 };
 
 class Mandelbrot {

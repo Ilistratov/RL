@@ -54,48 +54,6 @@ PushConstants& MandelbrotDrawPass::GetPushConstants() {
   return push_constants_;
 }
 
-SwapchainPresentPass::SwapchainPresentPass()
-    : Pass(0, vk::PipelineStageFlagBits2KHR::eTransfer) {
-  LOG << "Initializing SwapchainPresentPass";
-  image_binds_[kRT_NAME] = render_graph::ImagePassBind(
-      gpu_resources::ResourceUsage{vk::PipelineStageFlagBits2KHR::eTransfer,
-                                   vk::AccessFlagBits2KHR::eTransferRead,
-                                   vk::ImageLayout::eTransferSrcOptimal},
-      vk::ImageUsageFlagBits::eTransferSrc);
-  LOG << "Image binds count " << image_binds_.size();
-}
-
-void SwapchainPresentPass::OnRecord(
-    vk::CommandBuffer primary_cmd,
-    const std::vector<vk::CommandBuffer>&) noexcept {
-  auto& swapchain = base::Base::Get().GetSwapchain();
-  gpu_resources::PhysicalImage swapchain_image(
-      swapchain.GetImage(swapchain.GetActiveImageInd()), swapchain.GetExtent(),
-      swapchain.GetFormat());
-
-  auto pre_blit_barrier = swapchain_image.GetBarrier(
-      vk::PipelineStageFlagBits2KHR::eTopOfPipe, {},
-      vk::PipelineStageFlagBits2KHR::eTransfer,
-      vk::AccessFlagBits2KHR::eTransferWrite, vk::ImageLayout::eUndefined,
-      vk::ImageLayout::eTransferDstOptimal);
-  primary_cmd.pipelineBarrier2KHR(
-      vk::DependencyInfoKHR({}, {}, {}, pre_blit_barrier));
-
-  gpu_resources::PhysicalImage::RecordBlit(
-      primary_cmd, image_binds_[kRT_NAME].GetBoundImage()->GetPhysicalImage(),
-      swapchain_image);
-
-  auto post_blit_barrier = swapchain_image.GetBarrier(
-      vk::PipelineStageFlagBits2KHR::eTransfer,
-      vk::AccessFlagBits2KHR::eTransferWrite,
-      vk::PipelineStageFlagBits2KHR::eBottomOfPipe, {},
-      vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::ePresentSrcKHR);
-  primary_cmd.pipelineBarrier2KHR(
-      vk::DependencyInfoKHR({}, {}, {}, post_blit_barrier));
-
-  swapchain_image.Release();
-}
-
 void Mandelbrot::UpdatePushConstants() {
   auto mouse_state = utill::InputManager::GetMouseState();
   auto& swapchain = base::Base::Get().GetSwapchain();
@@ -125,7 +83,7 @@ void Mandelbrot::UpdatePushConstants() {
   pc.scale = pc.scale * 0.8 + dst_scale_ * 0.2;
 }
 
-Mandelbrot::Mandelbrot() {
+Mandelbrot::Mandelbrot() : present_(kRT_NAME) {
   LOG << "Initializing Renderer";
   auto device = base::Base::Get().GetContext().GetDevice();
   auto& swapchain = base::Base::Get().GetSwapchain();
