@@ -9,7 +9,7 @@
 #include "utill/logger.h"
 
 namespace examples {
-const std::string kRT_NAME = "render_target";
+const static std::string kColorTarget = "render_target";
 
 void MandelbrotDrawPass::OnRecord(
     vk::CommandBuffer primary_cmd,
@@ -30,7 +30,7 @@ MandelbrotDrawPass::MandelbrotDrawPass()
   rt_usage.stage = vk::PipelineStageFlagBits2KHR::eComputeShader;
   rt_usage.layout = vk::ImageLayout::eGeneral;
 
-  image_binds_[kRT_NAME] = render_graph::ImagePassBind(
+  image_binds_[kColorTarget] = render_graph::ImagePassBind(
       rt_usage, vk::ImageUsageFlagBits::eStorage,
       vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
   LOG << "Image binds count " << image_binds_.size();
@@ -40,14 +40,14 @@ void MandelbrotDrawPass::ReserveDescriptorSets(
     pipeline_handler::DescriptorPool& pool) noexcept {
   vk::PushConstantRange pc_range(vk::ShaderStageFlagBits::eCompute, 0,
                                  sizeof(PushConstants));
-  assert(image_binds_.contains(kRT_NAME));
-  auto rt_bind = image_binds_[kRT_NAME];
+  DCHECK(image_binds_.contains(kColorTarget));
+  auto rt_bind = image_binds_[kColorTarget];
   compute_pipeline_ = pipeline_handler::Compute({&rt_bind}, pool, {pc_range},
                                                 "mandelbrot.spv", "main");
 }
 
 void MandelbrotDrawPass::OnResourcesInitialized() noexcept {
-  compute_pipeline_.UpdateDescriptorSet({&image_binds_[kRT_NAME]});
+  compute_pipeline_.UpdateDescriptorSet({&image_binds_[kColorTarget]});
 }
 
 PushConstants& MandelbrotDrawPass::GetPushConstants() {
@@ -83,7 +83,7 @@ void Mandelbrot::UpdatePushConstants() {
   pc.scale = pc.scale * 0.8 + dst_scale_ * 0.2;
 }
 
-Mandelbrot::Mandelbrot() : present_(kRT_NAME) {
+Mandelbrot::Mandelbrot() : present_(kColorTarget) {
   LOG << "Initializing Renderer";
   auto device = base::Base::Get().GetContext().GetDevice();
   auto& swapchain = base::Base::Get().GetSwapchain();
@@ -91,7 +91,7 @@ Mandelbrot::Mandelbrot() : present_(kRT_NAME) {
 
   LOG << "Adding resources to RenderGraph";
   render_graph_.GetResourceManager().AddImage(
-      kRT_NAME, {}, {}, vk::MemoryPropertyFlagBits::eDeviceLocal);
+      kColorTarget, {}, {}, vk::MemoryPropertyFlagBits::eDeviceLocal);
   LOG << "Adding draw pass";
   render_graph_.AddPass(&draw_, {}, {});
   LOG << "Adding present pass";

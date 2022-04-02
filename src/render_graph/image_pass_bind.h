@@ -18,6 +18,7 @@ class ImagePassBind : public pipeline_handler::DescriptorBinding {
                 vk::ImageUsageFlags image_usage_flags,
                 vk::DescriptorType descriptor_type = {},
                 vk::ShaderStageFlags stage_flags = {});
+  static ImagePassBind ComputeRenderTarget(vk::AccessFlagBits2KHR access_flags);
 
   void OnResourceBind(uint32_t user_ind, gpu_resources::LogicalImage* image);
   gpu_resources::LogicalImage* GetBoundImage() const;

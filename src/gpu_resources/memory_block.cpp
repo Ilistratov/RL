@@ -16,7 +16,8 @@ MemoryBlock MemoryBlock::Suballocate(vk::DeviceSize block_size,
                                      vk::DeviceSize alignment) {
   vk::DeviceSize n_offset = GetAlignedOffset(alignment);
   DCHECK(n_offset + block_size <= size) << "No enough space for suballocation";
-  MemoryBlock result = {memory, block_size, n_offset, type_index};
+  MemoryBlock result = {memory, block_size, n_offset, type_index,
+                        (char*)mapping_start + n_offset};
   offset = n_offset + block_size;
   return result;
 }

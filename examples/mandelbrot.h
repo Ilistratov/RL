@@ -32,10 +32,10 @@ class MandelbrotDrawPass : public render_graph::Pass {
 };
 
 class Mandelbrot {
-  render_graph::RenderGraph render_graph_;
   MandelbrotDrawPass draw_;
   SwapchainPresentPass present_;
   vk::Semaphore ready_to_present_;
+  render_graph::RenderGraph render_graph_;
   float dst_x_ = 0;
   float dst_y_ = 0;
   float dst_scale_ = 1;

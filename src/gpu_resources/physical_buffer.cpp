@@ -78,4 +78,24 @@ PhysicalBuffer::~PhysicalBuffer() {
   device.destroyBuffer(buffer_);
 }
 
+void PhysicalBuffer::RecordCopy(vk::CommandBuffer cmd,
+                                const PhysicalBuffer& src,
+                                const PhysicalBuffer& dst,
+                                vk::DeviceSize src_offset,
+                                vk::DeviceSize dst_offset,
+                                vk::DeviceSize size) {
+  PhysicalBuffer::RecordCopy(cmd, src, dst,
+                             {vk::BufferCopy(src_offset, dst_offset, size)});
+}
+
+void PhysicalBuffer::RecordCopy(
+    vk::CommandBuffer cmd,
+    const PhysicalBuffer& src,
+    const PhysicalBuffer& dst,
+    const std::vector<vk::BufferCopy>& copy_regions) {
+  DCHECK(src.buffer_) << "src must be created to use this method";
+  DCHECK(dst.buffer_) << "dst must be created to use this method";
+  cmd.copyBuffer(src.buffer_, dst.buffer_, copy_regions);
+}
+
 }  // namespace gpu_resources

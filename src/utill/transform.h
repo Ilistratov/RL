@@ -5,7 +5,7 @@
 namespace utill {
 
 class Transform {
-  glm::mat4 tranform_mat_;
+  glm::mat4 tranform_mat_ = glm::mat4(1.0);
 
   Transform(glm::mat4 transform_mat);
 

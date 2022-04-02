@@ -3,6 +3,7 @@
 #include "base/base.h"
 
 #include "utill/error_handling.h"
+#include "utill/logger.h"
 
 namespace gpu_resources {
 
@@ -63,11 +64,18 @@ DeviceMemoryAllocator::DeviceMemoryAllocator() {
 void DeviceMemoryAllocator::Allocate() {
   auto device = base::Base::Get().GetContext().GetDevice();
   for (auto& [type_ind, block] : memory_by_type_ind_) {
+    DLOG << "Allocating " << block.offset << " bytes of memory type "
+         << type_ind;
+
     block.size = block.offset;
     block.offset = 0;
     block.type_index = type_ind;
     block.memory = device.allocateMemory(
         vk::MemoryAllocateInfo{block.size, block.type_index});
+    if (device_memory_properties_.memoryTypes[type_ind].propertyFlags &
+        vk::MemoryPropertyFlagBits::eHostVisible) {
+      block.mapping_start = device.mapMemory(block.memory, 0, block.size);
+    }
   }
   for (auto& allocation : allocations_) {
     // info for actual allocation stored in RequestMemory is used here
@@ -94,6 +102,9 @@ MemoryBlock* DeviceMemoryAllocator::RequestMemory(
 DeviceMemoryAllocator::~DeviceMemoryAllocator() {
   auto device = base::Base::Get().GetContext().GetDevice();
   for (auto& [type_ind, block] : memory_by_type_ind_) {
+    if (block.mapping_start) {
+      device.unmapMemory(block.memory);
+    }
     device.freeMemory(block.memory);
   }
 }

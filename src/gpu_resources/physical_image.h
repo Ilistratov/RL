@@ -16,7 +16,13 @@ class PhysicalImage {
 
   friend class LogicalImage;
 
+  bool IsDepthImage() const;
+  vk::ImageAspectFlags GetAspectFlags() const;
+
  public:
+  static const vk::Format kDepthFormats[];
+  static const uint32_t kDepthFormatsCount;
+
   PhysicalImage() = default;
   PhysicalImage(vk::Extent2D extent,
                 vk::Format format,
@@ -56,6 +62,12 @@ class PhysicalImage {
   static void RecordBlit(vk::CommandBuffer cmd,
                          const PhysicalImage& src,
                          const PhysicalImage& dst);
+
+  static bool IsFormatFeatureCombinationSupported(
+      vk::Format format,
+      vk::ImageTiling tiling,
+      vk::FormatFeatureFlags features);
+  static vk::Format GetDepthImageFormat();
 
   ~PhysicalImage();
 };

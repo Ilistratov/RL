@@ -44,6 +44,9 @@ class LogicalBuffer {
   // ending at |GetFirstUserInd()|, than returning back to
   // |GetFirstUserInd()|
   vk::BufferMemoryBarrier2KHR GetPostPassBarrier(uint32_t user_ind);
+
+  void* GetMappingStart() const;
+  vk::MappedMemoryRange GetMappedMemoryRange() const;
 };
 
 }  // namespace gpu_resources
