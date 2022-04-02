@@ -1,4 +1,4 @@
-#include "swapchain_present_pass.h"
+#include "blit_to_swapchain.h"
 
 #include "base/base.h"
 
@@ -6,11 +6,10 @@
 
 namespace examples {
 
-SwapchainPresentPass::SwapchainPresentPass(
-    const std::string& render_target_name)
+BlitToSwapchainPass::BlitToSwapchainPass(const std::string& render_target_name)
     : Pass(0, vk::PipelineStageFlagBits2KHR::eTransfer),
       render_target_name_(render_target_name) {
-  LOG << "Initializing SwapchainPresentPass";
+  LOG << "Initializing BlitToSwapchainPass";
   image_binds_[render_target_name_] = render_graph::ImagePassBind(
       gpu_resources::ResourceUsage{vk::PipelineStageFlagBits2KHR::eTransfer,
                                    vk::AccessFlagBits2KHR::eTransferRead,
@@ -19,7 +18,7 @@ SwapchainPresentPass::SwapchainPresentPass(
   LOG << "Image binds count " << image_binds_.size();
 }
 
-void SwapchainPresentPass::OnRecord(
+void BlitToSwapchainPass::OnRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer>&) noexcept {
   auto& swapchain = base::Base::Get().GetSwapchain();

@@ -5,11 +5,11 @@
 
 namespace examples {
 
-class SwapchainPresentPass : public render_graph::Pass {
+class BlitToSwapchainPass : public render_graph::Pass {
   const std::string& render_target_name_;
 
  public:
-  SwapchainPresentPass(const std::string& render_target_name);
+  BlitToSwapchainPass(const std::string& render_target_name);
   void OnRecord(vk::CommandBuffer primary_cmd,
                 const std::vector<vk::CommandBuffer>&) noexcept override;
 };

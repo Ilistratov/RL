@@ -1,8 +1,8 @@
 #pragma once
 
+#include "blit_to_swapchain.h"
 #include "pipeline_handler/compute.h"
 #include "render_graph/render_graph.h"
-#include "swapchain_present_pass.h"
 
 namespace examples {
 
@@ -33,7 +33,7 @@ class MandelbrotDrawPass : public render_graph::Pass {
 
 class Mandelbrot {
   MandelbrotDrawPass draw_;
-  SwapchainPresentPass present_;
+  BlitToSwapchainPass present_;
   vk::Semaphore ready_to_present_;
   render_graph::RenderGraph render_graph_;
   float dst_x_ = 0;

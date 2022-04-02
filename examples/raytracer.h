@@ -2,9 +2,9 @@
 
 #include <vector>
 
+#include "blit_to_swapchain.h"
 #include "pipeline_handler/compute.h"
 #include "render_graph/render_graph.h"
-#include "swapchain_present_pass.h"
 #include "utill/transform.h"
 
 namespace examples {
@@ -46,7 +46,7 @@ class RaytracerPass : public render_graph::Pass {
 class RayTracer {
   ResourceTransferPass resource_transfer_;
   RaytracerPass raytrace_;
-  SwapchainPresentPass present_;
+  BlitToSwapchainPass present_;
   render_graph::RenderGraph render_graph_;
   vk::Semaphore ready_to_present_;
 
