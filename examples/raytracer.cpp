@@ -14,15 +14,30 @@ const static std::string kIndexBufferName = "index_buffer";
 const static std::string kLightBufferName = "light_buffer";
 const static std::string kCameraInfoBufferName = "camera_info";
 const static std::string kStagingBufferName = "staging_buffer";
+const static float PI = acos(-1);
 
-std::vector<glm::vec4> g_vertex_buffer = {
+static std::vector<glm::vec4> g_vertex_buffer = {
     {0.0, 0.0, 0.0, 1.0}, {1.0, 0.0, 0.0, 1.0}, {0.0, 0.0, 1.0, 1.0},
     {1.0, 0.0, 1.0, 1.0}, {0.0, 1.0, 0.0, 1.0}, {1.0, 1.0, 0.0, 1.0},
     {0.0, 1.0, 1.0, 1.0}, {1.0, 1.0, 1.0, 1.0},
 };
-std::vector<uint32_t> g_index_buffer = {0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7};
-std::vector<glm::vec4> g_light_buffer = {{0.5, 2, 0.5, 1.0}};
+static std::vector<uint32_t> g_index_buffer = {0, 1, 2, 2, 1, 3,
+                                               4, 5, 6, 6, 5, 7};
+static std::vector<glm::vec4> g_light_buffer = {{0.5, 2, 0.5, 1.0}};
 static CameraInfo g_camera_info;
+static bool g_is_update_camera_transform_ = false;
+static int g_move_axis[][2] = {{GLFW_KEY_A, GLFW_KEY_D},
+                               {GLFW_KEY_LEFT_SHIFT, GLFW_KEY_SPACE},
+                               {GLFW_KEY_S, GLFW_KEY_W}};
+
+static float GetAxisVal(int axis) {
+  if (utill::InputManager::IsKeyPressed(g_move_axis[axis][0])) {
+    return -1;
+  } else if (utill::InputManager::IsKeyPressed(g_move_axis[axis][1])) {
+    return 1;
+  }
+  return 0;
+}
 
 template <typename T>
 static inline size_t GetDataSize(const std::vector<T>& data) {
@@ -187,9 +202,41 @@ RayTracer::RayTracer() : present_(kColorRTName) {
   render_graph_.Init();
 }
 
-void UpdateCameraInfo() {}
+void UpdateCameraInfo() {
+  const auto& m_state = utill::InputManager::GetMouseState();
+  if (m_state.lmb_state.action == GLFW_PRESS &&
+      !g_is_update_camera_transform_) {
+    g_is_update_camera_transform_ = true;
+    utill::InputManager::SetCursorMode(GLFW_CURSOR_DISABLED);
+  } else if (utill::InputManager::IsKeyPressed(GLFW_KEY_ESCAPE) &&
+             g_is_update_camera_transform_) {
+    utill::InputManager::SetCursorMode(GLFW_CURSOR_NORMAL);
+    g_is_update_camera_transform_ = false;
+  }
+  if (!g_is_update_camera_transform_) {
+    return;
+  }
+
+  // Both divided by width so vertical and horizontal sensitivity are the same
+  float c_ang_x =
+      glm::clamp(m_state.pos_y / g_camera_info.screen_width, -0.5, 0.5);
+  float c_ang_y = m_state.pos_x / g_camera_info.screen_width;
+  c_ang_x *= -PI;
+  c_ang_y *= PI;
+
+  auto& cam_transform = g_camera_info.camera_to_world;
+  cam_transform = utill::Transform::Combine(
+      utill::Transform::Rotation(c_ang_x, c_ang_y, 0),
+      utill::Transform::Translation(cam_transform.GetPos()));
+  glm::vec3 d_pos = cam_transform.GetDirX() * GetAxisVal(0) +
+                    cam_transform.GetDirY() * GetAxisVal(1) +
+                    cam_transform.GetDirZ() * GetAxisVal(2);
+  cam_transform = utill::Transform::Combine(
+      cam_transform, utill::Transform::Translation(d_pos));
+}
 
 bool RayTracer::Draw() {
+  UpdateCameraInfo();
   auto& swapchain = base::Base::Get().GetSwapchain();
 
   g_camera_info.screen_width = swapchain.GetExtent().width;

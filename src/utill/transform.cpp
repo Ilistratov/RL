@@ -12,12 +12,21 @@ Transform Transform::Rotation(float rad_x, float rad_y, float rad_z) {
   dir_x = glm::rotateY(dir_x, rad_y);
   dir_x = glm::rotateZ(dir_x, rad_z);
   glm::vec4 dir_y(0, 1, 0, 0);
-  dir_y = glm::rotateX(dir_y, rad_x);
+  dir_y = glm::rotate(dir_y, rad_x, glm::vec3(dir_x));
   dir_y = glm::rotateZ(dir_y, rad_z);
   glm::vec4 dir_z(0, 0, 1, 0);
-  dir_z = glm::rotateX(dir_z, rad_x);
-  dir_z = glm::rotateY(dir_z, rad_y);
+  dir_z = glm::rotate(dir_z, rad_x, glm::vec3(dir_x));
+  dir_z = glm::rotate(dir_z, rad_y, glm::vec3(dir_y));
   return Transform(glm::mat4(dir_x, dir_y, dir_z, glm::vec4(0, 0, 0, 1)));
+}
+
+Transform Transform::Rotation(float rad_x,
+                              float rad_y,
+                              float rad_z,
+                              glm::vec3 origin) {
+  return Transform::Combine({Transform::Translation(-origin),
+                             Transform::Rotation(rad_x, rad_y, rad_z),
+                             Transform::Translation(origin)});
 }
 
 Transform Transform::Translation(glm::vec3 d_pos) {
@@ -28,6 +37,14 @@ Transform Transform::Translation(glm::vec3 d_pos) {
 
 Transform Transform::Combine(const Transform& fst, const Transform& snd) {
   return snd.tranform_mat_ * fst.tranform_mat_;
+}
+
+Transform Transform::Combine(const std::vector<Transform>& transforms) {
+  Transform res;
+  for (auto t : transforms) {
+    res.tranform_mat_ = t.tranform_mat_ * res.tranform_mat_;
+  }
+  return res;
 }
 
 glm::vec3 Transform::GetDirX() const {

@@ -73,4 +73,9 @@ const MouseState& InputManager::GetMouseState() {
   return g_input_state.mouse;
 }
 
+void InputManager::SetCursorMode(int mode) {
+  GLFWwindow* window = base::Base::Get().GetWindow().GetWindow();
+  glfwSetInputMode(window, GLFW_CURSOR, mode);
+}
+
 }  // namespace utill

@@ -29,6 +29,8 @@ class InputManager {
   static KeyState GetKeyState(int key);
   static bool IsKeyPressed(int key);
   static const MouseState& GetMouseState();
+
+  static void SetCursorMode(int mode);
 };
 
 }  // namespace utill

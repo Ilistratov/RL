@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <glm/glm.hpp>
 
 namespace utill {
@@ -13,9 +15,14 @@ class Transform {
   Transform() = default;
 
   static Transform Rotation(float rad_x, float rad_y, float rad_z);
+  static Transform Rotation(float rad_x,
+                            float rad_y,
+                            float rad_z,
+                            glm::vec3 origin);
   static Transform Translation(glm::vec3 d_pos);
 
   static Transform Combine(const Transform& fst, const Transform& snd);
+  static Transform Combine(const std::vector<Transform>& transforms);
 
   glm::vec3 GetPos() const;
   glm::vec3 GetDirX() const;
