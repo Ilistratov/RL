@@ -14,7 +14,10 @@ class Transform {
  public:
   Transform() = default;
 
-  static Transform Rotation(float rad_x, float rad_y, float rad_z);
+  static Transform Rotation(float rad, glm::vec3 axis);
+  static Transform RotationX(float rad);
+  static Transform RotationY(float rad);
+  static Transform RotationZ(float rad);
   static Transform Rotation(float rad_x,
                             float rad_y,
                             float rad_z,

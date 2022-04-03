@@ -12,8 +12,6 @@ struct MouseState {
   KeyState rmb_state;
   double pos_x = 0;
   double pos_y = 0;
-  double prv_x = 0;
-  double prv_y = 0;
 };
 
 class InputManager {

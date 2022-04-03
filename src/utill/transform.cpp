@@ -7,26 +7,20 @@ namespace utill {
 
 Transform::Transform(glm::mat4 transform_mat) : tranform_mat_(transform_mat) {}
 
-Transform Transform::Rotation(float rad_x, float rad_y, float rad_z) {
-  glm::vec4 dir_x(1, 0, 0, 0);
-  dir_x = glm::rotateY(dir_x, rad_y);
-  dir_x = glm::rotateZ(dir_x, rad_z);
-  glm::vec4 dir_y(0, 1, 0, 0);
-  dir_y = glm::rotate(dir_y, rad_x, glm::vec3(dir_x));
-  dir_y = glm::rotateZ(dir_y, rad_z);
-  glm::vec4 dir_z(0, 0, 1, 0);
-  dir_z = glm::rotate(dir_z, rad_x, glm::vec3(dir_x));
-  dir_z = glm::rotate(dir_z, rad_y, glm::vec3(dir_y));
-  return Transform(glm::mat4(dir_x, dir_y, dir_z, glm::vec4(0, 0, 0, 1)));
+Transform Transform::Rotation(float rad, glm::vec3 axis) {
+  return glm::rotate(rad, axis);
 }
 
-Transform Transform::Rotation(float rad_x,
-                              float rad_y,
-                              float rad_z,
-                              glm::vec3 origin) {
-  return Transform::Combine({Transform::Translation(-origin),
-                             Transform::Rotation(rad_x, rad_y, rad_z),
-                             Transform::Translation(origin)});
+Transform Transform::RotationX(float rad) {
+  return Rotation(rad, glm::vec3(1, 0, 0));
+}
+
+Transform Transform::RotationY(float rad) {
+  return Rotation(rad, glm::vec3(0, 1, 0));
+}
+
+Transform Transform::RotationZ(float rad) {
+  return Rotation(rad, glm::vec3(0, 0, 1));
 }
 
 Transform Transform::Translation(glm::vec3 d_pos) {

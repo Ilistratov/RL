@@ -5,6 +5,8 @@
 #include "utill/input_manager.h"
 #include "utill/logger.h"
 
+using utill::Transform;
+
 namespace examples {
 
 const static std::string kColorRTName = "color_target";
@@ -217,22 +219,18 @@ void UpdateCameraInfo() {
     return;
   }
 
-  // Both divided by width so vertical and horizontal sensitivity are the same
-  float c_ang_x =
-      glm::clamp(m_state.pos_y / g_camera_info.screen_width, -0.5, 0.5);
-  float c_ang_y = m_state.pos_x / g_camera_info.screen_width;
-  c_ang_x *= -PI;
-  c_ang_y *= PI;
+  float c_ang_x = m_state.pos_y * (-PI / 2);
+  float c_ang_y = m_state.pos_x * PI;
 
   auto& cam_transform = g_camera_info.camera_to_world;
-  cam_transform = utill::Transform::Combine(
-      utill::Transform::Rotation(c_ang_x, c_ang_y, 0),
-      utill::Transform::Translation(cam_transform.GetPos()));
-  glm::vec3 d_pos = cam_transform.GetDirX() * GetAxisVal(0) +
-                    cam_transform.GetDirY() * GetAxisVal(1) +
-                    cam_transform.GetDirZ() * GetAxisVal(2);
-  cam_transform = utill::Transform::Combine(
-      cam_transform, utill::Transform::Translation(d_pos));
+  Transform rotate_y = Transform::RotationY(c_ang_y);
+  Transform rotate_x = Transform::Rotation(c_ang_x, rotate_y.GetDirX());
+  cam_transform = Transform::Combine(rotate_y, rotate_x);
+  Transform translate = Transform::Translation(
+      cam_transform.GetDirX() * GetAxisVal(0) +
+      cam_transform.GetDirY() * GetAxisVal(1) +
+      cam_transform.GetDirZ() * GetAxisVal(2) + cam_transform.GetPos());
+  cam_transform = Transform::Combine(cam_transform, translate);
 }
 
 bool RayTracer::Draw() {
