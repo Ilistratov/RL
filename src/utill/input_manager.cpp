@@ -91,10 +91,11 @@ bool InputManager::IsKeyPressed(int key) {
   if (!IsValidKey(key)) {
     return false;
   }
-  return g_input_state.keys[key].action == GLFW_PRESS;
+  return g_input_state.keys[key].action == GLFW_PRESS ||
+         g_input_state.keys[key].action == GLFW_REPEAT;
 }
 
-const MouseState& InputManager::GetMouseState() {
+MouseState InputManager::GetMouseState() {
   return g_input_state.mouse;
 }
 

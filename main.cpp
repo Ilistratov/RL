@@ -44,7 +44,7 @@ int main() {
       vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eGraphics};
 
   try {
-    base::Base::Get().Init(base_config, vk::Extent2D{1366, 768},
+    base::Base::Get().Init(base_config, vk::Extent2D{1280, 768},
                            context_config);
     utill::InputManager::Init();
     Run();

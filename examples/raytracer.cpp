@@ -19,12 +19,12 @@ const static std::string kStagingBufferName = "staging_buffer";
 const static float PI = acos(-1);
 
 static std::vector<glm::vec4> g_vertex_buffer = {
-    {0.0, 0.0, 0.0, 1.0}, {1.0, 0.0, 0.0, 1.0}, {0.0, 0.0, 1.0, 1.0},
-    {1.0, 0.0, 1.0, 1.0}, {0.0, 1.0, 0.0, 1.0}, {1.0, 1.0, 0.0, 1.0},
-    {0.0, 1.0, 1.0, 1.0}, {1.0, 1.0, 1.0, 1.0},
+    {0.0, 0.0, 0.0, 1.0},
+    {10.0, 0.0, 0.0, 1.0},
+    {0.0, 0.0, 10.0, 1.0},
+    {10.0, 0.0, 10.0, 1.0},
 };
-static std::vector<uint32_t> g_index_buffer = {0, 1, 2, 2, 1, 3,
-                                               4, 5, 6, 6, 5, 7};
+static std::vector<uint32_t> g_index_buffer = {2, 1, 3, 0, 1, 2};
 static std::vector<glm::vec4> g_light_buffer = {{0.5, 2, 0.5, 1.0}};
 static CameraInfo g_camera_info;
 static bool g_is_update_camera_transform_ = false;
@@ -91,7 +91,7 @@ void ResourceTransferPass::OnRecord(
     gpu_resources::LogicalBuffer* light_logical_buffer =
         buffer_binds_[kLightBufferName].GetBoundBuffer();
     RecordCopy(primary_cmd, staging_buffer, light_logical_buffer,
-               staging_offset, GetDataSize(g_index_buffer));
+               staging_offset, GetDataSize(g_light_buffer));
   }
 
   void* camera_buffer_mapping =
@@ -185,13 +185,13 @@ RayTracer::RayTracer() : present_(kColorRTName) {
                              vk::MemoryPropertyFlagBits::eDeviceLocal);
   resource_manager.AddBuffer(kIndexBufferName, GetDataSize(g_index_buffer),
                              vk::MemoryPropertyFlagBits::eDeviceLocal);
-  resource_manager.AddBuffer(kLightBufferName, GetDataSize(g_vertex_buffer),
+  resource_manager.AddBuffer(kLightBufferName, GetDataSize(g_light_buffer),
                              vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   resource_manager.AddBuffer(kStagingBufferName,
                              GetDataSize(g_vertex_buffer) +
                                  GetDataSize(g_index_buffer) +
-                                 GetDataSize(g_vertex_buffer),
+                                 GetDataSize(g_light_buffer),
                              vk::MemoryPropertyFlagBits::eHostVisible);
   resource_manager.AddBuffer(kCameraInfoBufferName, sizeof(CameraInfo),
                              vk::MemoryPropertyFlagBits::eHostVisible |
@@ -205,11 +205,12 @@ RayTracer::RayTracer() : present_(kColorRTName) {
 }
 
 void UpdateCameraInfo() {
-  const auto& m_state = utill::InputManager::GetMouseState();
+  auto m_state = utill::InputManager::GetMouseState();
   if (m_state.lmb_state.action == GLFW_PRESS &&
       !g_is_update_camera_transform_) {
     g_is_update_camera_transform_ = true;
     utill::InputManager::SetCursorMode(GLFW_CURSOR_DISABLED);
+    m_state = utill::InputManager::GetMouseState();
   } else if (utill::InputManager::IsKeyPressed(GLFW_KEY_ESCAPE) &&
              g_is_update_camera_transform_) {
     utill::InputManager::SetCursorMode(GLFW_CURSOR_NORMAL);
@@ -225,11 +226,15 @@ void UpdateCameraInfo() {
   auto& cam_transform = g_camera_info.camera_to_world;
   Transform rotate_y = Transform::RotationY(c_ang_y);
   Transform rotate_x = Transform::Rotation(c_ang_x, rotate_y.GetDirX());
+  auto pos = cam_transform.GetPos();
   cam_transform = Transform::Combine(rotate_y, rotate_x);
-  Transform translate = Transform::Translation(
-      cam_transform.GetDirX() * GetAxisVal(0) +
-      cam_transform.GetDirY() * GetAxisVal(1) +
-      cam_transform.GetDirZ() * GetAxisVal(2) + cam_transform.GetPos());
+  glm::vec3 move_dir = cam_transform.GetDirX() * GetAxisVal(0) -
+                       cam_transform.GetDirY() * GetAxisVal(1) +
+                       cam_transform.GetDirZ() * GetAxisVal(2);
+  if (glm::length(move_dir) >= 1) {
+    move_dir = glm::normalize(move_dir);
+  }
+  Transform translate = Transform::Translation(pos + move_dir * 0.1f);
   cam_transform = Transform::Combine(cam_transform, translate);
 }
 

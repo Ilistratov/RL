@@ -26,7 +26,7 @@ class InputManager {
   static void Init();
   static KeyState GetKeyState(int key);
   static bool IsKeyPressed(int key);
-  static const MouseState& GetMouseState();
+  static MouseState GetMouseState();
 
   static void SetCursorMode(int mode);
 };
