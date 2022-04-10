@@ -39,34 +39,57 @@ Ray PixCordToRay(uint pix_x, uint pix_y) {
   return result;
 }
 
-float3 GetRayTriangleInterseption(Ray r, float3 a, float3 b, float3 c) {
-  float3x3 sys_mat = float3x3(-r.direction, b - a, c - a);
-  float det_sys = determinant(sys_mat);
-  if (det_sys < 1e-4) {
-    return float3(-1, 0, 0);
-  }
-  float3 sys_coef = r.origin - a;
-  float inv_det_sys = 1.0 / det_sys;
-
-  float t = determinant(float3x3(sys_coef, b - a, c - a)) * inv_det_sys;
-  if (t < 1e-4) {
-    return float3(-1, 0, 0);
-  }
-  float u = determinant(float3x3(-r.direction, sys_coef, c - a)) * inv_det_sys;
-  if (u < 0 || u > 1) {
-    return float3(-1, 0, 0);
-  }
-  float v = determinant(float3x3(-r.direction, b - a, sys_coef)) * inv_det_sys;
-  if (v < 0 || v > 1 || u + v > 1) {
-    return float3(-1, 0, 0);
-  }
-  return float3(t, u, v);
-}
-
 struct Interseption {
-  float3 bar_cord;
+  float2 bar_cord;
   uint trg_ind;
 };
+
+struct Triangle {
+  float3 a;
+  float3 b;
+  float3 c;
+
+  float3 GetNormal() {
+    return normalize(cross(c - a, b - a));
+  }
+
+  float3 GetPointFromBarCord(float2 cord) {
+    return a + (b - a) * cord.x + (c - a) * cord.y;
+  }
+
+  //returns insp distance, uv coord's of interseption/
+  float3 GetRayInterseption(Ray r) {
+    float3x3 sys_mat = float3x3(-r.direction, b - a, c - a);
+    float det_sys = determinant(sys_mat);
+    if (det_sys < 1e-4) {
+      return float3(-1, 0, 0);
+    }
+    float3 sys_coef = r.origin - a;
+    float inv_det_sys = 1.0 / det_sys;
+
+    float t = determinant(float3x3(sys_coef, b - a, c - a)) * inv_det_sys;
+    if (t < 1e-4) {
+      return float3(-1, 0, 0);
+    }
+    float u = determinant(float3x3(-r.direction, sys_coef, c - a)) * inv_det_sys;
+    if (u < 0 || u > 1) {
+      return float3(-1, 0, 0);
+    }
+    float v = determinant(float3x3(-r.direction, b - a, sys_coef)) * inv_det_sys;
+    if (v < 0 || v > 1 || u + v > 1) {
+      return float3(-1, 0, 0);
+    }
+    return float3(t, u, v);
+  }
+};
+
+Triangle GetTriangleByInd(uint ind) {
+  Triangle res;
+  res.a = vertex_pos[vertex_ind[3 * ind + 0]].xyz;
+  res.b = vertex_pos[vertex_ind[3 * ind + 1]].xyz;
+  res.c = vertex_pos[vertex_ind[3 * ind + 2]].xyz;
+  return res;
+}
 
 Interseption CastRay(Ray r) {
   uint cur_trg = (uint)-1;
@@ -75,25 +98,48 @@ Interseption CastRay(Ray r) {
   uint memb_size = 0;
   vertex_ind.GetDimensions(n_trg, memb_size);
 
-  for (uint i = 0; i < n_trg; i += 3) {
-    float3 a = vertex_pos[vertex_ind[i + 0]].xyz;
-    float3 b = vertex_pos[vertex_ind[i + 1]].xyz;
-    float3 c = vertex_pos[vertex_ind[i + 2]].xyz;
-    float3 n_insp = GetRayTriangleInterseption(r, a, b, c);
+  for (uint i = 0; i * 3 < n_trg; ++i) {
+    Triangle t = GetTriangleByInd(i);
+    float3 n_insp = t.GetRayInterseption(r);
     if (n_insp.x > 0 && (n_insp.x < cur_insp.x || cur_insp.x < 0)) {
-      cur_trg = i / 3;
+      cur_trg = i;
       cur_insp = n_insp;
     }
   }
 
   Interseption res;
   res.trg_ind = cur_trg;
-  if (cur_trg == (uint)-1) {
-    res.bar_cord = cur_insp;
-    return res;
-  }
-  res.bar_cord = float3(cur_insp.y, cur_insp.z, 1 - cur_insp.y - cur_insp.z);
+  res.bar_cord = cur_insp.yz;
   return res;
+}
+
+float4 CalcLightAtInterseption(Interseption insp, Ray r) {
+  float3 materialColor = float3(1, 1, 1);
+	uint specPow = 256;
+  Triangle t = GetTriangleByInd(insp.trg_ind);
+  float3 insp_point = t.GetPointFromBarCord(insp.bar_cord);
+  float3 trg_n = t.GetNormal();
+
+  float diffuse = 0;
+  float specular = 0;
+  uint light_cnt = 0;
+  uint light_struct_size = 0;
+  light_pos.GetDimensions(light_cnt, light_struct_size);
+  for (int i = 0; i < light_cnt; i++) {
+    float3 to_light = light_pos[i].xyz - insp_point;
+    float3 light_dst = length(to_light);
+    to_light = normalize(to_light);
+    Ray shadow_ray;
+    shadow_ray.direction = to_light;
+    shadow_ray.origin = insp_point + to_light * 1e-3;
+    Interseption shadow_ray_insp = CastRay(shadow_ray);
+    if (shadow_ray_insp.trg_ind != (uint)(-1)) {
+      continue;
+    }
+    diffuse += max(0, dot(trg_n, to_light));
+		specular += pow(max(0, dot(to_light, reflect(r.direction, trg_n))), 128);
+  }
+  return float4(materialColor * (diffuse + specular), 1.0);
 }
 
 [numthreads(8, 8, 1)]
@@ -101,12 +147,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gind : SV_GroupIndex) {
   Ray camera_ray = PixCordToRay(DTid.x, DTid.y);
   Interseption res = CastRay(camera_ray);
   if (res.trg_ind != (uint)-1) {
-    color_target[DTid.xy] = float4(res.bar_cord, 1.0);
+    color_target[DTid.xy] = CalcLightAtInterseption(res, camera_ray);
   } else {
     float3 nxt_pt = (camera_ray.origin + camera_ray.direction) * 0.25;
     nxt_pt = max(frac(nxt_pt), float3(1, 1, 1) - frac(nxt_pt));
     nxt_pt = pow(nxt_pt, float3(64, 64, 64));
     color_target[DTid.xy] = float4(nxt_pt, 1.0);
+    depth_target[DTid.xy] = 0.0f;
   }
-  depth_target[DTid.xy] = 0.0f;
 }
