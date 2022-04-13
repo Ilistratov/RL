@@ -9,7 +9,7 @@ namespace gpu_resources {
 PhysicalBuffer::PhysicalBuffer(vk::DeviceSize size,
                                vk::BufferUsageFlags usage_flags)
     : size_(size), usage_flags_(usage_flags) {
-  assert(size > 0);
+  DCHECK(size > 0);
   auto device = base::Base::Get().GetContext().GetDevice();
   buffer_ = device.createBuffer(vk::BufferCreateInfo(
       {}, size, usage_flags, vk::SharingMode::eExclusive, {}));

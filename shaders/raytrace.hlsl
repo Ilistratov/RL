@@ -2,7 +2,7 @@
 [[vk::binding(1, 0)]] RWTexture2D<float> depth_target;
 
 [[vk::binding(2, 0)]] StructuredBuffer<float4> vertex_pos;
-[[vk::binding(3, 0)]] StructuredBuffer<uint> vertex_ind;
+[[vk::binding(3, 0)]] StructuredBuffer<uint4> vertex_ind;
 [[vk::binding(4, 0)]] StructuredBuffer<float4> light_pos;
 
 struct CameraInfo {
@@ -85,9 +85,9 @@ struct Triangle {
 
 Triangle GetTriangleByInd(uint ind) {
   Triangle res;
-  res.a = vertex_pos[vertex_ind[3 * ind + 0]].xyz;
-  res.b = vertex_pos[vertex_ind[3 * ind + 1]].xyz;
-  res.c = vertex_pos[vertex_ind[3 * ind + 2]].xyz;
+  res.a = vertex_pos[vertex_ind[3 * ind + 0].x].xyz;
+  res.b = vertex_pos[vertex_ind[3 * ind + 1].x].xyz;
+  res.c = vertex_pos[vertex_ind[3 * ind + 2].x].xyz;
   return res;
 }
 
@@ -137,7 +137,7 @@ float4 CalcLightAtInterseption(Interseption insp, Ray r) {
       continue;
     }
     diffuse += max(0, dot(trg_n, to_light));
-		specular += pow(max(0, dot(to_light, reflect(r.direction, trg_n))), 128);
+		specular += pow(max(0, dot(to_light, -reflect(r.direction, trg_n))), 128);
   }
   return float4(materialColor * (diffuse + specular), 1.0);
 }
@@ -152,6 +152,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gind : SV_GroupIndex) {
     float3 nxt_pt = (camera_ray.origin + camera_ray.direction) * 0.25;
     nxt_pt = max(frac(nxt_pt), float3(1, 1, 1) - frac(nxt_pt));
     nxt_pt = pow(nxt_pt, float3(64, 64, 64));
+    nxt_pt = max(nxt_pt, float3(0.1, 0.1, 0.1));
     color_target[DTid.xy] = float4(nxt_pt, 1.0);
     depth_target[DTid.xy] = 0.0f;
   }

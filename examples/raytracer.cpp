@@ -1,6 +1,7 @@
 #include "raytracer.h"
 
 #include "base/base.h"
+#include "render_data/mesh.h"
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
@@ -18,19 +19,15 @@ const static std::string kCameraInfoBufferName = "camera_info";
 const static std::string kStagingBufferName = "staging_buffer";
 const static float PI = acos(-1);
 
-static std::vector<glm::vec4> g_vertex_buffer = {
-    {0.0, 0.0, 0.0, 1.0},
-    {10.0, 0.0, 0.0, 1.0},
-    {0.0, 0.0, 10.0, 1.0},
-    {10.0, 0.0, 10.0, 1.0},
-};
-static std::vector<uint32_t> g_index_buffer = {2, 1, 3, 0, 1, 2};
-static std::vector<glm::vec4> g_light_buffer = {{0.5, 2, 0.5, 1.0}};
+static render_data::Mesh g_scene_mesh;
+static std::vector<glm::vec4> g_light_buffer = {{0.5, 15, 0.5, 1.0}};
 static CameraInfo g_camera_info;
 static bool g_is_update_camera_transform_ = false;
 static int g_move_axis[][2] = {{GLFW_KEY_A, GLFW_KEY_D},
                                {GLFW_KEY_LEFT_SHIFT, GLFW_KEY_SPACE},
                                {GLFW_KEY_S, GLFW_KEY_W}};
+
+using gpu_resources::GetDataSize;
 
 static float GetAxisVal(int axis) {
   if (utill::InputManager::IsKeyPressed(g_move_axis[axis][0])) {
@@ -42,20 +39,16 @@ static float GetAxisVal(int axis) {
 }
 
 template <typename T>
-static inline size_t GetDataSize(const std::vector<T>& data) {
-  return sizeof(T) * data.size();
-}
-
-template <typename T>
-static void FillStagingBuffer(gpu_resources::LogicalBuffer* staging_buffer,
-                              const std::vector<T>& data,
-                              size_t& dst_offset) {
+static size_t FillStagingBuffer(gpu_resources::LogicalBuffer* staging_buffer,
+                                const std::vector<T>& data,
+                                size_t dst_offset) {
   DCHECK(staging_buffer) << "Unexpected null";
   size_t data_byte_size = GetDataSize(data);
   void* map_start = staging_buffer->GetMappingStart();
   DCHECK(map_start) << "Expected buffer memory to be mapped";
   memcpy((char*)map_start + dst_offset, data.data(), data_byte_size);
   dst_offset += data_byte_size;
+  return dst_offset;
 }
 
 static void RecordCopy(vk::CommandBuffer cmd,
@@ -74,19 +67,17 @@ void ResourceTransferPass::OnRecord(
     const std::vector<vk::CommandBuffer>&) noexcept {
   gpu_resources::LogicalBuffer* staging_buffer =
       buffer_binds_[kStagingBufferName].GetBoundBuffer();
-  size_t staging_offset = 0;
 
   if (is_first_record_) {
     is_first_record_ = false;
+    size_t staging_offset = 0;
     gpu_resources::LogicalBuffer* vertex_logical_buffer =
         buffer_binds_[kVertexBufferName].GetBoundBuffer();
-    RecordCopy(primary_cmd, staging_buffer, vertex_logical_buffer,
-               staging_offset, GetDataSize(g_vertex_buffer));
-
     gpu_resources::LogicalBuffer* index_logical_buffer =
         buffer_binds_[kIndexBufferName].GetBoundBuffer();
-    RecordCopy(primary_cmd, staging_buffer, index_logical_buffer,
-               staging_offset, GetDataSize(g_index_buffer));
+    staging_offset = g_scene_mesh.RecordCopyFromStaging(
+        primary_cmd, staging_buffer, vertex_logical_buffer, nullptr, nullptr,
+        index_logical_buffer, staging_offset);
 
     gpu_resources::LogicalBuffer* light_logical_buffer =
         buffer_binds_[kLightBufferName].GetBoundBuffer();
@@ -119,8 +110,7 @@ void ResourceTransferPass::OnResourcesInitialized() noexcept {
   gpu_resources::LogicalBuffer* staging_buffer =
       buffer_binds_[kStagingBufferName].GetBoundBuffer();
   size_t fill_offset = 0;
-  FillStagingBuffer(staging_buffer, g_vertex_buffer, fill_offset);
-  FillStagingBuffer(staging_buffer, g_index_buffer, fill_offset);
+  fill_offset = g_scene_mesh.LoadToStagingBuffer(staging_buffer, fill_offset);
   FillStagingBuffer(staging_buffer, g_light_buffer, fill_offset);
   auto device = base::Base::Get().GetContext().GetDevice();
   device.flushMappedMemoryRanges(staging_buffer->GetMappedMemoryRange());
@@ -176,21 +166,27 @@ RayTracer::RayTracer() : present_(kColorRTName) {
   ready_to_present_ = device.createSemaphore({});
   auto& resource_manager = render_graph_.GetResourceManager();
 
+  g_scene_mesh = render_data::Mesh::LoadFromObj("obj/sphere.obj");
+  // remove, when those buffers are needed
+  g_scene_mesh.normal.clear();
+  g_scene_mesh.tex_coord.clear();
+
   resource_manager.AddImage(kColorRTName, {}, {},
                             vk::MemoryPropertyFlagBits::eDeviceLocal);
   resource_manager.AddImage(kDepthRTName, {}, vk::Format::eR32Sfloat,
                             vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-  resource_manager.AddBuffer(kVertexBufferName, GetDataSize(g_vertex_buffer),
+  resource_manager.AddBuffer(kVertexBufferName,
+                             GetDataSize(g_scene_mesh.position),
                              vk::MemoryPropertyFlagBits::eDeviceLocal);
-  resource_manager.AddBuffer(kIndexBufferName, GetDataSize(g_index_buffer),
+  resource_manager.AddBuffer(kIndexBufferName, GetDataSize(g_scene_mesh.index),
                              vk::MemoryPropertyFlagBits::eDeviceLocal);
   resource_manager.AddBuffer(kLightBufferName, GetDataSize(g_light_buffer),
                              vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   resource_manager.AddBuffer(kStagingBufferName,
-                             GetDataSize(g_vertex_buffer) +
-                                 GetDataSize(g_index_buffer) +
+                             GetDataSize(g_scene_mesh.position) +
+                                 GetDataSize(g_scene_mesh.index) +
                                  GetDataSize(g_light_buffer),
                              vk::MemoryPropertyFlagBits::eHostVisible);
   resource_manager.AddBuffer(kCameraInfoBufferName, sizeof(CameraInfo),
