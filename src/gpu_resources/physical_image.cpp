@@ -6,6 +6,24 @@
 
 namespace gpu_resources {
 
+const vk::Format PhysicalImage::kDepthFormats[] = {
+    vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint,
+    vk::Format::eD24UnormS8Uint, vk::Format::eD16Unorm};
+
+const uint32_t PhysicalImage::kDepthFormatsCount =
+    sizeof(PhysicalImage::kDepthFormats) / sizeof(vk::Format);
+
+bool PhysicalImage::IsDepthImage() const {
+  return format_ == GetDepthImageFormat();
+}
+
+vk::ImageAspectFlags PhysicalImage::GetAspectFlags() const {
+  if (IsDepthImage()) {
+    return vk::ImageAspectFlagBits::eDepth;
+  }
+  return vk::ImageAspectFlagBits::eColor;
+}
+
 PhysicalImage::PhysicalImage(vk::Extent2D extent,
                              vk::Format format,
                              vk::ImageUsageFlags image_usage)
@@ -75,11 +93,11 @@ vk::BindImageMemoryInfo PhysicalImage::GetBindMemoryInfo(
 }
 
 vk::ImageSubresourceRange PhysicalImage::GetSubresourceRange() const {
-  return vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+  return vk::ImageSubresourceRange(GetAspectFlags(), 0, 1, 0, 1);
 }
 
 vk::ImageSubresourceLayers PhysicalImage::GetSubresourceLayers() const {
-  return vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
+  return vk::ImageSubresourceLayers(GetAspectFlags(), 0, 0, 1);
 }
 
 vk::ImageMemoryBarrier2KHR PhysicalImage::GetBarrier(
@@ -141,6 +159,40 @@ PhysicalImage::~PhysicalImage() {
   auto device = base::Base::Get().GetContext().GetDevice();
   device.destroyImageView(image_view_);
   device.destroyImage(image_);
+}
+
+bool PhysicalImage::IsFormatFeatureCombinationSupported(
+    vk::Format format,
+    vk::ImageTiling tiling,
+    vk::FormatFeatureFlags features) {
+  auto format_properties =
+      base::Base::Get().GetContext().GetPhysicalDevice().getFormatProperties(
+          format);
+  if (tiling == vk::ImageTiling::eLinear) {
+    return (format_properties.linearTilingFeatures & features) == features;
+  }
+  if (tiling == vk::ImageTiling::eOptimal) {
+    return (format_properties.optimalTilingFeatures & features) == features;
+  }
+  return false;
+}
+
+vk::Format PhysicalImage::GetDepthImageFormat() {
+  static vk::Format depth_format = vk::Format::eUndefined;
+  if (depth_format != vk::Format::eUndefined) {
+    return depth_format;
+  }
+  for (uint32_t i = 0; i < kDepthFormatsCount; i++) {
+    if (IsFormatFeatureCombinationSupported(
+            kDepthFormats[i], vk::ImageTiling::eOptimal,
+            vk::FormatFeatureFlagBits::eDepthStencilAttachment)) {
+      depth_format = kDepthFormats[i];
+      break;
+    }
+  }
+  CHECK(depth_format != vk::Format::eUndefined)
+      << "Failed to find depth format";
+  return depth_format;
 }
 
 }  // namespace gpu_resources

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <list>
 #include <map>
 #include <vector>
 
@@ -11,7 +12,7 @@
 namespace pipeline_handler {
 
 class DescriptorPool {
-  std::vector<DescriptorSet> managed_sets_;
+  std::list<DescriptorSet> managed_sets_;
   vk::DescriptorPool pool_;
   std::map<vk::DescriptorType, uint32_t> descriptor_type_reserved_count_;
 

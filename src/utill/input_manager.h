@@ -12,8 +12,6 @@ struct MouseState {
   KeyState rmb_state;
   double pos_x = 0;
   double pos_y = 0;
-  double prv_x = 0;
-  double prv_y = 0;
 };
 
 class InputManager {
@@ -28,7 +26,9 @@ class InputManager {
   static void Init();
   static KeyState GetKeyState(int key);
   static bool IsKeyPressed(int key);
-  static const MouseState& GetMouseState();
+  static MouseState GetMouseState();
+
+  static void SetCursorMode(int mode);
 };
 
 }  // namespace utill

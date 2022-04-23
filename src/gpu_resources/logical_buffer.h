@@ -1,10 +1,12 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "gpu_resources/access_sync_manager.h"
 #include "gpu_resources/device_memory_allocator.h"
 #include "gpu_resources/physical_buffer.h"
+#include "utill/error_handling.h"
 
 namespace gpu_resources {
 
@@ -44,6 +46,36 @@ class LogicalBuffer {
   // ending at |GetFirstUserInd()|, than returning back to
   // |GetFirstUserInd()|
   vk::BufferMemoryBarrier2KHR GetPostPassBarrier(uint32_t user_ind);
+
+  void* GetMappingStart() const;
+  vk::MappedMemoryRange GetMappedMemoryRange() const;
+
+  template <typename T>
+  vk::DeviceSize LoadDataFromVec(const std::vector<T>& data,
+                                 vk::DeviceSize dst_offset);
 };
+
+template <typename T>
+static size_t GetDataSize(const std::vector<T>& data) {
+  return sizeof(T) * data.size();
+}
+
+template <typename T>
+vk::DeviceSize LogicalBuffer::LoadDataFromVec(const std::vector<T>& data,
+                                              vk::DeviceSize dst_offset) {
+  size_t data_size = sizeof(T) * data.size();
+  if (data_size == 0) {
+    return dst_offset;
+  }
+  if (dst_offset + data_size > size_) {
+    LOG << "Failed to load data from vec to buffer, not enough space";
+    return -1;
+  }
+  DCHECK(memory_) << "Memory not bound";
+  DCHECK(memory_->mapping_start) << "Memory not mapped";
+  memcpy((char*)memory_->mapping_start + dst_offset, data.data(), data_size);
+  dst_offset += data_size;
+  return dst_offset;
+}
 
 }  // namespace gpu_resources

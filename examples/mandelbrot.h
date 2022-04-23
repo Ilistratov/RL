@@ -1,5 +1,6 @@
 #pragma once
 
+#include "blit_to_swapchain.h"
 #include "pipeline_handler/compute.h"
 #include "render_graph/render_graph.h"
 
@@ -30,18 +31,11 @@ class MandelbrotDrawPass : public render_graph::Pass {
   PushConstants& GetPushConstants();
 };
 
-class SwapchainPresentPass : public render_graph::Pass {
- public:
-  SwapchainPresentPass();
-  void OnRecord(vk::CommandBuffer primary_cmd,
-                const std::vector<vk::CommandBuffer>&) noexcept override;
-};
-
 class Mandelbrot {
-  render_graph::RenderGraph render_graph_;
   MandelbrotDrawPass draw_;
-  SwapchainPresentPass present_;
+  BlitToSwapchainPass present_;
   vk::Semaphore ready_to_present_;
+  render_graph::RenderGraph render_graph_;
   float dst_x_ = 0;
   float dst_y_ = 0;
   float dst_scale_ = 1;

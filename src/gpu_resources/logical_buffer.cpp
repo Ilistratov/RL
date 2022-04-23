@@ -72,4 +72,14 @@ vk::BufferMemoryBarrier2KHR LogicalBuffer::GetPostPassBarrier(
                             dst_usage.access);
 }
 
+void* LogicalBuffer::GetMappingStart() const {
+  DCHECK(memory_);
+  return memory_->mapping_start;
+}
+
+vk::MappedMemoryRange LogicalBuffer::GetMappedMemoryRange() const {
+  DCHECK(memory_);
+  return vk::MappedMemoryRange(memory_->memory, memory_->offset, memory_->size);
+}
+
 }  // namespace gpu_resources

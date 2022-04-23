@@ -13,6 +13,17 @@ ImagePassBind::ImagePassBind(gpu_resources::ResourceUsage usage,
       descriptor_type_(descriptor_type),
       descriptor_stage_flags_(stage_flags) {}
 
+ImagePassBind ImagePassBind::ComputeRenderTarget(
+    vk::AccessFlagBits2KHR access_flags) {
+  gpu_resources::ResourceUsage usage;
+  usage.access = access_flags;
+  usage.stage = vk::PipelineStageFlagBits2KHR::eComputeShader;
+  usage.layout = vk::ImageLayout::eGeneral;
+  return ImagePassBind(usage, vk::ImageUsageFlagBits::eStorage,
+                       vk::DescriptorType::eStorageImage,
+                       vk::ShaderStageFlagBits::eCompute);
+}
+
 void ImagePassBind::OnResourceBind(uint32_t user_ind,
                                    gpu_resources::LogicalImage* image) {
   DCHECK(!image_) << "Resource already bound";

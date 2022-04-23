@@ -40,6 +40,17 @@ class PhysicalBuffer {
   void SetDebugName(const std::string& debug_name) const;
 
   ~PhysicalBuffer();
+
+  static void RecordCopy(vk::CommandBuffer cmd,
+                         const PhysicalBuffer& src,
+                         const PhysicalBuffer& dst,
+                         vk::DeviceSize src_offset,
+                         vk::DeviceSize dst_offset,
+                         vk::DeviceSize size);
+  static void RecordCopy(vk::CommandBuffer cmd,
+                         const PhysicalBuffer& src,
+                         const PhysicalBuffer& dst,
+                         const std::vector<vk::BufferCopy>& copy_regions);
 };
 
 }  // namespace gpu_resources

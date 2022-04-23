@@ -9,7 +9,7 @@ namespace gpu_resources {
 PhysicalBuffer::PhysicalBuffer(vk::DeviceSize size,
                                vk::BufferUsageFlags usage_flags)
     : size_(size), usage_flags_(usage_flags) {
-  assert(size > 0);
+  DCHECK(size > 0);
   auto device = base::Base::Get().GetContext().GetDevice();
   buffer_ = device.createBuffer(vk::BufferCreateInfo(
       {}, size, usage_flags, vk::SharingMode::eExclusive, {}));
@@ -76,6 +76,26 @@ void PhysicalBuffer::SetDebugName(const std::string& debug_name) const {
 PhysicalBuffer::~PhysicalBuffer() {
   auto device = base::Base::Get().GetContext().GetDevice();
   device.destroyBuffer(buffer_);
+}
+
+void PhysicalBuffer::RecordCopy(vk::CommandBuffer cmd,
+                                const PhysicalBuffer& src,
+                                const PhysicalBuffer& dst,
+                                vk::DeviceSize src_offset,
+                                vk::DeviceSize dst_offset,
+                                vk::DeviceSize size) {
+  PhysicalBuffer::RecordCopy(cmd, src, dst,
+                             {vk::BufferCopy(src_offset, dst_offset, size)});
+}
+
+void PhysicalBuffer::RecordCopy(
+    vk::CommandBuffer cmd,
+    const PhysicalBuffer& src,
+    const PhysicalBuffer& dst,
+    const std::vector<vk::BufferCopy>& copy_regions) {
+  DCHECK(src.buffer_) << "src must be created to use this method";
+  DCHECK(dst.buffer_) << "dst must be created to use this method";
+  cmd.copyBuffer(src.buffer_, dst.buffer_, copy_regions);
 }
 
 }  // namespace gpu_resources

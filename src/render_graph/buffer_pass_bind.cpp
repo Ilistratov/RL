@@ -13,6 +13,40 @@ BufferPassBind::BufferPassBind(gpu_resources::ResourceUsage usage,
       descriptor_type_(descriptor_type),
       descriptor_stage_flags_(stage_flags) {}
 
+BufferPassBind BufferPassBind::ComputeStorageBuffer(
+    vk::AccessFlags2KHR access_flags) {
+  gpu_resources::ResourceUsage usage;
+  usage.access = access_flags;
+  usage.stage = vk::PipelineStageFlagBits2KHR::eComputeShader;
+  return BufferPassBind(usage, vk::BufferUsageFlagBits::eStorageBuffer,
+                        vk::DescriptorType::eStorageBuffer,
+                        vk::ShaderStageFlagBits::eCompute);
+}
+
+BufferPassBind BufferPassBind::UniformBuffer(
+    vk::PipelineStageFlags2KHR pipeline_stage,
+    vk::ShaderStageFlags shader_stage) {
+  gpu_resources::ResourceUsage usage;
+  usage.access = vk::AccessFlagBits2KHR::eUniformRead;
+  usage.stage = pipeline_stage;
+  return BufferPassBind(usage, vk::BufferUsageFlagBits::eUniformBuffer,
+                        vk::DescriptorType::eUniformBuffer, shader_stage);
+}
+
+BufferPassBind BufferPassBind::TransferSrcBuffer() {
+  gpu_resources::ResourceUsage usage;
+  usage.access = vk::AccessFlagBits2KHR::eTransferRead;
+  usage.stage = vk::PipelineStageFlagBits2KHR::eTransfer;
+  return BufferPassBind(usage, vk::BufferUsageFlagBits::eTransferSrc, {}, {});
+}
+
+BufferPassBind BufferPassBind::TransferDstBuffer() {
+  gpu_resources::ResourceUsage usage;
+  usage.access = vk::AccessFlagBits2KHR::eTransferWrite;
+  usage.stage = vk::PipelineStageFlagBits2KHR::eTransfer;
+  return BufferPassBind(usage, vk::BufferUsageFlagBits::eTransferDst, {}, {});
+}
+
 void BufferPassBind::OnResourceBind(uint32_t user_ind,
                                     gpu_resources::LogicalBuffer* buffer) {
   DCHECK(!buffer_) << "Resource already bound";

@@ -1,7 +1,7 @@
 #include <chrono>
 #include <iostream>
 
-#include "examples/mandelbrot.h"
+#include "examples/raytracer.h"
 
 #include "base/base.h"
 #include "base/context.h"
@@ -12,7 +12,7 @@
 #include "utill/logger.h"
 
 void Run() {
-  examples::Mandelbrot renderer;
+  examples::RayTracer renderer;
   auto& window = base::Base::Get().GetWindow();
   while (!glfwWindowShouldClose(window.GetWindow())) {
     glfwPollEvents();
@@ -44,7 +44,7 @@ int main() {
       vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eGraphics};
 
   try {
-    base::Base::Get().Init(base_config, vk::Extent2D{1366, 768},
+    base::Base::Get().Init(base_config, vk::Extent2D{1280, 768},
                            context_config);
     utill::InputManager::Init();
     Run();

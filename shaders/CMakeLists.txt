@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.8)
 
 set(HLSL_SOURCE_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/mandelbrot.hlsl
+	${CMAKE_CURRENT_SOURCE_DIR}/raytrace.hlsl
 )
 
 foreach(HLSL ${HLSL_SOURCE_FILES})
@@ -9,7 +10,7 @@ foreach(HLSL ${HLSL_SOURCE_FILES})
 	set(SPIRV ${PROJECT_BINARY_DIR}/${FILE_NAME}.spv)
 	add_custom_command(
 		OUTPUT ${SPIRV}
-		COMMAND $ENV{VK_SDK_PATH}/bin/dxc.exe -spirv -T cs_6_7  -fspv-target-env=vulkan1.1 -E main -Fo ${SPIRV} ${HLSL} &&
+		COMMAND $ENV{VK_SDK_PATH}/bin/dxc.exe -spirv -T cs_6_7 -fspv-target-env=vulkan1.1 -E main -Fo ${SPIRV} ${HLSL} &&
 				$ENV{VK_SDK_PATH}/bin/spirv-val.exe ${SPIRV}
 		DEPENDS ${HLSL}
 	)
