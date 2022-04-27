@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
 
-#include "gpu_resources/logical_buffer.h"
+#include "gpu_resources/buffer.h"
 
 namespace render_data {
 
@@ -27,17 +27,15 @@ struct Mesh {
 
   void Swap(Mesh& other) noexcept;
 
-  vk::DeviceSize LoadToStagingBuffer(
-      gpu_resources::LogicalBuffer* staging_buffer,
-      vk::DeviceSize dst_offset);
-  vk::DeviceSize RecordCopyFromStaging(
-      vk::CommandBuffer cmd,
-      gpu_resources::LogicalBuffer* staging_buffer,
-      gpu_resources::LogicalBuffer* position_buffer,
-      gpu_resources::LogicalBuffer* normal_buffer,
-      gpu_resources::LogicalBuffer* tex_coord_buffer,
-      gpu_resources::LogicalBuffer* index_buffer,
-      vk::DeviceSize src_offset);
+  vk::DeviceSize LoadToStagingBuffer(gpu_resources::Buffer* staging_buffer,
+                                     vk::DeviceSize dst_offset);
+  vk::DeviceSize RecordCopyFromStaging(vk::CommandBuffer cmd,
+                                       gpu_resources::Buffer* staging_buffer,
+                                       gpu_resources::Buffer* position_buffer,
+                                       gpu_resources::Buffer* normal_buffer,
+                                       gpu_resources::Buffer* tex_coord_buffer,
+                                       gpu_resources::Buffer* index_buffer,
+                                       vk::DeviceSize src_offset);
 };
 
 }  // namespace render_data

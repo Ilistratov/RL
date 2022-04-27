@@ -16,7 +16,7 @@ void RenderGraph::AddPass(Pass* pass,
   passes_.push_back(std::move(pass));
 }
 
-ResourceManager& RenderGraph::GetResourceManager() {
+gpu_resources::ResourceManager& RenderGraph::GetResourceManager() {
   return resource_manager_;
 }
 

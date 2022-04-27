@@ -3,15 +3,15 @@
 #include <map>
 #include <string>
 
+#include "gpu_resources/buffer.h"
 #include "gpu_resources/device_memory_allocator.h"
-#include "gpu_resources/logical_buffer.h"
 #include "gpu_resources/logical_image.h"
 
-namespace render_graph {
+namespace gpu_resources {
 
 class ResourceManager {
   gpu_resources::DeviceMemoryAllocator allocator_;
-  std::map<std::string, gpu_resources::LogicalBuffer> buffers_;
+  std::map<std::string, gpu_resources::Buffer> buffers_;
   std::map<std::string, gpu_resources::LogicalImage> images_;
 
  public:
@@ -30,8 +30,8 @@ class ResourceManager {
   void InitResources();
   void RecordInitBarriers(vk::CommandBuffer cmd) const;
 
-  gpu_resources::LogicalBuffer& GetBuffer(const std::string& name);
+  gpu_resources::Buffer& GetBuffer(const std::string& name);
   gpu_resources::LogicalImage& GetImage(const std::string& name);
 };
 
-}  // namespace render_graph
+}  // namespace gpu_resources

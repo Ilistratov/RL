@@ -82,9 +82,8 @@ void Mesh::Swap(Mesh& other) noexcept {
   index.swap(other.index);
 }
 
-vk::DeviceSize Mesh::LoadToStagingBuffer(
-    gpu_resources::LogicalBuffer* staging_buffer,
-    vk::DeviceSize dst_offset) {
+vk::DeviceSize Mesh::LoadToStagingBuffer(gpu_resources::Buffer* staging_buffer,
+                                         vk::DeviceSize dst_offset) {
   DCHECK(staging_buffer) << "Staging buffer must be presented";
   dst_offset = staging_buffer->LoadDataFromVec(position, dst_offset);
   DCHECK(dst_offset != (vk::DeviceSize)(-1)) << "Failed to load position";
@@ -98,26 +97,25 @@ vk::DeviceSize Mesh::LoadToStagingBuffer(
 }
 
 static vk::DeviceSize RecordCopy(vk::CommandBuffer cmd,
-                                 gpu_resources::LogicalBuffer* staging_buffer,
-                                 gpu_resources::LogicalBuffer* dst_buffer,
+                                 gpu_resources::Buffer* staging_buffer,
+                                 gpu_resources::Buffer* dst_buffer,
                                  vk::DeviceSize data_size,
                                  vk::DeviceSize src_offset) {
   if (!dst_buffer || data_size == 0) {
     return src_offset;
   }
-  gpu_resources::PhysicalBuffer::RecordCopy(
-      cmd, staging_buffer->GetPhysicalBuffer(), dst_buffer->GetPhysicalBuffer(),
-      src_offset, 0, data_size);
+  gpu_resources::Buffer::RecordCopy(cmd, *staging_buffer, *dst_buffer,
+                                    src_offset, 0, data_size);
   return src_offset + data_size;
 }
 
 vk::DeviceSize Mesh::RecordCopyFromStaging(
     vk::CommandBuffer cmd,
-    gpu_resources::LogicalBuffer* staging_buffer,
-    gpu_resources::LogicalBuffer* position_buffer,
-    gpu_resources::LogicalBuffer* normal_buffer,
-    gpu_resources::LogicalBuffer* tex_coord_buffer,
-    gpu_resources::LogicalBuffer* index_buffer,
+    gpu_resources::Buffer* staging_buffer,
+    gpu_resources::Buffer* position_buffer,
+    gpu_resources::Buffer* normal_buffer,
+    gpu_resources::Buffer* tex_coord_buffer,
+    gpu_resources::Buffer* index_buffer,
     vk::DeviceSize src_offset) {
   using gpu_resources::GetDataSize;
   DCHECK(staging_buffer) << "Staging buffer must be presented";

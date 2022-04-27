@@ -31,7 +31,8 @@ void Pass::OnRecord(vk::CommandBuffer,
 Pass::Pass(uint32_t secondary_cmd_count, vk::PipelineStageFlags2KHR stage_flags)
     : secondary_cmd_count_(secondary_cmd_count), stage_flags_(stage_flags) {}
 
-void Pass::BindResources(uint32_t user_ind, ResourceManager& resource_manager) {
+void Pass::BindResources(uint32_t user_ind,
+                         gpu_resources::ResourceManager& resource_manager) {
   DCHECK(user_ind_ == (uint32_t)(-1)) << "Resources already bound";
   user_ind_ = user_ind;
   for (auto& [name, buffer] : buffer_binds_) {

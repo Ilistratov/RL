@@ -48,14 +48,14 @@ BufferPassBind BufferPassBind::TransferDstBuffer() {
 }
 
 void BufferPassBind::OnResourceBind(uint32_t user_ind,
-                                    gpu_resources::LogicalBuffer* buffer) {
+                                    gpu_resources::Buffer* buffer) {
   DCHECK(!buffer_) << "Resource already bound";
   DCHECK(buffer) << "Can't bind null";
   buffer_ = buffer;
   buffer_->AddUsage(user_ind, buffer_usage_, buffer_usage_flags_);
 }
 
-gpu_resources::LogicalBuffer* BufferPassBind::GetBoundBuffer() const {
+gpu_resources::Buffer* BufferPassBind::GetBoundBuffer() const {
   return buffer_;
 }
 
@@ -76,8 +76,7 @@ pipeline_handler::Write BufferPassBind::GetWrite() const noexcept {
       0,
       descriptor_type_,
       {},
-      {vk::DescriptorBufferInfo(buffer_->GetPhysicalBuffer().GetBuffer(), 0,
-                                buffer_->GetPhysicalBuffer().GetSize())}};
+      {vk::DescriptorBufferInfo(buffer_->GetBuffer(), 0, buffer_->GetSize())}};
 }
 
 }  // namespace render_graph

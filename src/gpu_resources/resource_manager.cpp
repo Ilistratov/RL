@@ -1,4 +1,4 @@
-#include "render_graph/resource_manager.h"
+#include "gpu_resources/resource_manager.h"
 
 #include <cassert>
 
@@ -7,13 +7,13 @@
 #include "utill/error_handling.h"
 #include "utill/logger.h"
 
-namespace render_graph {
+namespace gpu_resources {
 
 void ResourceManager::AddBuffer(const std::string& name,
                                 vk::DeviceSize size,
                                 vk::MemoryPropertyFlags memory_flags) {
   DCHECK(!buffers_.contains(name)) << "Already have buffer named: " << name;
-  buffers_[name] = gpu_resources::LogicalBuffer(size, memory_flags);
+  buffers_[name] = Buffer(size, memory_flags);
   LOG << "Added buffer named: " << name;
 }
 
@@ -35,7 +35,7 @@ void ResourceManager::AddImage(const std::string& name,
 
 void ResourceManager::InitResources() {
   for (auto& [name, buffer] : buffers_) {
-    buffer.Create();
+    buffer.CreateVkBuffer();
     buffer.SetDebugName(name);
     buffer.RequestMemory(allocator_);
   }
@@ -76,8 +76,7 @@ void ResourceManager::RecordInitBarriers(vk::CommandBuffer cmd) const {
   cmd.pipelineBarrier2KHR(dep_info);
 }
 
-gpu_resources::LogicalBuffer& ResourceManager::GetBuffer(
-    const std::string& name) {
+gpu_resources::Buffer& ResourceManager::GetBuffer(const std::string& name) {
   DCHECK(buffers_.contains(name)) << "No buffer named: " << name;
   return buffers_.at(name);
 }
@@ -88,4 +87,4 @@ gpu_resources::LogicalImage& ResourceManager::GetImage(
   return images_.at(name);
 }
 
-}  // namespace render_graph
+}  // namespace gpu_resources

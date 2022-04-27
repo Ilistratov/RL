@@ -4,10 +4,10 @@
 #include <string>
 
 #include "gpu_executer/task.h"
+#include "gpu_resources/resource_manager.h"
 #include "pipeline_handler/descriptor_pool.h"
 #include "render_graph/buffer_pass_bind.h"
 #include "render_graph/image_pass_bind.h"
-#include "render_graph/resource_manager.h"
 
 namespace render_graph {
 
@@ -30,7 +30,8 @@ class Pass : public gpu_executer::Task {
   Pass(uint32_t secondary_cmd_count = 0,
        vk::PipelineStageFlags2KHR stage_flags = {});
 
-  void BindResources(uint32_t user_ind, ResourceManager& resource_manager);
+  void BindResources(uint32_t user_ind,
+                     gpu_resources::ResourceManager& resource_manager);
   virtual void ReserveDescriptorSets(
       pipeline_handler::DescriptorPool& pool) noexcept;
   virtual void OnResourcesInitialized() noexcept;
