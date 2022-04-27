@@ -3,11 +3,7 @@ set(SRC
   buffer.cpp
   device_memory_allocator.cpp
   image.cpp
-  logical_buffer.cpp
-  logical_image.cpp
   memory_block.cpp
-  physical_buffer.cpp
-  physical_image.cpp
   resource_manager.cpp
 )
 
