@@ -176,4 +176,4 @@ void Image::RecordBlit(vk::CommandBuffer cmd,
   cmd.blitImage2KHR(blit_info);
 }
 
-}
+}  // namespace gpu_resources
