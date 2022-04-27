@@ -29,7 +29,7 @@ void ResourceManager::AddImage(const std::string& name,
   if (format == vk::Format::eUndefined) {
     format = swapchain.GetFormat();
   }
-  images_[name] = gpu_resources::LogicalImage(extent, format, memory_flags);
+  images_[name] = gpu_resources::Image(extent, format, memory_flags);
   LOG << "Added image named: " << name;
 }
 
@@ -40,7 +40,7 @@ void ResourceManager::InitResources() {
     buffer.RequestMemory(allocator_);
   }
   for (auto& [name, image] : images_) {
-    image.Create();
+    image.CreateVkImage();
     image.SetDebugName(name);
     image.RequestMemory(allocator_);
   }
@@ -81,8 +81,7 @@ gpu_resources::Buffer& ResourceManager::GetBuffer(const std::string& name) {
   return buffers_.at(name);
 }
 
-gpu_resources::LogicalImage& ResourceManager::GetImage(
-    const std::string& name) {
+gpu_resources::Image& ResourceManager::GetImage(const std::string& name) {
   DCHECK(images_.contains(name)) << "No image named: " << name;
   return images_.at(name);
 }

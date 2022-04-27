@@ -7,7 +7,6 @@
 
 #include "gpu_resources/access_sync_manager.h"
 #include "gpu_resources/device_memory_allocator.h"
-#include "gpu_resources/physical_buffer.h"
 
 namespace gpu_resources {
 

@@ -5,14 +5,14 @@
 
 #include "gpu_resources/buffer.h"
 #include "gpu_resources/device_memory_allocator.h"
-#include "gpu_resources/logical_image.h"
+#include "gpu_resources/image.h"
 
 namespace gpu_resources {
 
 class ResourceManager {
   gpu_resources::DeviceMemoryAllocator allocator_;
   std::map<std::string, gpu_resources::Buffer> buffers_;
-  std::map<std::string, gpu_resources::LogicalImage> images_;
+  std::map<std::string, gpu_resources::Image> images_;
 
  public:
   ResourceManager() = default;
@@ -31,7 +31,7 @@ class ResourceManager {
   void RecordInitBarriers(vk::CommandBuffer cmd) const;
 
   gpu_resources::Buffer& GetBuffer(const std::string& name);
-  gpu_resources::LogicalImage& GetImage(const std::string& name);
+  gpu_resources::Image& GetImage(const std::string& name);
 };
 
 }  // namespace gpu_resources

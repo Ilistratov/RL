@@ -2,6 +2,7 @@ set(SRC
   access_sync_manager.cpp
   buffer.cpp
   device_memory_allocator.cpp
+  image.cpp
   logical_buffer.cpp
   logical_image.cpp
   memory_block.cpp
