@@ -22,7 +22,7 @@ void BlitToSwapchainPass::OnRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer>&) noexcept {
   auto& swapchain = base::Base::Get().GetSwapchain();
-  gpu_resources::PhysicalImage swapchain_image(
+  gpu_resources::Image swapchain_image(
       swapchain.GetImage(swapchain.GetActiveImageInd()), swapchain.GetExtent(),
       swapchain.GetFormat());
 
@@ -34,9 +34,8 @@ void BlitToSwapchainPass::OnRecord(
   primary_cmd.pipelineBarrier2KHR(
       vk::DependencyInfoKHR({}, {}, {}, pre_blit_barrier));
 
-  gpu_resources::PhysicalImage::RecordBlit(
-      primary_cmd,
-      image_binds_[render_target_name_].GetBoundImage()->GetPhysicalImage(),
+  gpu_resources::Image::RecordBlit(
+      primary_cmd, *image_binds_[render_target_name_].GetBoundImage(),
       swapchain_image);
 
   auto post_blit_barrier = swapchain_image.GetBarrier(

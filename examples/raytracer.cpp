@@ -39,7 +39,7 @@ static float GetAxisVal(int axis) {
 }
 
 template <typename T>
-static size_t FillStagingBuffer(gpu_resources::LogicalBuffer* staging_buffer,
+static size_t FillStagingBuffer(gpu_resources::Buffer* staging_buffer,
                                 const std::vector<T>& data,
                                 size_t dst_offset) {
   DCHECK(staging_buffer) << "Unexpected null";
@@ -52,37 +52,36 @@ static size_t FillStagingBuffer(gpu_resources::LogicalBuffer* staging_buffer,
 }
 
 static void RecordCopy(vk::CommandBuffer cmd,
-                       gpu_resources::LogicalBuffer* staging_buffer,
-                       gpu_resources::LogicalBuffer* dst_buffer,
+                       gpu_resources::Buffer* staging_buffer,
+                       gpu_resources::Buffer* dst_buffer,
                        size_t& staging_offset,
                        size_t size) {
-  gpu_resources::PhysicalBuffer::RecordCopy(
-      cmd, staging_buffer->GetPhysicalBuffer(), dst_buffer->GetPhysicalBuffer(),
-      staging_offset, 0, size);
+  gpu_resources::Buffer::RecordCopy(cmd, *staging_buffer, *dst_buffer,
+                                    staging_offset, 0, size);
   staging_offset += size;
 }
 
 void ResourceTransferPass::OnRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer>&) noexcept {
-  gpu_resources::LogicalBuffer* staging_buffer =
+  gpu_resources::Buffer* staging_buffer =
       buffer_binds_[kStagingBufferName].GetBoundBuffer();
 
   if (is_first_record_) {
     is_first_record_ = false;
     size_t staging_offset = 0;
-    gpu_resources::LogicalBuffer* vertex_logical_buffer =
+    gpu_resources::Buffer* vertex_gpu_buffer =
         buffer_binds_[kVertexBufferName].GetBoundBuffer();
-    gpu_resources::LogicalBuffer* index_logical_buffer =
+    gpu_resources::Buffer* index_gpu_buffer =
         buffer_binds_[kIndexBufferName].GetBoundBuffer();
     staging_offset = g_scene_mesh.RecordCopyFromStaging(
-        primary_cmd, staging_buffer, vertex_logical_buffer, nullptr, nullptr,
-        index_logical_buffer, staging_offset);
+        primary_cmd, staging_buffer, vertex_gpu_buffer, nullptr, nullptr,
+        index_gpu_buffer, staging_offset);
 
-    gpu_resources::LogicalBuffer* light_logical_buffer =
+    gpu_resources::Buffer* light_gpu_buffer =
         buffer_binds_[kLightBufferName].GetBoundBuffer();
-    RecordCopy(primary_cmd, staging_buffer, light_logical_buffer,
-               staging_offset, GetDataSize(g_light_buffer));
+    RecordCopy(primary_cmd, staging_buffer, light_gpu_buffer, staging_offset,
+               GetDataSize(g_light_buffer));
   }
 
   void* camera_buffer_mapping =
@@ -107,7 +106,7 @@ ResourceTransferPass::ResourceTransferPass() {
 }
 
 void ResourceTransferPass::OnResourcesInitialized() noexcept {
-  gpu_resources::LogicalBuffer* staging_buffer =
+  gpu_resources::Buffer* staging_buffer =
       buffer_binds_[kStagingBufferName].GetBoundBuffer();
   size_t fill_offset = 0;
   fill_offset = g_scene_mesh.LoadToStagingBuffer(staging_buffer, fill_offset);

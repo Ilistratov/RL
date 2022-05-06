@@ -56,7 +56,10 @@ std::vector<vk::CommandBuffer> CommandPool::GetCmd(
     if (alloc_step + cmd_vec.size() < cmd_count) {
       alloc_step = cmd_count - cmd_vec.size();
     }
-    DCHECK(alloc_step < kCmdPoolMaxAllocStep) << "Command buffer overuse";
+    DCHECK(alloc_step < kCmdPoolMaxAllocStep)
+        << vk::to_string(cmd_level) << " command buffer overuse";
+    LOG << "Allocating " << alloc_step << " " << vk::to_string(cmd_level)
+        << " cmd buffer";
 
     auto device = base::Base::Get().GetContext().GetDevice();
     auto n_cmd = device.allocateCommandBuffers(

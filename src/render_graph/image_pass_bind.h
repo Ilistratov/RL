@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu_resources/logical_image.h"
+#include "gpu_resources/image.h"
 #include "pipeline_handler/descriptor_binding.h"
 
 namespace render_graph {
@@ -8,7 +8,7 @@ namespace render_graph {
 class ImagePassBind : public pipeline_handler::DescriptorBinding {
   gpu_resources::ResourceUsage image_usage_;
   vk::ImageUsageFlags image_usage_flags_;
-  gpu_resources::LogicalImage* image_ = nullptr;
+  gpu_resources::Image* image_ = nullptr;
   vk::DescriptorType descriptor_type_;
   vk::ShaderStageFlags descriptor_stage_flags_;
 
@@ -20,8 +20,8 @@ class ImagePassBind : public pipeline_handler::DescriptorBinding {
                 vk::ShaderStageFlags stage_flags = {});
   static ImagePassBind ComputeRenderTarget(vk::AccessFlagBits2KHR access_flags);
 
-  void OnResourceBind(uint32_t user_ind, gpu_resources::LogicalImage* image);
-  gpu_resources::LogicalImage* GetBoundImage() const;
+  void OnResourceBind(uint32_t user_ind, gpu_resources::Image* image);
+  gpu_resources::Image* GetBoundImage() const;
   vk::ImageMemoryBarrier2KHR GetBarrier(uint32_t user_ind) const;
 
   vk::DescriptorSetLayoutBinding GetVkBinding() const noexcept override;

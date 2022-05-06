@@ -25,14 +25,14 @@ ImagePassBind ImagePassBind::ComputeRenderTarget(
 }
 
 void ImagePassBind::OnResourceBind(uint32_t user_ind,
-                                   gpu_resources::LogicalImage* image) {
+                                   gpu_resources::Image* image) {
   DCHECK(!image_) << "Resource already bound";
   DCHECK(image) << "Cant bind null";
   image_ = image;
   image_->AddUsage(user_ind, image_usage_, image_usage_flags_);
 }
 
-gpu_resources::LogicalImage* ImagePassBind::GetBoundImage() const {
+gpu_resources::Image* ImagePassBind::GetBoundImage() const {
   return image_;
 }
 
@@ -48,14 +48,14 @@ vk::DescriptorSetLayoutBinding ImagePassBind::GetVkBinding() const noexcept {
 
 pipeline_handler::Write ImagePassBind::GetWrite() const noexcept {
   DCHECK(image_) << "Resource must be bound to use this method";
-  if (!image_->GetPhysicalImage().GetImageView()) {
-    image_->GetPhysicalImage().CreateImageView();
+  if (!image_->GetImageView()) {
+    image_->CreateImageView();
   }
 
   return pipeline_handler::Write{
       0,
       descriptor_type_,
-      {vk::DescriptorImageInfo({}, image_->GetPhysicalImage().GetImageView(),
+      {vk::DescriptorImageInfo({}, image_->GetImageView(),
                                image_usage_.layout)},
       {}};
 }

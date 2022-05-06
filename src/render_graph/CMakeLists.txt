@@ -3,7 +3,6 @@ set(SRC
   image_pass_bind.cpp
   pass.cpp
   render_graph.cpp
-  resource_manager.cpp
 )
 
 add_library(render_graph ${SRC})
