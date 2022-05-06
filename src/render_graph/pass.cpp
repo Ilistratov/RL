@@ -25,6 +25,42 @@ void Pass::RecordPostPassParriers(vk::CommandBuffer cmd) {
   cmd.pipelineBarrier2KHR(dep_info);
 }
 
+void Pass::AddBuffer(const std::string& buffer_name, BufferPassBind bind) {
+  DCHECK(!buffer_binds_.contains(buffer_name))
+      << "Already have buffer bind with name " << buffer_name;
+  buffer_binds_[buffer_name] = bind;
+}
+
+void Pass::AddImage(const std::string& image_name, ImagePassBind bind) {
+  DCHECK(!image_binds_.contains(image_name))
+      << "Already have image bind with name " << image_name;
+  image_binds_[image_name] = bind;
+}
+
+gpu_resources::Buffer* Pass::GetBuffer(const std::string& buffer_name) {
+  DCHECK(buffer_binds_.contains(buffer_name))
+      << "No buffer bind with name " << buffer_name;
+  return buffer_binds_[buffer_name].GetBoundBuffer();
+}
+
+BufferPassBind& Pass::GetBufferPassBind(const std::string& buffer_name) {
+  DCHECK(buffer_binds_.contains(buffer_name))
+      << "No buffer bind with name " << buffer_name;
+  return buffer_binds_[buffer_name];
+}
+
+gpu_resources::Image* Pass::GetImage(const std::string& image_name) {
+  DCHECK(image_binds_.contains(image_name))
+      << "No image bind with name " << image_name;
+  return image_binds_[image_name].GetBoundImage();
+}
+
+ImagePassBind& Pass::GetImagePassBind(const std::string& image_name) {
+  DCHECK(image_binds_.contains(image_name))
+      << "No image bind with name " << image_name;
+  return image_binds_[image_name];
+}
+
 void Pass::OnRecord(vk::CommandBuffer,
                     const std::vector<vk::CommandBuffer>&) noexcept {}
 

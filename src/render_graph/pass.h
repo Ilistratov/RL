@@ -15,16 +15,23 @@ class Pass : public gpu_executer::Task {
   uint32_t user_ind_ = -1;
   uint32_t secondary_cmd_count_ = 0;
   vk::PipelineStageFlags2KHR stage_flags_ = {};
+  std::map<std::string, BufferPassBind> buffer_binds_;
+  std::map<std::string, ImagePassBind> image_binds_;
 
   void RecordPostPassParriers(vk::CommandBuffer cmd);
 
  protected:
-  std::map<std::string, BufferPassBind> buffer_binds_;
-  std::map<std::string, ImagePassBind> image_binds_;
-
   virtual void OnRecord(
       vk::CommandBuffer primary_cmd,
       const std::vector<vk::CommandBuffer>& secondary_cmd) noexcept;
+
+  void AddBuffer(const std::string& buffer_name, BufferPassBind bind);
+  void AddImage(const std::string& image_name, ImagePassBind bind);
+
+  gpu_resources::Buffer* GetBuffer(const std::string& buffer_name);
+  BufferPassBind& GetBufferPassBind(const std::string& buffer_name);
+  gpu_resources::Image* GetImage(const std::string& image_name);
+  ImagePassBind& GetImagePassBind(const std::string& image_name);
 
  public:
   Pass(uint32_t secondary_cmd_count = 0,

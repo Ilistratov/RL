@@ -2,8 +2,10 @@
 [[vk::binding(1, 0)]] RWTexture2D<float> depth_target;
 
 [[vk::binding(2, 0)]] StructuredBuffer<float4> vertex_pos;
-[[vk::binding(3, 0)]] StructuredBuffer<uint4> vertex_ind;
-[[vk::binding(4, 0)]] StructuredBuffer<float4> light_pos;
+[[vk::binding(3, 0)]] StructuredBuffer<float4> vertex_normal;
+[[vk::binding(4, 0)]] StructuredBuffer<float2> vertex_texcoord;
+[[vk::binding(5, 0)]] StructuredBuffer<uint4> vertex_ind;
+[[vk::binding(6, 0)]] StructuredBuffer<float4> light_pos;
 
 struct CameraInfo {
   float4x4 camera_to_world;
@@ -12,7 +14,7 @@ struct CameraInfo {
   float aspect;
 };
 
-[[vk::binding(5, 0)]] ConstantBuffer<CameraInfo> camera_info;
+[[vk::binding(7, 0)]] ConstantBuffer<CameraInfo> camera_info;
 
 float4 PixCordToCameraSpace(uint pix_x, uint pix_y) {
   float uss_x = (float)(pix_x) / camera_info.screen_width;

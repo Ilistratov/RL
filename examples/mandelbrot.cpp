@@ -30,24 +30,23 @@ MandelbrotDrawPass::MandelbrotDrawPass()
   rt_usage.stage = vk::PipelineStageFlagBits2KHR::eComputeShader;
   rt_usage.layout = vk::ImageLayout::eGeneral;
 
-  image_binds_[kColorTarget] = render_graph::ImagePassBind(
-      rt_usage, vk::ImageUsageFlagBits::eStorage,
-      vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
-  LOG << "Image binds count " << image_binds_.size();
+  AddImage(kColorTarget, render_graph::ImagePassBind(
+                             rt_usage, vk::ImageUsageFlagBits::eStorage,
+                             vk::DescriptorType::eStorageImage,
+                             vk::ShaderStageFlagBits::eCompute));
 }
 
 void MandelbrotDrawPass::ReserveDescriptorSets(
     pipeline_handler::DescriptorPool& pool) noexcept {
   vk::PushConstantRange pc_range(vk::ShaderStageFlagBits::eCompute, 0,
                                  sizeof(PushConstants));
-  DCHECK(image_binds_.contains(kColorTarget));
-  auto rt_bind = image_binds_[kColorTarget];
-  compute_pipeline_ = pipeline_handler::Compute({&rt_bind}, pool, {pc_range},
-                                                "mandelbrot.spv", "main");
+  compute_pipeline_ =
+      pipeline_handler::Compute({&GetImagePassBind(kColorTarget)}, pool,
+                                {pc_range}, "mandelbrot.spv", "main");
 }
 
 void MandelbrotDrawPass::OnResourcesInitialized() noexcept {
-  compute_pipeline_.UpdateDescriptorSet({&image_binds_[kColorTarget]});
+  compute_pipeline_.UpdateDescriptorSet({&GetImagePassBind(kColorTarget)});
 }
 
 PushConstants& MandelbrotDrawPass::GetPushConstants() {
