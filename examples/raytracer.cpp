@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "base/base.h"
+#include "render_data/bvh.h"
 #include "render_data/mesh.h"
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
@@ -21,6 +22,7 @@ const static std::string kIndexBufferName = "index_buffer";
 const static std::string kLightBufferName = "light_buffer";
 const static std::string kCameraInfoBufferName = "camera_info";
 const static std::string kStagingBufferName = "staging_buffer";
+const static std::string kBVHBufferName = "bvh_buffer";
 const static float PI = acos(-1);
 
 const static std::vector<std::string> kGeometryBufferNames = {
@@ -28,6 +30,7 @@ const static std::vector<std::string> kGeometryBufferNames = {
     kIndexBufferName};
 
 static render_data::Mesh g_scene_mesh;
+static render_data::BVH g_scene_bvh;
 static std::vector<glm::vec4> g_light_buffer = {{0.5, 15, 0.5, 1.0}};
 static CameraInfo g_camera_info;
 static bool g_is_update_camera_transform_ = false;
@@ -88,6 +91,9 @@ void ResourceTransferPass::OnRecord(
     gpu_resources::Buffer* light_gpu_buffer = GetBuffer(kLightBufferName);
     RecordCopy(primary_cmd, staging_buffer, light_gpu_buffer, staging_offset,
                GetDataSize(g_light_buffer));
+    gpu_resources::Buffer* bvh_gpu_buffer = GetBuffer(kBVHBufferName);
+    RecordCopy(primary_cmd, staging_buffer, bvh_gpu_buffer, staging_offset,
+               GetDataSize(g_scene_bvh.GetNodes()));
   }
 
   void* camera_buffer_mapping =
@@ -108,6 +114,8 @@ ResourceTransferPass::ResourceTransferPass() {
   AddBuffer(kCameraInfoBufferName,
             render_graph::BufferPassBind::TransferDstBuffer());
 
+  AddBuffer(kBVHBufferName, render_graph::BufferPassBind::TransferDstBuffer());
+
   AddBuffer(kStagingBufferName,
             render_graph::BufferPassBind::TransferSrcBuffer());
 }
@@ -116,7 +124,9 @@ void ResourceTransferPass::OnResourcesInitialized() noexcept {
   gpu_resources::Buffer* staging_buffer = GetBuffer(kStagingBufferName);
   size_t fill_offset = 0;
   fill_offset = g_scene_mesh.LoadToStagingBuffer(staging_buffer, fill_offset);
-  FillStagingBuffer(staging_buffer, g_light_buffer, fill_offset);
+  fill_offset = FillStagingBuffer(staging_buffer, g_light_buffer, fill_offset);
+  fill_offset =
+      FillStagingBuffer(staging_buffer, g_scene_bvh.GetNodes(), fill_offset);
   auto device = base::Base::Get().GetContext().GetDevice();
   device.flushMappedMemoryRanges(staging_buffer->GetMappedMemoryRange());
 }
@@ -149,6 +159,9 @@ RaytracerPass::RaytracerPass() {
                 vk::PipelineStageFlagBits2KHR::eComputeShader,
                 vk::ShaderStageFlagBits::eCompute));
 
+  AddBuffer(kBVHBufferName, render_graph::BufferPassBind::ComputeStorageBuffer(
+                                vk::AccessFlagBits2KHR::eShaderRead));
+
   shader_bindings_.reserve(2 + kGeometryBufferNames.size() + 2);
   shader_bindings_.push_back(&GetImagePassBind(kColorRTName));
   shader_bindings_.push_back(&GetImagePassBind(kDepthRTName));
@@ -157,6 +170,7 @@ RaytracerPass::RaytracerPass() {
   }
   shader_bindings_.push_back(&GetBufferPassBind(kLightBufferName));
   shader_bindings_.push_back(&GetBufferPassBind(kCameraInfoBufferName));
+  shader_bindings_.push_back(&GetBufferPassBind(kBVHBufferName));
 }
 
 void RaytracerPass::ReserveDescriptorSets(
@@ -176,6 +190,9 @@ RayTracer::RayTracer() : present_(kColorRTName) {
   auto& resource_manager = render_graph_.GetResourceManager();
 
   g_scene_mesh = render_data::Mesh::LoadFromObj("obj/sphere.obj");
+  g_scene_bvh =
+      render_data::BVH(render_data::BVH::BuildPrimitivesBB(g_scene_mesh));
+  g_scene_mesh.ReorderPrimitives(g_scene_bvh.GetPrimitiveOrd());
 
   resource_manager.AddImage(kColorRTName, {}, {},
                             vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -197,11 +214,16 @@ RayTracer::RayTracer() : present_(kColorRTName) {
   resource_manager.AddBuffer(kLightBufferName, GetDataSize(g_light_buffer),
                              vk::MemoryPropertyFlagBits::eDeviceLocal);
 
+  resource_manager.AddBuffer(kBVHBufferName,
+                             GetDataSize(g_scene_bvh.GetNodes()),
+                             vk::MemoryPropertyFlagBits::eDeviceLocal);
+
   resource_manager.AddBuffer(
       kStagingBufferName,
       GetDataSize(g_scene_mesh.position) + GetDataSize(g_scene_mesh.normal) +
           GetDataSize(g_scene_mesh.tex_coord) +
-          GetDataSize(g_scene_mesh.index) + GetDataSize(g_light_buffer),
+          GetDataSize(g_scene_mesh.index) + GetDataSize(g_light_buffer) +
+          GetDataSize(g_scene_bvh.GetNodes()),
       vk::MemoryPropertyFlagBits::eHostVisible);
   resource_manager.AddBuffer(kCameraInfoBufferName, sizeof(CameraInfo),
                              vk::MemoryPropertyFlagBits::eHostVisible |

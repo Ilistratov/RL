@@ -1,4 +1,5 @@
 set(SRC
+  bvh.cpp
   mesh.cpp
 )
 

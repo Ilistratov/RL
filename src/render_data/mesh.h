@@ -36,6 +36,7 @@ struct Mesh {
                                        gpu_resources::Buffer* tex_coord_buffer,
                                        gpu_resources::Buffer* index_buffer,
                                        vk::DeviceSize src_offset);
+  void ReorderPrimitives(const std::vector<uint32_t>& primirive_order);
 };
 
 }  // namespace render_data

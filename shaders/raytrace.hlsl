@@ -16,6 +16,22 @@ struct CameraInfo {
 
 [[vk::binding(7, 0)]] ConstantBuffer<CameraInfo> camera_info;
 
+struct BoundingBox {
+  float2 x_range;
+  float2 y_range;
+  float2 z_range;
+};
+
+struct BVHNode {
+  BoundingBox bounds;
+  uint left;
+  uint right;
+  uint parent;
+  uint bvh_level;
+};
+
+[[vk::binding(8, 0)]] StructuredBuffer<BVHNode> bvh_buffer;
+
 float4 PixCordToCameraSpace(uint pix_x, uint pix_y) {
   float uss_x = (float)(pix_x) / camera_info.screen_width;
   float uss_y = (float)(pix_y) / camera_info.screen_height;
@@ -93,6 +109,15 @@ Triangle GetTriangleByInd(uint ind) {
   return res;
 }
 
+float3 GetNormalAtBarCord(uint trg_ind, float2 bar_cord) {
+  float3 na = vertex_normal[vertex_ind[3 * trg_ind + 0].y].xyz;
+  float3 nb = vertex_normal[vertex_ind[3 * trg_ind + 1].y].xyz;
+  float3 nc = vertex_normal[vertex_ind[3 * trg_ind + 2].y].xyz;
+  float3 n = nb * bar_cord.x + nc * bar_cord.y
+                             + na * (1 - (bar_cord.x + bar_cord.y));
+  return normalize(-n);
+}
+
 Interseption CastRay(Ray r) {
   uint cur_trg = (uint)-1;
   float3 cur_insp = float3(-1, 0, 0);
@@ -120,7 +145,8 @@ float4 CalcLightAtInterseption(Interseption insp, Ray r) {
 	uint specPow = 256;
   Triangle t = GetTriangleByInd(insp.trg_ind);
   float3 insp_point = t.GetPointFromBarCord(insp.bar_cord);
-  float3 trg_n = t.GetNormal();
+  float3 trg_n = GetNormalAtBarCord(insp.trg_ind, insp.bar_cord);
+  // float3 trg_n = t.GetNormal();
 
   float diffuse = 0;
   float specular = 0;
