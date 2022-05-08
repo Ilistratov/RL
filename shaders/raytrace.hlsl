@@ -16,10 +16,46 @@ struct CameraInfo {
 
 [[vk::binding(7, 0)]] ConstantBuffer<CameraInfo> camera_info;
 
+struct Ray {
+  float3 origin;
+  float3 direction;
+};
+
+float2 GetInspT1d(float origin, float speed, float2 range) {
+  if (abs(speed) < 1e-4) {
+    if (range.x < origin && origin < range.y) {
+      return float2(0, 1e9);
+    } else {
+      return float2(0, -1);
+    }
+  }
+  float t1 = (range.x - origin) / speed;
+  float t2 = (range.y - origin) / speed;
+  if (t1 > t2) {
+    float t_tmp = t1;
+    t1 = t2;
+    t2 = t_tmp;
+  }
+  t1 = max(0, t1);
+  if (t2 < t1) {
+    return float2(0, -1);
+  }
+  return float2(t1, t2);
+}
+
 struct BoundingBox {
   float2 x_range;
   float2 y_range;
   float2 z_range;
+
+  float2 GetInspT(Ray r) {
+    float2 t_range_res = GetInspT1d(r.origin.x, r.direction.x, x_range);
+    float2 t_range_n = GetInspT1d(r.origin.y, r.direction.y, y_range);
+    t_range_res = float2(max(t_range_res.x, t_range_n.x), min(t_range_res.y, t_range_n.y));
+    t_range_n = GetInspT1d(r.origin.z, r.direction.z, z_range);
+    t_range_res = float2(max(t_range_res.x, t_range_n.x), min(t_range_res.y, t_range_n.y));
+    return t_range_res;
+  }
 };
 
 struct BVHNode {
@@ -38,13 +74,9 @@ float4 PixCordToCameraSpace(uint pix_x, uint pix_y) {
   float2 camera_space_xy = float2(uss_x, uss_y);
   camera_space_xy = camera_space_xy * 2 - float2(1, 1);
   camera_space_xy.x *= camera_info.aspect;
+  camera_space_xy.y *= -1;
   return float4(camera_space_xy, 1, 1);
 }
-
-struct Ray {
-  float3 origin;
-  float3 direction;
-};
 
 Ray PixCordToRay(uint pix_x, uint pix_y) {
   Ray result;
@@ -59,7 +91,9 @@ Ray PixCordToRay(uint pix_x, uint pix_y) {
 
 struct Interseption {
   float2 bar_cord;
+  float dst;
   uint trg_ind;
+  uint it_count;
 };
 
 struct Triangle {
@@ -115,38 +149,81 @@ float3 GetNormalAtBarCord(uint trg_ind, float2 bar_cord) {
   float3 nc = vertex_normal[vertex_ind[3 * trg_ind + 2].y].xyz;
   float3 n = nb * bar_cord.x + nc * bar_cord.y
                              + na * (1 - (bar_cord.x + bar_cord.y));
-  return normalize(-n);
+  return normalize(n);
 }
 
 Interseption CastRay(Ray r) {
   uint cur_trg = (uint)-1;
   float3 cur_insp = float3(-1, 0, 0);
-  uint n_trg = 0;
+  uint n_bvh_nodes = 0;
   uint memb_size = 0;
-  vertex_ind.GetDimensions(n_trg, memb_size);
+  uint it_count = 0;
+  bvh_buffer.GetDimensions(n_bvh_nodes, memb_size);
 
-  for (uint i = 0; i * 3 < n_trg; ++i) {
-    Triangle t = GetTriangleByInd(i);
-    float3 n_insp = t.GetRayInterseption(r);
-    if (n_insp.x > 0 && (n_insp.x < cur_insp.x || cur_insp.x < 0)) {
-      cur_trg = i;
-      cur_insp = n_insp;
+  for (uint cur_vrt = 0, prv_vrt = 0; ;) {
+    ++it_count;
+    if (cur_vrt == (uint)(-1)) {
+      cur_vrt = prv_vrt;
+      prv_vrt = (uint)(-1);
+      continue;
+    }
+    if (bvh_buffer[cur_vrt].bvh_level == (uint)(-1)) {
+      for (uint t_ind = bvh_buffer[cur_vrt].left; t_ind < bvh_buffer[cur_vrt].right; t_ind++) {
+        Triangle t = GetTriangleByInd(t_ind);
+        float3 n_insp = t.GetRayInterseption(r);
+        if (n_insp.x > 0 && (n_insp.x < cur_insp.x || cur_insp.x < 0)) {
+          cur_trg = t_ind;
+          cur_insp = n_insp;
+        }
+      }
+      prv_vrt = cur_vrt;
+      cur_vrt = bvh_buffer[cur_vrt].parent;
+      continue;
+    }
+
+    float2 r_bb_insp_t = bvh_buffer[cur_vrt].bounds.GetInspT(r);
+    if (r_bb_insp_t.x > r_bb_insp_t.y || (cur_insp.x > 0 && cur_insp.x < r_bb_insp_t.x)) {
+      if (cur_vrt == 0) {
+        break;
+      }
+      prv_vrt = cur_vrt;
+      cur_vrt = bvh_buffer[cur_vrt].parent;
+    } else if (prv_vrt == bvh_buffer[cur_vrt].parent) {
+      prv_vrt = cur_vrt;
+      cur_vrt = bvh_buffer[cur_vrt].left;
+    } else if (prv_vrt == bvh_buffer[cur_vrt].left) {
+      prv_vrt = cur_vrt;
+      cur_vrt = bvh_buffer[cur_vrt].right;
+    } else if (prv_vrt == bvh_buffer[cur_vrt].right)  {
+      if (cur_vrt == 0) {
+        break;
+      }
+      prv_vrt = cur_vrt;
+      cur_vrt = bvh_buffer[cur_vrt].parent;
+    } else {
+      break;
     }
   }
 
   Interseption res;
   res.trg_ind = cur_trg;
   res.bar_cord = cur_insp.yz;
+  res.it_count = it_count;
+  res.dst = cur_insp.x;
   return res;
 }
 
 float4 CalcLightAtInterseption(Interseption insp, Ray r) {
-  float3 materialColor = float3(1, 1, 1);
+  // float t_flag = insp.trg_ind / 16;
+  // float t_flag2 = insp.trg_ind / 32;
+  // float t_flag3 = insp.trg_ind / 64;
+  // float3 materialColor = float3((t_flag % 2) * 0.4 + 0.2, (t_flag2 % 2) * 0.4 + 0.2, (t_flag3 % 2) * 0.4 + 0.2);
+  float3 materialColor = float3(1.0, 1.0, 1.0);
 	uint specPow = 256;
   Triangle t = GetTriangleByInd(insp.trg_ind);
   float3 insp_point = t.GetPointFromBarCord(insp.bar_cord);
   float3 trg_n = GetNormalAtBarCord(insp.trg_ind, insp.bar_cord);
-  // float3 trg_n = t.GetNormal();
+  //float3 trg_n = -t.GetNormal();
 
   float diffuse = 0;
   float specular = 0;
@@ -155,17 +232,17 @@ float4 CalcLightAtInterseption(Interseption insp, Ray r) {
   light_pos.GetDimensions(light_cnt, light_struct_size);
   for (int i = 0; i < light_cnt; i++) {
     float3 to_light = light_pos[i].xyz - insp_point;
-    float3 light_dst = length(to_light);
+    float light_dst = length(to_light);
     to_light = normalize(to_light);
     Ray shadow_ray;
     shadow_ray.direction = to_light;
-    shadow_ray.origin = insp_point + to_light * 1e-3;
+    shadow_ray.origin = insp_point + to_light * 1e-4;
     Interseption shadow_ray_insp = CastRay(shadow_ray);
-    if (shadow_ray_insp.trg_ind != (uint)(-1)) {
+    if (shadow_ray_insp.trg_ind != (uint)(-1) && light_dst > shadow_ray_insp.dst) {
       continue;
     }
     diffuse += max(0, dot(trg_n, to_light));
-		specular += pow(max(0, dot(to_light, -reflect(r.direction, trg_n))), 128);
+		specular += pow(max(0, dot(to_light, reflect(r.direction, trg_n))), 128);
   }
   return float4(materialColor * (diffuse + specular), 1.0);
 }
@@ -184,4 +261,5 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gind : SV_GroupIndex) {
     color_target[DTid.xy] = float4(nxt_pt, 1.0);
     depth_target[DTid.xy] = 0.0f;
   }
+  // color_target[DTid.xy] = float4(res.it_count / 128.0, res.it_count / 256.0, res.it_count / 512.0, 1.0);
 }

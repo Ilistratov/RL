@@ -1,5 +1,7 @@
 #include "render_data/bvh.h"
 
+#include "utill/logger.h"
+
 namespace render_data {
 
 static void interseptRange(glm::vec2& a, const glm::vec2& b) {

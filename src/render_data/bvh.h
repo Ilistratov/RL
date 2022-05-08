@@ -9,9 +9,9 @@
 namespace render_data {
 
 struct BoundingBox {
-  glm::vec2 x_range = {0, 0};
-  glm::vec2 y_range = {0, 0};
-  glm::vec2 z_range = {0, 0};
+  glm::vec2 x_range = {1e9, -1e9};
+  glm::vec2 y_range = {1e9, -1e9};
+  glm::vec2 z_range = {1e9, -1e9};
 
   BoundingBox& Intersept(const BoundingBox& other);
   BoundingBox GetInterseption(BoundingBox other) const;
@@ -28,8 +28,8 @@ struct BoundingBox {
 
 struct BVHNode {
   BoundingBox bounds;
-  uint32_t left = 0;
-  uint32_t right = 0;
+  uint32_t left = uint32_t(-1);
+  uint32_t right = uint32_t(-1);
   uint32_t parent = 0;
   uint32_t bvh_level = 0;
 };

@@ -31,7 +31,8 @@ const static std::vector<std::string> kGeometryBufferNames = {
 
 static render_data::Mesh g_scene_mesh;
 static render_data::BVH g_scene_bvh;
-static std::vector<glm::vec4> g_light_buffer = {{0.5, 15, 0.5, 1.0}};
+static std::vector<glm::vec4> g_light_buffer = {{30, 50, 30, 1.0},
+                                                {-30, 50, -30, 1.0}};
 static CameraInfo g_camera_info;
 static bool g_is_update_camera_transform_ = false;
 static int g_move_axis[][2] = {{GLFW_KEY_A, GLFW_KEY_D},
@@ -189,7 +190,7 @@ RayTracer::RayTracer() : present_(kColorRTName) {
   ready_to_present_ = device.createSemaphore({});
   auto& resource_manager = render_graph_.GetResourceManager();
 
-  g_scene_mesh = render_data::Mesh::LoadFromObj("obj/sphere.obj");
+  g_scene_mesh = render_data::Mesh::LoadFromObj("obj/test_scene.obj");
   g_scene_bvh =
       render_data::BVH(render_data::BVH::BuildPrimitivesBB(g_scene_mesh));
   g_scene_mesh.ReorderPrimitives(g_scene_bvh.GetPrimitiveOrd());
@@ -252,7 +253,7 @@ void UpdateCameraInfo() {
     return;
   }
 
-  float c_ang_x = m_state.pos_y * (-PI / 2);
+  float c_ang_x = m_state.pos_y * (PI / 2);
   float c_ang_y = m_state.pos_x * PI;
 
   auto& cam_transform = g_camera_info.camera_to_world;
@@ -260,7 +261,7 @@ void UpdateCameraInfo() {
   Transform rotate_x = Transform::Rotation(c_ang_x, rotate_y.GetDirX());
   auto pos = cam_transform.GetPos();
   cam_transform = Transform::Combine(rotate_y, rotate_x);
-  glm::vec3 move_dir = cam_transform.GetDirX() * GetAxisVal(0) -
+  glm::vec3 move_dir = cam_transform.GetDirX() * GetAxisVal(0) +
                        cam_transform.GetDirY() * GetAxisVal(1) +
                        cam_transform.GetDirZ() * GetAxisVal(2);
   if (glm::length(move_dir) >= 1) {
