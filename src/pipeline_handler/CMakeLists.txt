@@ -5,5 +5,5 @@ set(SRC
   descriptor_set.cpp
 )
 
-add_library(pipeline_handler ${SRC})
-target_link_libraries(pipeline_handler rl_common base utill)
+add_library(pipeline_handler OBJECT ${SRC})
+target_link_libraries(pipeline_handler PRIVATE rl_common)
