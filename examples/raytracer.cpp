@@ -1,6 +1,9 @@
 #include "raytracer.h"
 
+#include <vector>
+
 #include "base/base.h"
+#include "render_data/bvh.h"
 #include "render_data/mesh.h"
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
@@ -13,14 +16,23 @@ namespace examples {
 const static std::string kColorRTName = "color_target";
 const static std::string kDepthRTName = "depth_target";
 const static std::string kVertexBufferName = "vertex_buffer";
+const static std::string kNormalBufferName = "vertex_normal";
+const static std::string kTexcoordBufferName = "vertex_texcoord";
 const static std::string kIndexBufferName = "index_buffer";
 const static std::string kLightBufferName = "light_buffer";
 const static std::string kCameraInfoBufferName = "camera_info";
 const static std::string kStagingBufferName = "staging_buffer";
+const static std::string kBVHBufferName = "bvh_buffer";
 const static float PI = acos(-1);
 
+const static std::vector<std::string> kGeometryBufferNames = {
+    kVertexBufferName, kNormalBufferName, kTexcoordBufferName,
+    kIndexBufferName};
+
 static render_data::Mesh g_scene_mesh;
-static std::vector<glm::vec4> g_light_buffer = {{0.5, 15, 0.5, 1.0}};
+static render_data::BVH g_scene_bvh;
+static std::vector<glm::vec4> g_light_buffer = {{30, 50, 30, 1.0},
+                                                {-30, 50, -30, 1.0}};
 static CameraInfo g_camera_info;
 static bool g_is_update_camera_transform_ = false;
 static int g_move_axis[][2] = {{GLFW_KEY_A, GLFW_KEY_D},
@@ -64,53 +76,58 @@ static void RecordCopy(vk::CommandBuffer cmd,
 void ResourceTransferPass::OnRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer>&) noexcept {
-  gpu_resources::Buffer* staging_buffer =
-      buffer_binds_[kStagingBufferName].GetBoundBuffer();
+  gpu_resources::Buffer* staging_buffer = GetBuffer(kStagingBufferName);
 
   if (is_first_record_) {
     is_first_record_ = false;
     size_t staging_offset = 0;
-    gpu_resources::Buffer* vertex_gpu_buffer =
-        buffer_binds_[kVertexBufferName].GetBoundBuffer();
-    gpu_resources::Buffer* index_gpu_buffer =
-        buffer_binds_[kIndexBufferName].GetBoundBuffer();
+    gpu_resources::Buffer* vertex_gpu_buffer = GetBuffer(kVertexBufferName);
+    gpu_resources::Buffer* normal_gpu_buffer = GetBuffer(kNormalBufferName);
+    gpu_resources::Buffer* texcoord_gpu_buffer = GetBuffer(kTexcoordBufferName);
+    gpu_resources::Buffer* index_gpu_buffer = GetBuffer(kIndexBufferName);
     staging_offset = g_scene_mesh.RecordCopyFromStaging(
-        primary_cmd, staging_buffer, vertex_gpu_buffer, nullptr, nullptr,
-        index_gpu_buffer, staging_offset);
+        primary_cmd, staging_buffer, vertex_gpu_buffer, normal_gpu_buffer,
+        texcoord_gpu_buffer, index_gpu_buffer, staging_offset);
 
-    gpu_resources::Buffer* light_gpu_buffer =
-        buffer_binds_[kLightBufferName].GetBoundBuffer();
+    gpu_resources::Buffer* light_gpu_buffer = GetBuffer(kLightBufferName);
     RecordCopy(primary_cmd, staging_buffer, light_gpu_buffer, staging_offset,
                GetDataSize(g_light_buffer));
+    gpu_resources::Buffer* bvh_gpu_buffer = GetBuffer(kBVHBufferName);
+    RecordCopy(primary_cmd, staging_buffer, bvh_gpu_buffer, staging_offset,
+               GetDataSize(g_scene_bvh.GetNodes()));
   }
 
   void* camera_buffer_mapping =
-      buffer_binds_[kCameraInfoBufferName].GetBoundBuffer()->GetMappingStart();
+      GetBuffer(kCameraInfoBufferName)->GetMappingStart();
   DCHECK(camera_buffer_mapping);
   memcpy(camera_buffer_mapping, &g_camera_info, sizeof(g_camera_info));
 }
 
 ResourceTransferPass::ResourceTransferPass() {
-  buffer_binds_[kVertexBufferName] =
-      render_graph::BufferPassBind::TransferDstBuffer();
-  buffer_binds_[kIndexBufferName] =
-      render_graph::BufferPassBind::TransferDstBuffer();
-  buffer_binds_[kLightBufferName] =
-      render_graph::BufferPassBind::TransferDstBuffer();
+  for (const auto& geometry_buffer_name : kGeometryBufferNames) {
+    AddBuffer(geometry_buffer_name,
+              render_graph::BufferPassBind::TransferDstBuffer());
+  }
 
-  buffer_binds_[kCameraInfoBufferName] =
-      render_graph::BufferPassBind::TransferDstBuffer();
+  AddBuffer(kLightBufferName,
+            render_graph::BufferPassBind::TransferDstBuffer());
 
-  buffer_binds_[kStagingBufferName] =
-      render_graph::BufferPassBind::TransferSrcBuffer();
+  AddBuffer(kCameraInfoBufferName,
+            render_graph::BufferPassBind::TransferDstBuffer());
+
+  AddBuffer(kBVHBufferName, render_graph::BufferPassBind::TransferDstBuffer());
+
+  AddBuffer(kStagingBufferName,
+            render_graph::BufferPassBind::TransferSrcBuffer());
 }
 
 void ResourceTransferPass::OnResourcesInitialized() noexcept {
-  gpu_resources::Buffer* staging_buffer =
-      buffer_binds_[kStagingBufferName].GetBoundBuffer();
+  gpu_resources::Buffer* staging_buffer = GetBuffer(kStagingBufferName);
   size_t fill_offset = 0;
   fill_offset = g_scene_mesh.LoadToStagingBuffer(staging_buffer, fill_offset);
-  FillStagingBuffer(staging_buffer, g_light_buffer, fill_offset);
+  fill_offset = FillStagingBuffer(staging_buffer, g_light_buffer, fill_offset);
+  fill_offset =
+      FillStagingBuffer(staging_buffer, g_scene_bvh.GetNodes(), fill_offset);
   auto device = base::Base::Get().GetContext().GetDevice();
   device.flushMappedMemoryRanges(staging_buffer->GetMappedMemoryRange());
 }
@@ -123,30 +140,38 @@ void RaytracerPass::OnRecord(vk::CommandBuffer primary_cmd,
 }
 
 RaytracerPass::RaytracerPass() {
-  image_binds_[kColorRTName] = render_graph::ImagePassBind::ComputeRenderTarget(
-      vk::AccessFlagBits2KHR::eShaderWrite);
-  image_binds_[kDepthRTName] = render_graph::ImagePassBind::ComputeRenderTarget(
-      vk::AccessFlagBits2KHR::eShaderWrite);
+  AddImage(kColorRTName, render_graph::ImagePassBind::ComputeRenderTarget(
+                             vk::AccessFlagBits2KHR::eShaderWrite));
+  AddImage(kDepthRTName, render_graph::ImagePassBind::ComputeRenderTarget(
+                             vk::AccessFlagBits2KHR::eShaderWrite));
 
-  buffer_binds_[kVertexBufferName] =
-      render_graph::BufferPassBind::ComputeStorageBuffer(
-          vk::AccessFlagBits2KHR::eShaderRead);
-  buffer_binds_[kIndexBufferName] =
-      render_graph::BufferPassBind::ComputeStorageBuffer(
-          vk::AccessFlagBits2KHR::eShaderRead);
-  buffer_binds_[kLightBufferName] =
-      render_graph::BufferPassBind::ComputeStorageBuffer(
-          vk::AccessFlagBits2KHR::eShaderRead);
+  for (const auto& geometry_buffer_name : kGeometryBufferNames) {
+    AddBuffer(geometry_buffer_name,
+              render_graph::BufferPassBind::ComputeStorageBuffer(
+                  vk::AccessFlagBits2KHR::eShaderRead));
+  }
 
-  buffer_binds_[kCameraInfoBufferName] =
-      render_graph::BufferPassBind::UniformBuffer(
-          vk::PipelineStageFlagBits2KHR::eComputeShader,
-          vk::ShaderStageFlagBits::eCompute);
-  shader_bindings_ = {
-      &image_binds_[kColorRTName],       &image_binds_[kDepthRTName],
-      &buffer_binds_[kVertexBufferName], &buffer_binds_[kIndexBufferName],
-      &buffer_binds_[kLightBufferName],  &buffer_binds_[kCameraInfoBufferName],
-  };
+  AddBuffer(kLightBufferName,
+            render_graph::BufferPassBind::ComputeStorageBuffer(
+                vk::AccessFlagBits2KHR::eShaderRead));
+
+  AddBuffer(kCameraInfoBufferName,
+            render_graph::BufferPassBind::UniformBuffer(
+                vk::PipelineStageFlagBits2KHR::eComputeShader,
+                vk::ShaderStageFlagBits::eCompute));
+
+  AddBuffer(kBVHBufferName, render_graph::BufferPassBind::ComputeStorageBuffer(
+                                vk::AccessFlagBits2KHR::eShaderRead));
+
+  shader_bindings_.reserve(2 + kGeometryBufferNames.size() + 2);
+  shader_bindings_.push_back(&GetImagePassBind(kColorRTName));
+  shader_bindings_.push_back(&GetImagePassBind(kDepthRTName));
+  for (const auto& geometry_buffer_name : kGeometryBufferNames) {
+    shader_bindings_.push_back(&GetBufferPassBind(geometry_buffer_name));
+  }
+  shader_bindings_.push_back(&GetBufferPassBind(kLightBufferName));
+  shader_bindings_.push_back(&GetBufferPassBind(kCameraInfoBufferName));
+  shader_bindings_.push_back(&GetBufferPassBind(kBVHBufferName));
 }
 
 void RaytracerPass::ReserveDescriptorSets(
@@ -165,10 +190,11 @@ RayTracer::RayTracer() : present_(kColorRTName) {
   ready_to_present_ = device.createSemaphore({});
   auto& resource_manager = render_graph_.GetResourceManager();
 
-  g_scene_mesh = render_data::Mesh::LoadFromObj("obj/sphere.obj");
-  // remove, when those buffers are needed
-  g_scene_mesh.normal.clear();
-  g_scene_mesh.tex_coord.clear();
+  g_scene_mesh =
+      render_data::Mesh::LoadFromObj("obj/Residential Buildings 001.obj");
+  g_scene_bvh =
+      render_data::BVH(render_data::BVH::BuildPrimitivesBB(g_scene_mesh));
+  g_scene_mesh.ReorderPrimitives(g_scene_bvh.GetPrimitiveOrd());
 
   resource_manager.AddImage(kColorRTName, {}, {},
                             vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -178,16 +204,29 @@ RayTracer::RayTracer() : present_(kColorRTName) {
   resource_manager.AddBuffer(kVertexBufferName,
                              GetDataSize(g_scene_mesh.position),
                              vk::MemoryPropertyFlagBits::eDeviceLocal);
+  resource_manager.AddBuffer(kNormalBufferName,
+                             GetDataSize(g_scene_mesh.normal),
+                             vk::MemoryPropertyFlagBits::eDeviceLocal);
+  resource_manager.AddBuffer(kTexcoordBufferName,
+                             GetDataSize(g_scene_mesh.tex_coord),
+                             vk::MemoryPropertyFlagBits::eDeviceLocal);
   resource_manager.AddBuffer(kIndexBufferName, GetDataSize(g_scene_mesh.index),
                              vk::MemoryPropertyFlagBits::eDeviceLocal);
+
   resource_manager.AddBuffer(kLightBufferName, GetDataSize(g_light_buffer),
                              vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-  resource_manager.AddBuffer(kStagingBufferName,
-                             GetDataSize(g_scene_mesh.position) +
-                                 GetDataSize(g_scene_mesh.index) +
-                                 GetDataSize(g_light_buffer),
-                             vk::MemoryPropertyFlagBits::eHostVisible);
+  resource_manager.AddBuffer(kBVHBufferName,
+                             GetDataSize(g_scene_bvh.GetNodes()),
+                             vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+  resource_manager.AddBuffer(
+      kStagingBufferName,
+      GetDataSize(g_scene_mesh.position) + GetDataSize(g_scene_mesh.normal) +
+          GetDataSize(g_scene_mesh.tex_coord) +
+          GetDataSize(g_scene_mesh.index) + GetDataSize(g_light_buffer) +
+          GetDataSize(g_scene_bvh.GetNodes()),
+      vk::MemoryPropertyFlagBits::eHostVisible);
   resource_manager.AddBuffer(kCameraInfoBufferName, sizeof(CameraInfo),
                              vk::MemoryPropertyFlagBits::eHostVisible |
                                  vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -215,7 +254,7 @@ void UpdateCameraInfo() {
     return;
   }
 
-  float c_ang_x = m_state.pos_y * (-PI / 2);
+  float c_ang_x = m_state.pos_y * (PI / 2);
   float c_ang_y = m_state.pos_x * PI;
 
   auto& cam_transform = g_camera_info.camera_to_world;
@@ -223,7 +262,7 @@ void UpdateCameraInfo() {
   Transform rotate_x = Transform::Rotation(c_ang_x, rotate_y.GetDirX());
   auto pos = cam_transform.GetPos();
   cam_transform = Transform::Combine(rotate_y, rotate_x);
-  glm::vec3 move_dir = cam_transform.GetDirX() * GetAxisVal(0) -
+  glm::vec3 move_dir = cam_transform.GetDirX() * GetAxisVal(0) +
                        cam_transform.GetDirY() * GetAxisVal(1) +
                        cam_transform.GetDirZ() * GetAxisVal(2);
   if (glm::length(move_dir) >= 1) {

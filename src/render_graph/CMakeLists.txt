@@ -5,5 +5,5 @@ set(SRC
   render_graph.cpp
 )
 
-add_library(render_graph ${SRC})
-target_link_libraries(render_graph rl_common base gpu_resources utill)
+add_library(render_graph OBJECT ${SRC})
+target_link_libraries(render_graph PRIVATE rl_common)

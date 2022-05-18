@@ -5,5 +5,5 @@ set(SRC
   transform.cpp
 )
 
-add_library(utill ${SRC})
-target_link_libraries(utill rl_common)
+add_library(utill OBJECT ${SRC})
+target_link_libraries(utill PRIVATE rl_common)

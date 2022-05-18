@@ -43,6 +43,7 @@ Compute::Compute(const std::vector<const DescriptorBinding*>& bindings,
   layout_ = device.createPipelineLayout(
       vk::PipelineLayoutCreateInfo({}, vk_layouts, push_constants));
   vk::UniqueShaderModule shader_module = LoadShaderModule(shader_file_path);
+  DLOG << "Creating compute pipeline for " << shader_file_path;
   auto pipeline_create_res = device.createComputePipeline(
       {}, vk::ComputePipelineCreateInfo(
               {},

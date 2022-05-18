@@ -7,5 +7,5 @@ set(SRC
   resource_manager.cpp
 )
 
-add_library(gpu_resources ${SRC})
-target_link_libraries(gpu_resources rl_common base)
+add_library(gpu_resources OBJECT ${SRC})
+target_link_libraries(gpu_resources PRIVATE rl_common)

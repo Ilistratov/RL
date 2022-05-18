@@ -10,12 +10,13 @@ BlitToSwapchainPass::BlitToSwapchainPass(const std::string& render_target_name)
     : Pass(0, vk::PipelineStageFlagBits2KHR::eTransfer),
       render_target_name_(render_target_name) {
   LOG << "Initializing BlitToSwapchainPass";
-  image_binds_[render_target_name_] = render_graph::ImagePassBind(
-      gpu_resources::ResourceUsage{vk::PipelineStageFlagBits2KHR::eTransfer,
-                                   vk::AccessFlagBits2KHR::eTransferRead,
-                                   vk::ImageLayout::eTransferSrcOptimal},
-      vk::ImageUsageFlagBits::eTransferSrc);
-  LOG << "Image binds count " << image_binds_.size();
+  AddImage(
+      render_target_name_,
+      render_graph::ImagePassBind(
+          gpu_resources::ResourceUsage{vk::PipelineStageFlagBits2KHR::eTransfer,
+                                       vk::AccessFlagBits2KHR::eTransferRead,
+                                       vk::ImageLayout::eTransferSrcOptimal},
+          vk::ImageUsageFlagBits::eTransferSrc));
 }
 
 void BlitToSwapchainPass::OnRecord(
@@ -34,9 +35,8 @@ void BlitToSwapchainPass::OnRecord(
   primary_cmd.pipelineBarrier2KHR(
       vk::DependencyInfoKHR({}, {}, {}, pre_blit_barrier));
 
-  gpu_resources::Image::RecordBlit(
-      primary_cmd, *image_binds_[render_target_name_].GetBoundImage(),
-      swapchain_image);
+  gpu_resources::Image::RecordBlit(primary_cmd, *GetImage(render_target_name_),
+                                   swapchain_image);
 
   auto post_blit_barrier = swapchain_image.GetBarrier(
       vk::PipelineStageFlagBits2KHR::eTransfer,

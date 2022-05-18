@@ -6,5 +6,5 @@ set(SRC
   window.cpp
 )
 
-add_library(base ${SRC})
-target_link_libraries(base rl_common)
+add_library(base OBJECT ${SRC})
+target_link_libraries(base PRIVATE rl_common)

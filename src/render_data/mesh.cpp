@@ -130,4 +130,15 @@ vk::DeviceSize Mesh::RecordCopyFromStaging(
   return src_offset;
 }
 
+void Mesh::ReorderPrimitives(const std::vector<uint32_t>& primirive_order) {
+  std::vector<glm::uvec4> n_index;
+  n_index.reserve(index.size());
+  for (uint32_t n_ind : primirive_order) {
+    n_index.push_back(index[3 * n_ind + 0]);
+    n_index.push_back(index[3 * n_ind + 1]);
+    n_index.push_back(index[3 * n_ind + 2]);
+  }
+  index.swap(n_index);
+}
+
 }  // namespace render_data
