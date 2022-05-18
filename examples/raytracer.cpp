@@ -31,8 +31,7 @@ const static std::vector<std::string> kGeometryBufferNames = {
 
 static render_data::Mesh g_scene_mesh;
 static render_data::BVH g_scene_bvh;
-static std::vector<glm::vec4> g_light_buffer = {{30, 50, 30, 1.0},
-                                                {-30, 50, -30, 1.0}};
+static std::vector<glm::vec4> g_light_buffer = {{0, 500, 20, 1.0}};
 static CameraInfo g_camera_info;
 static bool g_is_update_camera_transform_ = false;
 static int g_move_axis[][2] = {{GLFW_KEY_A, GLFW_KEY_D},
@@ -190,8 +189,7 @@ RayTracer::RayTracer() : present_(kColorRTName) {
   ready_to_present_ = device.createSemaphore({});
   auto& resource_manager = render_graph_.GetResourceManager();
 
-  g_scene_mesh =
-      render_data::Mesh::LoadFromObj("obj/Residential Buildings 001.obj");
+  g_scene_mesh = render_data::Mesh::LoadFromObj("obj/serpentine city.obj");
   g_scene_bvh =
       render_data::BVH(render_data::BVH::BuildPrimitivesBB(g_scene_mesh));
   g_scene_mesh.ReorderPrimitives(g_scene_bvh.GetPrimitiveOrd());
@@ -268,7 +266,7 @@ void UpdateCameraInfo() {
   if (glm::length(move_dir) >= 1) {
     move_dir = glm::normalize(move_dir);
   }
-  Transform translate = Transform::Translation(pos + move_dir * 0.1f);
+  Transform translate = Transform::Translation(pos + move_dir * 1.0f);
   cam_transform = Transform::Combine(cam_transform, translate);
 }
 
