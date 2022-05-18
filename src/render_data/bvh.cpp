@@ -155,7 +155,7 @@ void BVH::Construct(std::vector<std::pair<BoundingBox, uint32_t>>& primitives,
   OrderPrimitives(primitives, v, l, r);
   NodeSeparation sep = CalcOptimalSeparation(primitives, v, l, r);
 
-  if (sep.cost + 0.125 > r - l) {
+  if (sep.cost + 0.5 > r - l) {
     MakeLeaf(primitives, v, l, r);
     return;
   }
@@ -183,7 +183,7 @@ BVH::BVH(std::vector<std::pair<BoundingBox, uint32_t>>&& primitives) {
   for (const auto& [pbb, ind] : primitives) {
     node_[0].bounds.Unite(pbb);
   }
-  Construct(primitives, 0, 0, primitives.size(), 0);
+  Construct(primitives, 0, 0, primitives.size(), 0, 32, 8);
   bb_pool_.clear();
   bb_pool_.shrink_to_fit();
 }

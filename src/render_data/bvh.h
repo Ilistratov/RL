@@ -30,7 +30,7 @@ struct BVHNode {
   BoundingBox bounds;
   uint32_t left = uint32_t(-1);
   uint32_t right = uint32_t(-1);
-  uint32_t parent = 0;
+  uint32_t parent = uint32_t(-1);
   uint32_t bvh_level = 0;
 };
 

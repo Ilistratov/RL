@@ -37,9 +37,6 @@ float2 GetInspT1d(float origin, float speed, float2 range) {
     t2 = t_tmp;
   }
   t1 = max(0, t1);
-  if (t2 < t1) {
-    return float2(0, -1);
-  }
   return float2(t1, t2);
 }
 
@@ -49,12 +46,13 @@ struct BoundingBox {
   float2 z_range;
 
   float2 GetInspT(Ray r) {
-    float2 t_range_res = GetInspT1d(r.origin.x, r.direction.x, x_range);
-    float2 t_range_n = GetInspT1d(r.origin.y, r.direction.y, y_range);
-    t_range_res = float2(max(t_range_res.x, t_range_n.x), min(t_range_res.y, t_range_n.y));
-    t_range_n = GetInspT1d(r.origin.z, r.direction.z, z_range);
-    t_range_res = float2(max(t_range_res.x, t_range_n.x), min(t_range_res.y, t_range_n.y));
-    return t_range_res;
+    float2 t_range_x = GetInspT1d(r.origin.x, r.direction.x, x_range);
+    float2 t_range_y = GetInspT1d(r.origin.y, r.direction.y, y_range);
+    float2 t_range_z = GetInspT1d(r.origin.z, r.direction.z, z_range);
+    float2 res;
+    res.x = max(max(t_range_x.x, t_range_y.x), t_range_z.x);
+    res.y = min(min(t_range_x.y, t_range_y.y), t_range_z.y);
+    return res;
   }
 };
 
@@ -93,7 +91,8 @@ struct Interseption {
   float2 bar_cord;
   float dst;
   uint trg_ind;
-  uint it_count;
+  // uint it_count;
+  // uint insp_left;
 };
 
 struct Triangle {
@@ -152,72 +151,73 @@ float3 GetNormalAtBarCord(uint trg_ind, float2 bar_cord) {
   return normalize(n);
 }
 
+bool IsTraversalOmittable(float2 insp_t, float cur_res) {
+  return insp_t.x > insp_t.y || (cur_res > 0 && cur_res + 1e-2 < insp_t.x);
+}
+
 Interseption CastRay(Ray r) {
   uint cur_trg = (uint)-1;
   float3 cur_insp = float3(-1, 0, 0);
+  // uint insp_l = 0;
   uint n_bvh_nodes = 0;
   uint memb_size = 0;
-  uint it_count = 0;
+  // uint it_count = 0;
   bvh_buffer.GetDimensions(n_bvh_nodes, memb_size);
 
-  for (uint cur_vrt = 0, prv_vrt = 0; ;) {
-    ++it_count;
-    if (cur_vrt == (uint)(-1)) {
-      cur_vrt = prv_vrt;
-      prv_vrt = (uint)(-1);
-      continue;
-    }
+  for (uint cur_vrt = 0, prv_vrt = -1, nxt_vrt = 0; nxt_vrt != -1;
+       prv_vrt = cur_vrt, cur_vrt = nxt_vrt) {
+    nxt_vrt = bvh_buffer[cur_vrt].parent;
+    // ++it_count;
+
     if (bvh_buffer[cur_vrt].bvh_level == (uint)(-1)) {
       for (uint t_ind = bvh_buffer[cur_vrt].left; t_ind < bvh_buffer[cur_vrt].right; t_ind++) {
+        // it_count += 2;
         Triangle t = GetTriangleByInd(t_ind);
         float3 n_insp = t.GetRayInterseption(r);
         if (n_insp.x > 0 && (n_insp.x < cur_insp.x || cur_insp.x < 0)) {
           cur_trg = t_ind;
           cur_insp = n_insp;
+          // insp_l = bvh_buffer[cur_vrt].left;
         }
       }
-      prv_vrt = cur_vrt;
-      cur_vrt = bvh_buffer[cur_vrt].parent;
       continue;
     }
 
-    float2 r_bb_insp_t = bvh_buffer[cur_vrt].bounds.GetInspT(r);
-    if (r_bb_insp_t.x > r_bb_insp_t.y || (cur_insp.x > 0 && cur_insp.x < r_bb_insp_t.x)) {
-      if (cur_vrt == 0) {
-        break;
-      }
-      prv_vrt = cur_vrt;
-      cur_vrt = bvh_buffer[cur_vrt].parent;
-    } else if (prv_vrt == bvh_buffer[cur_vrt].parent) {
-      prv_vrt = cur_vrt;
-      cur_vrt = bvh_buffer[cur_vrt].left;
-    } else if (prv_vrt == bvh_buffer[cur_vrt].left) {
-      prv_vrt = cur_vrt;
-      cur_vrt = bvh_buffer[cur_vrt].right;
-    } else if (prv_vrt == bvh_buffer[cur_vrt].right)  {
-      if (cur_vrt == 0) {
-        break;
-      }
-      prv_vrt = cur_vrt;
-      cur_vrt = bvh_buffer[cur_vrt].parent;
-    } else {
-      break;
+    uint fst = bvh_buffer[cur_vrt].left;
+    float2 fst_t = bvh_buffer[fst].bounds.GetInspT(r);
+    uint snd = bvh_buffer[cur_vrt].right;
+    float2 snd_t = bvh_buffer[snd].bounds.GetInspT(r);
+
+    if (snd_t.x < snd_t.y && snd_t.x < fst_t.x) {
+      uint tmp = fst;
+      fst = snd;
+      snd = tmp;
+      float2 tmp_t = fst_t;
+      fst_t = snd_t;
+      snd_t = tmp_t;
+    }
+
+    if (prv_vrt == nxt_vrt && !IsTraversalOmittable(fst_t, cur_insp.x)) {
+      nxt_vrt = fst;
+    } else if (prv_vrt != snd && !IsTraversalOmittable(snd_t, cur_insp.x)) {
+      nxt_vrt = snd;
     }
   }
 
   Interseption res;
   res.trg_ind = cur_trg;
   res.bar_cord = cur_insp.yz;
-  res.it_count = it_count;
+  // res.it_count = it_count;
   res.dst = cur_insp.x;
+  // res.insp_left = insp_l;
   return res;
 }
 
 float4 CalcLightAtInterseption(Interseption insp, Ray r) {
-  // float t_flag = insp.trg_ind / 16;
-  // float t_flag2 = insp.trg_ind / 32;
-  // float t_flag3 = insp.trg_ind / 64;
-  // float3 materialColor = float3((t_flag % 2) * 0.4 + 0.2, (t_flag2 % 2) * 0.4 + 0.2, (t_flag3 % 2) * 0.4 + 0.2);
+  // float t_flag = insp.insp_left / 4;
+  // float t_flag2 = insp.insp_left / 16;
+  // float t_flag3 = insp.insp_left / 64;
+  // float3 materialColor = float3((t_flag % 4) * 0.2 + 0.2, (t_flag2 % 4) * 0.2 + 0.2, (t_flag3 % 4) * 0.2 + 0.2);
   float3 materialColor = float3(1.0, 1.0, 1.0);
 	uint specPow = 256;
   Triangle t = GetTriangleByInd(insp.trg_ind);

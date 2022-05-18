@@ -190,7 +190,8 @@ RayTracer::RayTracer() : present_(kColorRTName) {
   ready_to_present_ = device.createSemaphore({});
   auto& resource_manager = render_graph_.GetResourceManager();
 
-  g_scene_mesh = render_data::Mesh::LoadFromObj("obj/test_scene.obj");
+  g_scene_mesh =
+      render_data::Mesh::LoadFromObj("obj/Residential Buildings 001.obj");
   g_scene_bvh =
       render_data::BVH(render_data::BVH::BuildPrimitivesBB(g_scene_mesh));
   g_scene_mesh.ReorderPrimitives(g_scene_bvh.GetPrimitiveOrd());
