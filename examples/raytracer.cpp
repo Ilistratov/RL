@@ -231,7 +231,8 @@ RayTracer::RayTracer() : present_(kColorRTName) {
 
   render_graph_.AddPass(&resource_transfer_);
   render_graph_.AddPass(&raytrace_);
-  render_graph_.AddPass(&present_, ready_to_present_,
+  render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
+                        ready_to_present_,
                         swapchain.GetImageAvaliableSemaphore());
   render_graph_.Init();
 }

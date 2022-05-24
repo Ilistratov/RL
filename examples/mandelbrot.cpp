@@ -22,8 +22,7 @@ void MandelbrotDrawPass::OnRecord(
                                    swapchain.GetExtent().height / 8, 1);
 }
 
-MandelbrotDrawPass::MandelbrotDrawPass()
-    : Pass(0, vk::PipelineStageFlagBits2KHR::eComputeShader) {
+MandelbrotDrawPass::MandelbrotDrawPass() : Pass(0) {
   LOG << "Initializing MandelbrotDrawPass";
   gpu_resources::ResourceUsage rt_usage;
   rt_usage.access = vk::AccessFlagBits2KHR::eShaderWrite;
@@ -94,7 +93,8 @@ Mandelbrot::Mandelbrot() : present_(kColorTarget) {
   LOG << "Adding draw pass";
   render_graph_.AddPass(&draw_, {}, {});
   LOG << "Adding present pass";
-  render_graph_.AddPass(&present_, ready_to_present_,
+  render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
+                        ready_to_present_,
                         swapchain.GetImageAvaliableSemaphore());
   render_graph_.Init();
   LOG << "Renderer initized";

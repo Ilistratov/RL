@@ -64,8 +64,8 @@ ImagePassBind& Pass::GetImagePassBind(const std::string& image_name) {
 void Pass::OnRecord(vk::CommandBuffer,
                     const std::vector<vk::CommandBuffer>&) noexcept {}
 
-Pass::Pass(uint32_t secondary_cmd_count, vk::PipelineStageFlags2KHR stage_flags)
-    : secondary_cmd_count_(secondary_cmd_count), stage_flags_(stage_flags) {}
+Pass::Pass(uint32_t secondary_cmd_count)
+    : secondary_cmd_count_(secondary_cmd_count) {}
 
 void Pass::BindResources(uint32_t user_ind,
                          gpu_resources::ResourceManager& resource_manager) {
@@ -94,9 +94,6 @@ void Pass::OnWorkloadRecord(
 
 uint32_t Pass::GetSecondaryCmdCount() const {
   return secondary_cmd_count_;
-}
-vk::PipelineStageFlags2KHR Pass::GetStageFlags() const {
-  return stage_flags_;
 }
 
 }  // namespace render_graph

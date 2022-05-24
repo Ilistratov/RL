@@ -22,7 +22,10 @@ class RenderGraph {
   RenderGraph(const RenderGraph&) = delete;
   void operator=(const RenderGraph&) = delete;
 
+  // semaphore wait/signal operations will affect/happen at
+  // pipeline stages specified by stage_flags/
   void AddPass(Pass* pass,
+               vk::PipelineStageFlags2KHR stage_flags = {},
                vk::Semaphore external_signal = {},
                vk::Semaphore external_wait = {});
   gpu_resources::ResourceManager& GetResourceManager();
