@@ -244,22 +244,18 @@ float4 CalcLightAtInterseption(Interseption insp, Ray r) {
     diffuse += max(0, dot(trg_n, to_light));
 		specular += pow(max(0, dot(to_light, reflect(r.direction, trg_n))), 128);
   }
-  return float4(materialColor * (diffuse + specular), 1.0);
+  return float4(materialColor * (diffuse + specular + 0.2), 1.0);
 }
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint Gind : SV_GroupIndex) {
   Ray camera_ray = PixCordToRay(DTid.x, DTid.y);
   Interseption res = CastRay(camera_ray);
+  color_target[DTid.xy] = float4(0.1, 0.1, 0.1, 1.0);
+  depth_target[DTid.xy] = 0.0f;
   if (res.trg_ind != (uint)-1) {
     color_target[DTid.xy] = CalcLightAtInterseption(res, camera_ray);
-  } else {
-    float3 nxt_pt = (camera_ray.origin + camera_ray.direction) * 0.25;
-    nxt_pt = max(frac(nxt_pt), float3(1, 1, 1) - frac(nxt_pt));
-    nxt_pt = pow(nxt_pt, float3(64, 64, 64));
-    nxt_pt = max(nxt_pt, float3(0.1, 0.1, 0.1));
-    color_target[DTid.xy] = float4(nxt_pt, 1.0);
-    depth_target[DTid.xy] = 0.0f;
+    depth_target[DTid.xy] = res.dst;
   }
   // color_target[DTid.xy] = float4(res.it_count / 128.0, res.it_count / 256.0, res.it_count / 512.0, 1.0);
 }

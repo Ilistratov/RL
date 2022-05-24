@@ -131,7 +131,8 @@ void Executer::ExecuteOneTime(Task* task, uint32_t secondary_cmd_count) {
   auto fence = device.createFence({});
 
   context.GetQueue(0).submit2KHR(submit_info, fence);
-  device.waitForFences(fence, true, 16'000'000);
+  auto result = device.waitForFences(fence, true, -1);
+  CHECK_VK_RESULT(result) << "Failed to wait for onetime submit";
   device.destroyFence(fence);
 
   cmd_pool_.RecycleCmd({primary_cmd}, secondary_cmd, {});
