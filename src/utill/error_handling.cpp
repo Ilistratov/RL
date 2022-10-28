@@ -1,28 +1,15 @@
 #include "utill/error_handling.h"
+#include <memory>
+#include "utill/logger.h"
 
 namespace utill {
 
-DeathLogEntry::DeathLogEntry(const std::string_view source_location, bool cond)
-    : cond_(cond) {
-  if (cond) {
-    return;
-  }
-  Logger::AddInitialLogTag(message_, source_location);
-}
+DeathLogEntry::DeathLogEntry(const char* src_location, uint32_t ln)
+    : LogEntry(src_location, ln) {}
 
 DeathLogEntry::~DeathLogEntry() {
-  if (cond_) {
-    return;
-  }
-  if (!message_.str().empty()) {
-    message_ << '\n';
-    GlobalLogger.Log(message_.str());
-  }
-#ifdef NDEBUG
-  throw std::runtime_error("Unrecoverable error");
-#else
+  Logger::GetGlobal().Log(message_.str());
   _exit(1);
-#endif
 }
 
 }  // namespace utill
