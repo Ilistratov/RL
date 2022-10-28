@@ -113,24 +113,16 @@ struct Triangle {
     float3x3 sys_mat = float3x3(-r.direction, b - a, c - a);
     float det_sys = determinant(sys_mat);
     if (det_sys < 1e-4) {
-      return float3(-1, 0, 0);
+      det_sys = -1;
     }
     float3 sys_coef = r.origin - a;
     float inv_det_sys = 1.0 / det_sys;
 
     float t = determinant(float3x3(sys_coef, b - a, c - a)) * inv_det_sys;
-    if (t < 1e-4) {
-      return float3(-1, 0, 0);
-    }
     float u = determinant(float3x3(-r.direction, sys_coef, c - a)) * inv_det_sys;
-    if (u < 0 || u > 1) {
-      return float3(-1, 0, 0);
-    }
     float v = determinant(float3x3(-r.direction, b - a, sys_coef)) * inv_det_sys;
-    if (v < 0 || v > 1 || u + v > 1) {
-      return float3(-1, 0, 0);
-    }
-    return float3(t, u, v);
+    bool isValid = det_sys > 0 & t > 1e-4 & 0 < u & u < 1 & 0 < v & v < 1 & u + v < 1;
+    return isValid ? float3(t, u, v) : float3(-1, 0, 0);
   }
 };
 
@@ -238,11 +230,9 @@ float4 CalcLightAtInterseption(Interseption insp, Ray r) {
     shadow_ray.direction = to_light;
     shadow_ray.origin = insp_point + to_light * 1e-4;
     Interseption shadow_ray_insp = CastRay(shadow_ray);
-    if (shadow_ray_insp.trg_ind != (uint)(-1) && light_dst > shadow_ray_insp.dst) {
-      continue;
-    }
-    diffuse += max(0, dot(trg_n, to_light));
-		specular += pow(max(0, dot(to_light, reflect(r.direction, trg_n))), 128);
+    bool isValid = shadow_ray_insp.trg_ind == (uint)(-1) | light_dst < shadow_ray_insp.dst;
+    diffuse += isValid ? max(0, dot(trg_n, to_light)) : 0;
+		specular += isValid ? pow(max(0, dot(to_light, reflect(r.direction, trg_n))), 128) : 0;
   }
   return float4(materialColor * (diffuse + specular + 0.2), 1.0);
 }
