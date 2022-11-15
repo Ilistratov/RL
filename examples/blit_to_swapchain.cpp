@@ -7,8 +7,7 @@
 namespace examples {
 
 BlitToSwapchainPass::BlitToSwapchainPass(const std::string& render_target_name)
-    : Pass(0, vk::PipelineStageFlagBits2KHR::eTransfer),
-      render_target_name_(render_target_name) {
+    : Pass(0), render_target_name_(render_target_name) {
   LOG << "Initializing BlitToSwapchainPass";
   AddImage(
       render_target_name_,

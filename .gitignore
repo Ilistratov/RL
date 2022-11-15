@@ -1,5 +1,7 @@
 .vscode
+.cache
 build
 third_party
 src/third_party
 scc.exe
+assets

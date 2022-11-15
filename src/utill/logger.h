@@ -25,10 +25,11 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& vec) {
 class Logger;
 
 class LogEntry {
+ protected:
   std::ostringstream message_;
 
  public:
-  LogEntry(std::string_view source_location);
+  LogEntry(const char* src_location, uint32_t ln);
   LogEntry(const LogEntry&) = delete;
   void operator=(const LogEntry&) = delete;
 
@@ -41,36 +42,37 @@ class LogEntry {
   ~LogEntry();
 };
 
-class EmptyEntry {
+class Voidify {
  public:
+  Voidify() = default;
   template <typename T>
-  LogEntry& operator<<(const T&) {
-    return *this;
-  }
+  void operator<<(const T&) {}
+  template <typename T>
+  void operator&(const T&) {}
 };
 
 class Logger {
   std::chrono::system_clock::time_point start_;
+  Logger();
 
  public:
-  Logger();
+  static Logger& GetGlobal();
 
   std::chrono::system_clock::time_point GetStartTime() const;
   void Log(const std::string& message);
-  static void AddInitialLogTag(std::ostringstream& out,
-                               const std::string_view source_location);
 };
-
-extern Logger GlobalLogger;
 
 }  // namespace utill
 
-#define LOG                                                              \
-  utill::LogEntry(std::string(__FILE__).substr(SOURCE_PATH_SIZE) + ":" + \
-                  std::to_string(__LINE__))
+#define LAZY_STREAM(cond, stream) \
+  !(cond) ? (void)0 : utill::Voidify() & (stream)
+
+#define LOG_STREAM utill::LogEntry(__FILE__, __LINE__)
+
+#define LOG LAZY_STREAM(true, LOG_STREAM)
 
 #ifdef NDEBUG
-#define DLOG utill::EmptyEntry()
+#define DLOG utill::Voidify()
 #else
-#define DLOG LOG
+#define DLOG LAZY_STREAM(true, LOG_STREAM)
 #endif

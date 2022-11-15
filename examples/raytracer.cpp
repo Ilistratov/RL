@@ -189,7 +189,8 @@ RayTracer::RayTracer() : present_(kColorRTName) {
   ready_to_present_ = device.createSemaphore({});
   auto& resource_manager = render_graph_.GetResourceManager();
 
-  g_scene_mesh = render_data::Mesh::LoadFromObj("obj/serpentine city.obj");
+  g_scene_mesh =
+      render_data::Mesh::LoadFromObj("../assets/objects/serpentine_city.obj");
   g_scene_bvh =
       render_data::BVH(render_data::BVH::BuildPrimitivesBB(g_scene_mesh));
   g_scene_mesh.ReorderPrimitives(g_scene_bvh.GetPrimitiveOrd());
@@ -231,7 +232,8 @@ RayTracer::RayTracer() : present_(kColorRTName) {
 
   render_graph_.AddPass(&resource_transfer_);
   render_graph_.AddPass(&raytrace_);
-  render_graph_.AddPass(&present_, ready_to_present_,
+  render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
+                        ready_to_present_,
                         swapchain.GetImageAvaliableSemaphore());
   render_graph_.Init();
 }

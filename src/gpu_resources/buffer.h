@@ -66,7 +66,7 @@ class Buffer {
   static void RecordCopy(vk::CommandBuffer cmd,
                          const Buffer& src,
                          const Buffer& dst,
-                         const std::vector<vk::BufferCopy>& copy_regions);
+                         const std::vector<vk::BufferCopy2KHR>& copy_regions);
 
   vk::DeviceSize LoadDataFromPtr(void* data,
                                  vk::DeviceSize data_size,

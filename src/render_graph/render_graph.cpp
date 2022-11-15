@@ -6,13 +6,14 @@
 namespace render_graph {
 
 void RenderGraph::AddPass(Pass* pass,
+                          vk::PipelineStageFlags2KHR stage_flags,
                           vk::Semaphore external_signal,
                           vk::Semaphore external_wait) {
   DCHECK(pass) << "Can't add null";
   pass->BindResources(passes_.size(), resource_manager_);
   pass->ReserveDescriptorSets(descriptor_pool_);
-  executer_.ScheduleTask(pass, pass->GetStageFlags(), external_signal,
-                         external_wait, pass->GetSecondaryCmdCount());
+  executer_.ScheduleTask(pass, stage_flags, external_signal, external_wait,
+                         pass->GetSecondaryCmdCount());
   passes_.push_back(std::move(pass));
 }
 

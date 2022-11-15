@@ -14,7 +14,6 @@ namespace render_graph {
 class Pass : public gpu_executer::Task {
   uint32_t user_ind_ = -1;
   uint32_t secondary_cmd_count_ = 0;
-  vk::PipelineStageFlags2KHR stage_flags_ = {};
   std::map<std::string, BufferPassBind> buffer_binds_;
   std::map<std::string, ImagePassBind> image_binds_;
 
@@ -34,8 +33,7 @@ class Pass : public gpu_executer::Task {
   ImagePassBind& GetImagePassBind(const std::string& image_name);
 
  public:
-  Pass(uint32_t secondary_cmd_count = 0,
-       vk::PipelineStageFlags2KHR stage_flags = {});
+  Pass(uint32_t secondary_cmd_count = 0);
 
   void BindResources(uint32_t user_ind,
                      gpu_resources::ResourceManager& resource_manager);
@@ -48,7 +46,6 @@ class Pass : public gpu_executer::Task {
       const std::vector<vk::CommandBuffer>& secondary_cmd) override;
 
   uint32_t GetSecondaryCmdCount() const;
-  vk::PipelineStageFlags2KHR GetStageFlags() const;
 };
 
 }  // namespace render_graph

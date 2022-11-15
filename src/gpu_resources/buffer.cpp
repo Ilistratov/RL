@@ -114,16 +114,17 @@ void Buffer::RecordCopy(vk::CommandBuffer cmd,
                         vk::DeviceSize src_offset,
                         vk::DeviceSize dst_offset,
                         vk::DeviceSize size) {
-  RecordCopy(cmd, src, dst, {vk::BufferCopy(src_offset, dst_offset, size)});
+  RecordCopy(cmd, src, dst, {vk::BufferCopy2KHR(src_offset, dst_offset, size)});
 }
 
 void Buffer::RecordCopy(vk::CommandBuffer cmd,
                         const Buffer& src,
                         const Buffer& dst,
-                        const std::vector<vk::BufferCopy>& copy_regions) {
+                        const std::vector<vk::BufferCopy2KHR>& copy_regions) {
   DCHECK(src.buffer_) << "src must be created to use this method";
   DCHECK(dst.buffer_) << "dst must be created to use this method";
-  cmd.copyBuffer(src.buffer_, dst.buffer_, copy_regions);
+  vk::CopyBufferInfo2KHR copy(src.GetBuffer(), dst.GetBuffer(), copy_regions);
+  cmd.copyBuffer2KHR(copy);
 }
 
 vk::DeviceSize Buffer::LoadDataFromPtr(void* data,
