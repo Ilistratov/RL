@@ -1,54 +1,81 @@
 #include "gpu_resources/resource_manager.h"
 
-#include <cassert>
+#include <stdint.h>
+#include <string>
 
 #include "base/base.h"
 
-#include "utill/error_handling.h"
-#include "utill/logger.h"
+#include "gpu_resources/buffer.h"
+#include "gpu_resources/image.h"
+#include "gpu_resources/pass_access_syncronizer.h"
+#include "gpu_resources/physical_buffer.h"
+#include "gpu_resources/physical_image.h"
 
 namespace gpu_resources {
 
-void ResourceManager::AddBuffer(const std::string& name,
-                                vk::DeviceSize size,
-                                vk::MemoryPropertyFlags memory_flags) {
-  DCHECK(!buffers_.contains(name)) << "Already have buffer named: " << name;
-  buffers_[name] = Buffer(size, memory_flags);
-  LOG << "Added buffer named: " << name;
+Buffer* ResourceManager::AddBuffer(BufferProperties properties) {
+  buffers_.push_back(Buffer(properties, &syncronizer_));
+  return &buffers_.back();
 }
 
-void ResourceManager::AddImage(const std::string& name,
-                               vk::Extent2D extent,
-                               vk::Format format,
-                               vk::MemoryPropertyFlags memory_flags) {
-  DCHECK(!images_.contains(name)) << "Already have image named: " << name;
-  auto& swapchain = base::Base::Get().GetSwapchain();
-  if (extent.width == 0 || extent.height == 0) {
-    extent = swapchain.GetExtent();
-  }
-  if (format == vk::Format::eUndefined) {
-    format = swapchain.GetFormat();
-  }
-  images_[name] = gpu_resources::Image(extent, format, memory_flags);
-  LOG << "Added image named: " << name;
+Image* ResourceManager::AddImage(ImageProperties properties) {
+  images_.push_back(Image(properties, &syncronizer_));
+  return &images_.back();
 }
 
-void ResourceManager::InitResources() {
-  for (auto& [name, buffer] : buffers_) {
+// Simple 1:1 mapping for now. Can be replaced when transient resources are
+// supported
+uint32_t ResourceManager::CreateAndMapPhysicalResources() {
+  uint32_t resource_count = 0;
+  for (auto& buffer : buffers_) {
+    PhysicalBuffer physical_buffer(resource_count, buffer.required_properties_);
+    resource_count += 1;
+    physical_buffers_.push_back(physical_buffer);
+  }
+
+  for (auto& image : images_) {
+    PhysicalImage physical_image(resource_count, image.required_properties_);
+    resource_count += 1;
+    physical_images_.push_back(physical_image);
+  }
+
+  uint32_t idx = 0;
+  for (auto& buffer : buffers_) {
+    buffer.buffer_ = &physical_buffers_[idx];
+    idx += 1;
+  }
+
+  idx = 0;
+  for (auto& image : images_) {
+    image.image_ = &physical_images_[idx];
+    idx += 1;
+  }
+  return resource_count;
+}
+
+void ResourceManager::InitPhysicalResources() {
+  uint32_t idx = 0;
+  for (auto& buffer : physical_buffers_) {
     buffer.CreateVkBuffer();
-    buffer.SetDebugName(name);
+    buffer.SetDebugName(std::string("rg-buffer-") + std::to_string(idx));
+    idx += 1;
     buffer.RequestMemory(allocator_);
   }
-  for (auto& [name, image] : images_) {
+
+  idx = 0;
+
+  for (auto& image : physical_images_) {
     image.CreateVkImage();
-    image.SetDebugName(name);
+    image.SetDebugName(std::string("rg-image-") + std::to_string(idx));
+    idx += 1;
     image.RequestMemory(allocator_);
   }
-  allocator_.Allocate();
+}
 
+void ResourceManager::BindPhysicalResourcesMemory() {
   std::vector<vk::BindBufferMemoryInfo> buffer_bind_infos;
   buffer_bind_infos.reserve(buffers_.size());
-  for (auto& [name, buffer] : buffers_) {
+  for (auto& buffer : physical_buffers_) {
     buffer_bind_infos.push_back(buffer.GetBindMemoryInfo());
   }
   auto device = base::Base::Get().GetContext().GetDevice();
@@ -58,7 +85,7 @@ void ResourceManager::InitResources() {
 
   std::vector<vk::BindImageMemoryInfo> image_bind_infos;
   image_bind_infos.reserve(images_.size());
-  for (auto& [name, image] : images_) {
+  for (auto& image : physical_images_) {
     image_bind_infos.push_back(image.GetBindMemoryInfo());
   }
   if (!image_bind_infos.empty()) {
@@ -66,24 +93,12 @@ void ResourceManager::InitResources() {
   }
 }
 
-void ResourceManager::RecordInitBarriers(vk::CommandBuffer cmd) const {
-  std::vector<vk::ImageMemoryBarrier2KHR> image_barriers;
-  image_barriers.reserve(images_.size());
-  for (auto& [name, image] : images_) {
-    image_barriers.push_back(image.GetInitBarrier());
-  }
-  vk::DependencyInfoKHR dep_info({}, {}, {}, image_barriers);
-  cmd.pipelineBarrier2KHR(dep_info);
-}
-
-gpu_resources::Buffer& ResourceManager::GetBuffer(const std::string& name) {
-  DCHECK(buffers_.contains(name)) << "No buffer named: " << name;
-  return buffers_.at(name);
-}
-
-gpu_resources::Image& ResourceManager::GetImage(const std::string& name) {
-  DCHECK(images_.contains(name)) << "No image named: " << name;
-  return images_.at(name);
+void ResourceManager::InitResources(uint32_t pass_count) {
+  uint32_t resource_count = CreateAndMapPhysicalResources();
+  syncronizer_ = PassAccessSyncronizer(resource_count, pass_count);
+  InitPhysicalResources();
+  allocator_.Allocate();
+  BindPhysicalResourcesMemory();
 }
 
 }  // namespace gpu_resources

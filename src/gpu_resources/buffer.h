@@ -5,57 +5,23 @@
 #include <string>
 #include <vector>
 
-#include "gpu_resources/access_sync_manager.h"
 #include "gpu_resources/device_memory_allocator.h"
+#include "gpu_resources/pass_access_syncronizer.h"
+#include "gpu_resources/physical_buffer.h"
+#include "gpu_resources/resource_access_syncronizer.h"
 
 namespace gpu_resources {
 
 class Buffer {
-  AccessSyncManager access_manager_;
-  vk::Buffer buffer_ = {};
-  vk::DeviceSize size_ = 0;
-  vk::BufferUsageFlags usage_flags_ = {};
-  vk::MemoryPropertyFlags memory_flags_;
-  MemoryBlock* memory_ = nullptr;
-
+  PhysicalBuffer* buffer_;
+  PassAccessSyncronizer* syncronizer_;
+  BufferProperties required_properties_;
   friend class ResourceManager;
 
-  Buffer(vk::DeviceSize size, vk::MemoryPropertyFlags memory_flags);
+  Buffer(BufferProperties properties, PassAccessSyncronizer* syncronizer);
 
  public:
-  void AddUsage(uint32_t user_ind,
-                ResourceUsage usage,
-                vk::BufferUsageFlags buffer_usage_flags);
-
- private:
-  void CreateVkBuffer();
-  void SetDebugName(const std::string& debug_name) const;
-  void RequestMemory(DeviceMemoryAllocator& allocator);
-  vk::BindBufferMemoryInfo GetBindMemoryInfo() const;
-
- public:
-  Buffer() = default;
-
-  Buffer(const Buffer&) = delete;
-  void operator=(const Buffer&) = delete;
-
-  Buffer(Buffer&& other) noexcept;
-  void operator=(Buffer&& other) noexcept;
-  void Swap(Buffer& other) noexcept;
-
-  ~Buffer();
-
-  vk::Buffer GetBuffer() const;
-  vk::DeviceSize GetSize() const;
-  void* GetMappingStart() const;
-  vk::MappedMemoryRange GetMappedMemoryRange() const;
-
-  vk::BufferMemoryBarrier2KHR GetBarrier(
-      vk::PipelineStageFlags2KHR src_stage_flags,
-      vk::AccessFlags2KHR src_access_flags,
-      vk::PipelineStageFlags2KHR dst_stage_flags,
-      vk::AccessFlags2KHR dst_access_flags) const;
-  vk::BufferMemoryBarrier2KHR GetPostPassBarrier(uint32_t user_ind);
+  void DeclareAccess(ResourceAccess access, uint32_t pass_idx) const;
 
   static void RecordCopy(vk::CommandBuffer cmd,
                          const Buffer& src,

@@ -1,18 +1,30 @@
 #pragma once
 
+#include <list>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "gpu_resources/buffer.h"
 #include "gpu_resources/device_memory_allocator.h"
 #include "gpu_resources/image.h"
+#include "gpu_resources/pass_access_syncronizer.h"
+#include "gpu_resources/physical_buffer.h"
+#include "gpu_resources/physical_image.h"
 
 namespace gpu_resources {
 
 class ResourceManager {
-  gpu_resources::DeviceMemoryAllocator allocator_;
-  std::map<std::string, gpu_resources::Buffer> buffers_;
-  std::map<std::string, gpu_resources::Image> images_;
+  DeviceMemoryAllocator allocator_;
+  PassAccessSyncronizer syncronizer_;
+  std::list<Buffer> buffers_;
+  std::list<Image> images_;
+  std::vector<PhysicalBuffer> physical_buffers_;
+  std::vector<PhysicalImage> physical_images_;
+
+  uint32_t CreateAndMapPhysicalResources();
+  void InitPhysicalResources();
+  void BindPhysicalResourcesMemory();
 
  public:
   ResourceManager() = default;
@@ -20,18 +32,10 @@ class ResourceManager {
   ResourceManager(const ResourceManager&) = delete;
   void operator=(const ResourceManager&) = delete;
 
-  void AddBuffer(const std::string& name,
-                 vk::DeviceSize size,
-                 vk::MemoryPropertyFlags memory_flags);
-  void AddImage(const std::string& name,
-                vk::Extent2D extent,
-                vk::Format format,
-                vk::MemoryPropertyFlags memory_flags);
-  void InitResources();
-  void RecordInitBarriers(vk::CommandBuffer cmd) const;
+  Buffer* AddBuffer(BufferProperties properties);
+  Image* AddImage(ImageProperties properties);
 
-  gpu_resources::Buffer& GetBuffer(const std::string& name);
-  gpu_resources::Image& GetImage(const std::string& name);
+  void InitResources(uint32_t pass_count);
 };
 
 }  // namespace gpu_resources
