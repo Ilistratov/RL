@@ -60,4 +60,14 @@ vk::DeviceSize Buffer::LoadDataFromPtr(void* data,
   return dst_offset;
 }
 
+vk::Buffer Buffer::GetBuffer() const noexcept {
+  DCHECK(buffer_) << kErrNotInitialized;
+  return buffer_->GetBuffer();
+}
+
+vk::DeviceSize Buffer::GetSize() const noexcept {
+  DCHECK(buffer_) << kErrNotInitialized;
+  return buffer_->GetSize();
+}
+
 }  // namespace gpu_resources

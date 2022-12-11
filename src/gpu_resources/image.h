@@ -5,6 +5,7 @@
 
 #include <string>
 #include <vector>
+#include <vulkan/vulkan_handles.hpp>
 
 #include "gpu_resources/device_memory_allocator.h"
 #include "gpu_resources/pass_access_syncronizer.h"
@@ -28,6 +29,9 @@ class Image {
   static void RecordBlit(vk::CommandBuffer cmd,
                          const Image& src,
                          const Image& dst);
+
+  vk::ImageView GetImageView() const noexcept;
+  void CreateImageView();
 };
 
 }  // namespace gpu_resources

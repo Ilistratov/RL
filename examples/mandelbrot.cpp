@@ -24,7 +24,7 @@ void MandelbrotDrawPass::OnRecord(
 
 MandelbrotDrawPass::MandelbrotDrawPass() : Pass(0) {
   LOG << "Initializing MandelbrotDrawPass";
-  gpu_resources::ResourceUsage rt_usage;
+  gpu_resources::ResourceAccess rt_usage;
   rt_usage.access = vk::AccessFlagBits2KHR::eShaderWrite;
   rt_usage.stage = vk::PipelineStageFlagBits2KHR::eComputeShader;
   rt_usage.layout = vk::ImageLayout::eGeneral;

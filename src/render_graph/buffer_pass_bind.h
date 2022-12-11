@@ -6,7 +6,7 @@
 namespace render_graph {
 
 class BufferPassBind : public pipeline_handler::DescriptorBinding {
-  gpu_resources::ResourceUsage buffer_usage_;
+  gpu_resources::ResourceAccess buffer_usage_;
   vk::BufferUsageFlags buffer_usage_flags_;
   gpu_resources::Buffer* buffer_ = nullptr;
   vk::DescriptorType descriptor_type_;
@@ -14,7 +14,7 @@ class BufferPassBind : public pipeline_handler::DescriptorBinding {
 
  public:
   BufferPassBind() = default;
-  BufferPassBind(gpu_resources::ResourceUsage usage,
+  BufferPassBind(gpu_resources::ResourceAccess usage,
                  vk::BufferUsageFlags buffer_usage_flags,
                  vk::DescriptorType descriptor_type = {},
                  vk::ShaderStageFlags stage_flags = {});

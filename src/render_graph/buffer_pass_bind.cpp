@@ -4,7 +4,7 @@
 
 namespace render_graph {
 
-BufferPassBind::BufferPassBind(gpu_resources::ResourceUsage usage,
+BufferPassBind::BufferPassBind(gpu_resources::ResourceAccess usage,
                                vk::BufferUsageFlags buffer_usage_flags,
                                vk::DescriptorType descriptor_type,
                                vk::ShaderStageFlags stage_flags)
@@ -15,7 +15,7 @@ BufferPassBind::BufferPassBind(gpu_resources::ResourceUsage usage,
 
 BufferPassBind BufferPassBind::ComputeStorageBuffer(
     vk::AccessFlags2KHR access_flags) {
-  gpu_resources::ResourceUsage usage;
+  gpu_resources::ResourceAccess usage;
   usage.access = access_flags;
   usage.stage = vk::PipelineStageFlagBits2KHR::eComputeShader;
   return BufferPassBind(usage, vk::BufferUsageFlagBits::eStorageBuffer,
@@ -26,7 +26,7 @@ BufferPassBind BufferPassBind::ComputeStorageBuffer(
 BufferPassBind BufferPassBind::UniformBuffer(
     vk::PipelineStageFlags2KHR pipeline_stage,
     vk::ShaderStageFlags shader_stage) {
-  gpu_resources::ResourceUsage usage;
+  gpu_resources::ResourceAccess usage;
   usage.access = vk::AccessFlagBits2KHR::eUniformRead;
   usage.stage = pipeline_stage;
   return BufferPassBind(usage, vk::BufferUsageFlagBits::eUniformBuffer,
@@ -34,14 +34,14 @@ BufferPassBind BufferPassBind::UniformBuffer(
 }
 
 BufferPassBind BufferPassBind::TransferSrcBuffer() {
-  gpu_resources::ResourceUsage usage;
+  gpu_resources::ResourceAccess usage;
   usage.access = vk::AccessFlagBits2KHR::eTransferRead;
   usage.stage = vk::PipelineStageFlagBits2KHR::eTransfer;
   return BufferPassBind(usage, vk::BufferUsageFlagBits::eTransferSrc, {}, {});
 }
 
 BufferPassBind BufferPassBind::TransferDstBuffer() {
-  gpu_resources::ResourceUsage usage;
+  gpu_resources::ResourceAccess usage;
   usage.access = vk::AccessFlagBits2KHR::eTransferWrite;
   usage.stage = vk::PipelineStageFlagBits2KHR::eTransfer;
   return BufferPassBind(usage, vk::BufferUsageFlagBits::eTransferDst, {}, {});

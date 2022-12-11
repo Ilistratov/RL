@@ -41,6 +41,9 @@ class Buffer {
   template <typename T>
   vk::DeviceSize LoadDataFromVec(const std::vector<T>& data,
                                  vk::DeviceSize dst_offset);
+
+  vk::Buffer GetBuffer() const noexcept;
+  vk::DeviceSize GetSize() const noexcept;
 };
 
 template <typename T>

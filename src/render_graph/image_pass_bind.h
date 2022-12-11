@@ -6,7 +6,7 @@
 namespace render_graph {
 
 class ImagePassBind : public pipeline_handler::DescriptorBinding {
-  gpu_resources::ResourceUsage image_usage_;
+  gpu_resources::ResourceAccess image_usage_;
   vk::ImageUsageFlags image_usage_flags_;
   gpu_resources::Image* image_ = nullptr;
   vk::DescriptorType descriptor_type_;
@@ -14,7 +14,7 @@ class ImagePassBind : public pipeline_handler::DescriptorBinding {
 
  public:
   ImagePassBind() = default;
-  ImagePassBind(gpu_resources::ResourceUsage usage,
+  ImagePassBind(gpu_resources::ResourceAccess usage,
                 vk::ImageUsageFlags image_usage_flags,
                 vk::DescriptorType descriptor_type = {},
                 vk::ShaderStageFlags stage_flags = {});

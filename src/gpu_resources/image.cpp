@@ -20,6 +20,16 @@ void Image::DeclareAccess(ResourceAccess access, uint32_t pass_idx) const {
   syncronizer_->AddAccess(image_, access, pass_idx);
 }
 
+vk::ImageView Image::GetImageView() const noexcept {
+  DCHECK(image_) << kErrResourceIsNull;
+  return image_->GetImageView();
+}
+
+void Image::CreateImageView() {
+  DCHECK(image_) << kErrResourceIsNull;
+  image_->CreateImageView();
+}
+
 void Image::RecordBlit(vk::CommandBuffer cmd,
                        const Image& src,
                        const Image& dst) {

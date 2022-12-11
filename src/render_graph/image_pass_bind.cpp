@@ -4,7 +4,7 @@
 
 namespace render_graph {
 
-ImagePassBind::ImagePassBind(gpu_resources::ResourceUsage usage,
+ImagePassBind::ImagePassBind(gpu_resources::ResourceAccess usage,
                              vk::ImageUsageFlags image_usage_flags,
                              vk::DescriptorType descriptor_type,
                              vk::ShaderStageFlags stage_flags)
@@ -15,7 +15,7 @@ ImagePassBind::ImagePassBind(gpu_resources::ResourceUsage usage,
 
 ImagePassBind ImagePassBind::ComputeRenderTarget(
     vk::AccessFlagBits2KHR access_flags) {
-  gpu_resources::ResourceUsage usage;
+  gpu_resources::ResourceAccess usage;
   usage.access = access_flags;
   usage.stage = vk::PipelineStageFlagBits2KHR::eComputeShader;
   usage.layout = vk::ImageLayout::eGeneral;

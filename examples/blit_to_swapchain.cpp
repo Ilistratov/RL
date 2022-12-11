@@ -9,13 +9,13 @@ namespace examples {
 BlitToSwapchainPass::BlitToSwapchainPass(const std::string& render_target_name)
     : Pass(0), render_target_name_(render_target_name) {
   LOG << "Initializing BlitToSwapchainPass";
-  AddImage(
-      render_target_name_,
-      render_graph::ImagePassBind(
-          gpu_resources::ResourceUsage{vk::PipelineStageFlagBits2KHR::eTransfer,
-                                       vk::AccessFlagBits2KHR::eTransferRead,
-                                       vk::ImageLayout::eTransferSrcOptimal},
-          vk::ImageUsageFlagBits::eTransferSrc));
+  AddImage(render_target_name_,
+           render_graph::ImagePassBind(
+               gpu_resources::ResourceAccess{
+                   vk::PipelineStageFlagBits2KHR::eTransfer,
+                   vk::AccessFlagBits2KHR::eTransferRead,
+                   vk::ImageLayout::eTransferSrcOptimal},
+               vk::ImageUsageFlagBits::eTransferSrc));
 }
 
 void BlitToSwapchainPass::OnRecord(
