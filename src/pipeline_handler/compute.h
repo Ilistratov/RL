@@ -27,8 +27,6 @@ class Compute {
   void operator=(Compute&& other) noexcept;
   void Swap(Compute& other) noexcept;
 
-  void UpdateDescriptorSet(
-      const std::vector<const DescriptorBinding*>& bindings);
   void RecordDispatch(vk::CommandBuffer& cmd,
                       uint32_t group_count_x,
                       uint32_t group_count_y,

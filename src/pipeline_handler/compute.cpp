@@ -72,14 +72,13 @@ void Compute::Swap(Compute& other) noexcept {
 }
 
 void Compute::UpdateDescriptorSet(
-    const std::vector<const DescriptorBinding*>& bindings) {
-  descriptor_set_->UpdateDescriptorSet(bindings);
-}
+    const std::vector<const DescriptorBinding*>& bindings) {}
 
 void Compute::RecordDispatch(vk::CommandBuffer& cmd,
                              uint32_t group_count_x,
                              uint32_t group_count_y,
                              uint32_t group_count_z) {
+  descriptor_set_->SubmitUpdatesIfNeed();
   cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline_);
   cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, layout_, 0,
                          descriptor_set_->GetSet(), {});
