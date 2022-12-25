@@ -34,6 +34,7 @@ class ResourceManager {
 
   Buffer* AddBuffer(BufferProperties properties);
   Image* AddImage(ImageProperties properties);
+  PassAccessSyncronizer* GetAccessSyncronizer();
 
   void InitResources(uint32_t pass_count);
 };

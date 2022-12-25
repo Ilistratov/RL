@@ -11,8 +11,8 @@ struct BufferProperties {
   vk::BufferUsageFlags usage_flags = {};
   vk::MemoryPropertyFlags memory_flags = {};
 
-  BufferProperties Unite(const BufferProperties& lhs,
-                         const BufferProperties& rhs);
+  static BufferProperties Unite(const BufferProperties& lhs,
+                                const BufferProperties& rhs);
 };
 
 class PhysicalBuffer {

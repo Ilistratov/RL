@@ -27,15 +27,6 @@ struct Mesh {
 
   void Swap(Mesh& other) noexcept;
 
-  vk::DeviceSize LoadToStagingBuffer(gpu_resources::Buffer* staging_buffer,
-                                     vk::DeviceSize dst_offset);
-  vk::DeviceSize RecordCopyFromStaging(vk::CommandBuffer cmd,
-                                       gpu_resources::Buffer* staging_buffer,
-                                       gpu_resources::Buffer* position_buffer,
-                                       gpu_resources::Buffer* normal_buffer,
-                                       gpu_resources::Buffer* tex_coord_buffer,
-                                       gpu_resources::Buffer* index_buffer,
-                                       vk::DeviceSize src_offset);
   void ReorderPrimitives(const std::vector<uint32_t>& primirive_order);
 };
 

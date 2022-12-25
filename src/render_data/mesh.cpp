@@ -82,20 +82,6 @@ void Mesh::Swap(Mesh& other) noexcept {
   index.swap(other.index);
 }
 
-vk::DeviceSize Mesh::LoadToStagingBuffer(gpu_resources::Buffer* staging_buffer,
-                                         vk::DeviceSize dst_offset) {
-  DCHECK(staging_buffer) << "Staging buffer must be presented";
-  dst_offset = staging_buffer->LoadDataFromVec(position, dst_offset);
-  DCHECK(dst_offset != (vk::DeviceSize)(-1)) << "Failed to load position";
-  dst_offset = staging_buffer->LoadDataFromVec(normal, dst_offset);
-  DCHECK(dst_offset != (vk::DeviceSize)(-1)) << "Failed to load normal";
-  dst_offset = staging_buffer->LoadDataFromVec(tex_coord, dst_offset);
-  DCHECK(dst_offset != (vk::DeviceSize)(-1)) << "Failed to load tex_coord";
-  dst_offset = staging_buffer->LoadDataFromVec(index, dst_offset);
-  DCHECK(dst_offset != (vk::DeviceSize)(-1)) << "Failed to load index";
-  return dst_offset;
-}
-
 static vk::DeviceSize RecordCopy(vk::CommandBuffer cmd,
                                  gpu_resources::Buffer* staging_buffer,
                                  gpu_resources::Buffer* dst_buffer,
@@ -107,27 +93,6 @@ static vk::DeviceSize RecordCopy(vk::CommandBuffer cmd,
   gpu_resources::Buffer::RecordCopy(cmd, *staging_buffer, *dst_buffer,
                                     src_offset, 0, data_size);
   return src_offset + data_size;
-}
-
-vk::DeviceSize Mesh::RecordCopyFromStaging(
-    vk::CommandBuffer cmd,
-    gpu_resources::Buffer* staging_buffer,
-    gpu_resources::Buffer* position_buffer,
-    gpu_resources::Buffer* normal_buffer,
-    gpu_resources::Buffer* tex_coord_buffer,
-    gpu_resources::Buffer* index_buffer,
-    vk::DeviceSize src_offset) {
-  using gpu_resources::GetDataSize;
-  DCHECK(staging_buffer) << "Staging buffer must be presented";
-  src_offset = RecordCopy(cmd, staging_buffer, position_buffer,
-                          GetDataSize(position), src_offset);
-  src_offset = RecordCopy(cmd, staging_buffer, normal_buffer,
-                          GetDataSize(normal), src_offset);
-  src_offset = RecordCopy(cmd, staging_buffer, tex_coord_buffer,
-                          GetDataSize(tex_coord), src_offset);
-  src_offset = RecordCopy(cmd, staging_buffer, index_buffer, GetDataSize(index),
-                          src_offset);
-  return src_offset;
 }
 
 void Mesh::ReorderPrimitives(const std::vector<uint32_t>& primirive_order) {

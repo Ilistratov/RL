@@ -102,30 +102,31 @@ TransferScheduler::TransferScheduler(
     : buffer_requests_(queue_max_size),
       image_requests_(queue_max_size),
       staging_buffer_name_(staging_buffer_name) {
-  gpu_resources::ResourceUsage buffer_transfer_dst_usage{
+  gpu_resources::ResourceAccess buffer_transfer_dst_usage{
       vk::PipelineStageFlagBits2KHR::eTransfer,
       vk::AccessFlagBits2KHR::eTransferWrite, vk::ImageLayout::eUndefined};
-  for (const auto& buffer_name : dst_buffers) {
-    AddBuffer(buffer_name, render_graph::BufferPassBind(
-                               buffer_transfer_dst_usage,
-                               vk::BufferUsageFlagBits::eTransferDst));
-  }
+  // for (const auto& buffer_name : dst_buffers) {
+  //   AddBuffer(buffer_name, render_graph::BufferPassBind(
+  //                              buffer_transfer_dst_usage,
+  //                              vk::BufferUsageFlagBits::eTransferDst));
+  // }
 
-  gpu_resources::ResourceUsage image_transfer_dst_usage =
+  gpu_resources::ResourceAccess image_transfer_dst_usage =
       buffer_transfer_dst_usage;
   image_transfer_dst_usage.layout = vk::ImageLayout::eTransferDstOptimal;
-  for (const auto& image_name : dst_images) {
-    AddImage(image_name,
-             render_graph::ImagePassBind(image_transfer_dst_usage,
-                                         vk::ImageUsageFlagBits::eTransferDst));
-  }
+  // for (const auto& image_name : dst_images) {
+  //   AddImage(image_name,
+  //            render_graph::ImagePassBind(image_transfer_dst_usage,
+  //                                        vk::ImageUsageFlagBits::eTransferDst));
+  // }
 
-  gpu_resources::ResourceUsage staging_buffer_usage{
+  gpu_resources::ResourceAccess staging_buffer_usage{
       vk::PipelineStageFlagBits2KHR::eTransfer,
       vk::AccessFlagBits2KHR::eTransferRead, vk::ImageLayout::eUndefined};
-  AddBuffer(staging_buffer_name,
-            render_graph::BufferPassBind(
-                staging_buffer_usage, vk::BufferUsageFlagBits::eTransferSrc));
+  // AddBuffer(staging_buffer_name,
+  //           render_graph::BufferPassBind(
+  //               staging_buffer_usage,
+  //               vk::BufferUsageFlagBits::eTransferSrc));
 }
 
 void TransferScheduler::IncrementTransactionInd() {

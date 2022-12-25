@@ -1,7 +1,9 @@
 #include "gpu_resources/resource_access_syncronizer.h"
 
+#include <vulkan/vulkan_enums.hpp>
 #include "gpu_resources/common.h"
 #include "utill/error_handling.h"
+
 
 namespace gpu_resources {
 
@@ -38,6 +40,10 @@ AccessDependency ResourceAccessSyncronizer::AddAccess(uint32_t pass_idx,
   if (IsDepNeeded(current_unflushed_access_.access, access)) {
     result = AccessDependency{current_unflushed_access_.access, access,
                               current_unflushed_access_.pass_idx};
+    if (result.src.layout != result.dst.layout &&
+        result.dst.layout == vk::ImageLayout::eUndefined) {
+      access.layout = result.dst.layout = result.src.layout;
+    }
     current_unflushed_access_.access = access;
   } else {
     current_unflushed_access_.access |= access;

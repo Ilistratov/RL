@@ -1,5 +1,6 @@
 #include "gpu_resources/pass_access_syncronizer.h"
 
+#include <utility>
 #include <vector>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_structs.hpp>
@@ -62,6 +63,19 @@ void PassAccessSyncronizer::RecordPassCommandBuffers(vk::CommandBuffer cmd,
       std::move(pass_image_barriers_[pass_idx]);
   cmd.pipelineBarrier2KHR(
       vk::DependencyInfoKHR({}, {}, buffer_barriers, image_barriers));
+}
+
+std::vector<vk::BufferMemoryBarrier2KHR>
+PassAccessSyncronizer::GetBufferPostPassBarriers(uint32_t pass_idx) {
+  std::vector<vk::BufferMemoryBarrier2KHR> res;
+  pass_buffer_barriers_[pass_idx].swap(res);
+  return res;
+}
+std::vector<vk::ImageMemoryBarrier2KHR>
+PassAccessSyncronizer::GetImagePostPassBarriers(uint32_t pass_idx) {
+  std::vector<vk::ImageMemoryBarrier2KHR> res;
+  pass_image_barriers_[pass_idx].swap(res);
+  return res;
 }
 
 }  // namespace gpu_resources

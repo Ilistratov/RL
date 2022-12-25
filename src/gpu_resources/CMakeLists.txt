@@ -6,6 +6,7 @@ set(SRC
   memory_block.cpp
   pass_access_syncronizer.cpp
   physical_buffer.cpp
+  physical_image.cpp
   resource_access_syncronizer.cpp
   resource_manager.cpp
 )

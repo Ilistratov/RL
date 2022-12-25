@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_structs.hpp>
 
 #include "gpu_resources/physical_buffer.h"
 #include "gpu_resources/physical_image.h"
@@ -27,6 +28,11 @@ class PassAccessSyncronizer {
                  ResourceAccess access,
                  uint32_t pass_idx);
   void RecordPassCommandBuffers(vk::CommandBuffer cmd, uint32_t pass_idx);
+
+  std::vector<vk::BufferMemoryBarrier2KHR> GetBufferPostPassBarriers(
+      uint32_t pass_idx);
+  std::vector<vk::ImageMemoryBarrier2KHR> GetImagePostPassBarriers(
+      uint32_t pass_idx);
 };
 
 }  // namespace gpu_resources

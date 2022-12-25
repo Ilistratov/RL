@@ -2,12 +2,12 @@
 
 #include <stdint.h>
 #include <algorithm>
+#include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_handles.hpp>
 #include <vulkan/vulkan_structs.hpp>
 #include "base/base.h"
 #include "gpu_resources/common.h"
 #include "utill/error_handling.h"
-
 
 namespace gpu_resources {
 
@@ -15,10 +15,10 @@ using namespace error_messages;
 
 ImageProperties ImageProperties::Unite(const ImageProperties& lhs,
                                        const ImageProperties& rhs) {
-  CHECK(lhs.format == rhs.format);
+  CHECK(lhs.format == rhs.format || rhs.format == vk::Format::eUndefined);
+  CHECK(rhs.extent == vk::Extent2D(0, 0) || lhs.extent == rhs.extent);
   return ImageProperties{
-      vk::Extent2D(std::max(lhs.extent.width, rhs.extent.width),
-                   std::max(lhs.extent.height, rhs.extent.height)),
+      lhs.extent,
       lhs.format,
       lhs.memory_flags | rhs.memory_flags,
       lhs.usage_flags | rhs.usage_flags,
@@ -158,6 +158,26 @@ void PhysicalImage::CreateImageView() {
 
 vk::ImageView PhysicalImage::GetImageView() const {
   return image_view_;
+}
+
+void PhysicalImage::RecordBlit(vk::CommandBuffer cmd,
+                               const PhysicalImage& src,
+                               const PhysicalImage& dst) {
+  DCHECK(src.image_) << "src image: " << kErrNotInitialized;
+  DCHECK(dst.image_) << "dst image: " << kErrNotInitialized;
+  vk::Extent2D src_extent = src.GetExtent();
+  vk::Extent2D dst_extent = dst.GetExtent();
+  vk::ImageBlit2KHR region(
+      src.GetSubresourceLayers(),
+      {vk::Offset3D(0, 0, 0),
+       vk::Offset3D(src_extent.width, src_extent.height, 1)},
+      dst.GetSubresourceLayers(),
+      {vk::Offset3D(0, 0, 0),
+       vk::Offset3D(dst_extent.width, dst_extent.height, 1)});
+  vk::BlitImageInfo2KHR blit_info(
+      src.image_, vk::ImageLayout::eTransferSrcOptimal, dst.image_,
+      vk::ImageLayout::eTransferDstOptimal, region);
+  cmd.blitImage2KHR(blit_info);
 }
 
 }  // namespace gpu_resources

@@ -21,6 +21,7 @@ class Buffer {
   Buffer(BufferProperties properties, PassAccessSyncronizer* syncronizer);
 
  public:
+  void RequireProperties(BufferProperties properties);
   void DeclareAccess(ResourceAccess access, uint32_t pass_idx) const;
 
   static void RecordCopy(vk::CommandBuffer cmd,
@@ -42,7 +43,8 @@ class Buffer {
   vk::DeviceSize LoadDataFromVec(const std::vector<T>& data,
                                  vk::DeviceSize dst_offset);
 
-  vk::Buffer GetBuffer() const noexcept;
+  vk::Buffer GetVkBuffer() const noexcept;
+  PhysicalBuffer* GetBuffer() const noexcept;
   vk::DeviceSize GetSize() const noexcept;
 };
 

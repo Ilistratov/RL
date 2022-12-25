@@ -15,6 +15,11 @@ Buffer::Buffer(BufferProperties properties, PassAccessSyncronizer* syncronizer)
   DCHECK(syncronizer_) << kErrSyncronizerNotProvided;
 }
 
+void Buffer::RequireProperties(BufferProperties properties) {
+  required_properties_ =
+      BufferProperties::Unite(required_properties_, properties);
+}
+
 void Buffer::DeclareAccess(ResourceAccess access, uint32_t pass_idx) const {
   DCHECK(syncronizer_) << kErrSyncronizerNotProvided;
   syncronizer_->AddAccess(buffer_, access, pass_idx);
@@ -60,9 +65,13 @@ vk::DeviceSize Buffer::LoadDataFromPtr(void* data,
   return dst_offset;
 }
 
-vk::Buffer Buffer::GetBuffer() const noexcept {
+vk::Buffer Buffer::GetVkBuffer() const noexcept {
   DCHECK(buffer_) << kErrNotInitialized;
   return buffer_->GetBuffer();
+}
+
+PhysicalBuffer* Buffer::GetBuffer() const noexcept {
+  return buffer_;
 }
 
 vk::DeviceSize Buffer::GetSize() const noexcept {

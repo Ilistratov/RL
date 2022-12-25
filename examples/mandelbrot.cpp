@@ -1,15 +1,48 @@
 #include "mandelbrot.h"
 
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_enums.hpp>
 
 #include "base/base.h"
 
+#include "gpu_resources/physical_image.h"
+#include "gpu_resources/resource_access_syncronizer.h"
+#include "pipeline_handler/descriptor_binding.h"
+#include "render_graph/layout_initializer_pass.h"
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
 
 namespace examples {
-const static std::string kColorTarget = "render_target";
+
+MandelbrotDrawPass::MandelbrotDrawPass(gpu_resources::Image* render_target)
+    : Pass(0), render_target_(render_target) {
+  LOG << "Initializing MandelbrotDrawPass";
+  gpu_resources::ImageProperties render_target_requierments{};
+  render_target_requierments.usage_flags = vk::ImageUsageFlagBits::eStorage;
+  render_target_->RequireProperties(render_target_requierments);
+
+  render_target_binding_ = pipeline_handler::ImageDescriptorBinding(
+      render_target_, vk::DescriptorType::eStorageImage,
+      vk::ShaderStageFlagBits::eCompute, vk::ImageLayout::eGeneral);
+}
+
+void MandelbrotDrawPass::OnReserveDescriptorSets(
+    pipeline_handler::DescriptorPool& pool) noexcept {
+  vk::PushConstantRange pc_range(vk::ShaderStageFlagBits::eCompute, 0,
+                                 sizeof(PushConstants));
+  compute_pipeline_ = pipeline_handler::Compute(
+      {&render_target_binding_}, pool, {pc_range}, "mandelbrot.spv", "main");
+}
+
+void MandelbrotDrawPass::OnPreRecord() {
+  gpu_resources::ResourceAccess render_target_access;
+  render_target_access.access_flags = vk::AccessFlagBits2KHR::eShaderWrite;
+  render_target_access.stage_flags =
+      vk::PipelineStageFlagBits2KHR::eComputeShader;
+  render_target_access.layout = vk::ImageLayout::eGeneral;
+  render_target_->DeclareAccess(render_target_access, GetPassIdx());
+}
 
 void MandelbrotDrawPass::OnRecord(
     vk::CommandBuffer primary_cmd,
@@ -20,32 +53,6 @@ void MandelbrotDrawPass::OnRecord(
                             sizeof(PushConstants), &push_constants_);
   compute_pipeline_.RecordDispatch(primary_cmd, swapchain.GetExtent().width / 8,
                                    swapchain.GetExtent().height / 8, 1);
-}
-
-MandelbrotDrawPass::MandelbrotDrawPass() : Pass(0) {
-  LOG << "Initializing MandelbrotDrawPass";
-  gpu_resources::ResourceAccess rt_usage;
-  rt_usage.access = vk::AccessFlagBits2KHR::eShaderWrite;
-  rt_usage.stage = vk::PipelineStageFlagBits2KHR::eComputeShader;
-  rt_usage.layout = vk::ImageLayout::eGeneral;
-
-  AddImage(kColorTarget, render_graph::ImagePassBind(
-                             rt_usage, vk::ImageUsageFlagBits::eStorage,
-                             vk::DescriptorType::eStorageImage,
-                             vk::ShaderStageFlagBits::eCompute));
-}
-
-void MandelbrotDrawPass::ReserveDescriptorSets(
-    pipeline_handler::DescriptorPool& pool) noexcept {
-  vk::PushConstantRange pc_range(vk::ShaderStageFlagBits::eCompute, 0,
-                                 sizeof(PushConstants));
-  compute_pipeline_ =
-      pipeline_handler::Compute({&GetImagePassBind(kColorTarget)}, pool,
-                                {pc_range}, "mandelbrot.spv", "main");
-}
-
-void MandelbrotDrawPass::OnResourcesInitialized() noexcept {
-  compute_pipeline_.UpdateDescriptorSet({&GetImagePassBind(kColorTarget)});
 }
 
 PushConstants& MandelbrotDrawPass::GetPushConstants() {
@@ -81,18 +88,28 @@ void Mandelbrot::UpdatePushConstants() {
   pc.scale = pc.scale * 0.8 + dst_scale_ * 0.2;
 }
 
-Mandelbrot::Mandelbrot() : present_(kColorTarget) {
+Mandelbrot::Mandelbrot() {
   LOG << "Initializing Renderer";
   auto device = base::Base::Get().GetContext().GetDevice();
   auto& swapchain = base::Base::Get().GetSwapchain();
   ready_to_present_ = device.createSemaphore({});
 
   LOG << "Adding resources to RenderGraph";
-  render_graph_.GetResourceManager().AddImage(
-      kColorTarget, {}, {}, vk::MemoryPropertyFlagBits::eDeviceLocal);
+  gpu_resources::ImageProperties render_target_propertires;
+  render_target_propertires.memory_flags =
+      vk::MemoryPropertyFlagBits::eDeviceLocal;
+  render_target_ =
+      render_graph_.GetResourceManager().AddImage(render_target_propertires);
+
+  initialize_ = render_graph::LayoutInitializerPass({}, {render_target_});
+  render_graph_.AddPass(&initialize_);
+
+  draw_ = MandelbrotDrawPass(render_target_);
   LOG << "Adding draw pass";
-  render_graph_.AddPass(&draw_, {}, {});
+  render_graph_.AddPass(&draw_, vk::PipelineStageFlagBits2KHR::eComputeShader,
+                        {});
   LOG << "Adding present pass";
+  present_ = BlitToSwapchainPass(render_target_);
   render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
                         ready_to_present_,
                         swapchain.GetImageAvaliableSemaphore());

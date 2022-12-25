@@ -1,95 +1,51 @@
 #include "render_graph/pass.h"
 
+#include <stdint.h>
 #include "utill/error_handling.h"
 
 namespace render_graph {
 
 void Pass::RecordPostPassParriers(vk::CommandBuffer cmd) {
-  std::vector<vk::BufferMemoryBarrier2KHR> buffer_barriers_;
-  for (auto& [name, buffer] : buffer_binds_) {
-    vk::BufferMemoryBarrier2KHR barrier = buffer.GetBarrier(user_ind_);
-    if (barrier.buffer) {
-      buffer_barriers_.push_back(barrier);
-    }
-  }
-
-  std::vector<vk::ImageMemoryBarrier2KHR> image_barriers_;
-  for (auto& [name, image] : image_binds_) {
-    vk::ImageMemoryBarrier2KHR barrier = image.GetBarrier(user_ind_);
-    if (barrier.image) {
-      image_barriers_.push_back(barrier);
-    }
-  }
+  std::vector<vk::BufferMemoryBarrier2KHR> buffer_barriers_ =
+      access_syncronizer_->GetBufferPostPassBarriers(pass_idx_);
+  std::vector<vk::ImageMemoryBarrier2KHR> image_barriers_ =
+      access_syncronizer_->GetImagePostPassBarriers(pass_idx_);
 
   vk::DependencyInfoKHR dep_info({}, {}, buffer_barriers_, image_barriers_);
   cmd.pipelineBarrier2KHR(dep_info);
 }
 
-void Pass::AddBuffer(const std::string& buffer_name, BufferPassBind bind) {
-  DCHECK(!buffer_binds_.contains(buffer_name))
-      << "Already have buffer bind with name " << buffer_name;
-  buffer_binds_[buffer_name] = bind;
+void Pass::OnReserveDescriptorSets(pipeline_handler::DescriptorPool&) noexcept {
 }
 
-void Pass::AddImage(const std::string& image_name, ImagePassBind bind) {
-  DCHECK(!image_binds_.contains(image_name))
-      << "Already have image bind with name " << image_name;
-  image_binds_[image_name] = bind;
-}
+void Pass::OnPreRecord() {}
 
-gpu_resources::Buffer* Pass::GetBuffer(const std::string& buffer_name) {
-  DCHECK(buffer_binds_.contains(buffer_name))
-      << "No buffer bind with name " << buffer_name;
-  return buffer_binds_[buffer_name].GetBoundBuffer();
-}
-
-BufferPassBind& Pass::GetBufferPassBind(const std::string& buffer_name) {
-  DCHECK(buffer_binds_.contains(buffer_name))
-      << "No buffer bind with name " << buffer_name;
-  return buffer_binds_[buffer_name];
-}
-
-gpu_resources::Image* Pass::GetImage(const std::string& image_name) {
-  DCHECK(image_binds_.contains(image_name))
-      << "No image bind with name " << image_name;
-  return image_binds_[image_name].GetBoundImage();
-}
-
-ImagePassBind& Pass::GetImagePassBind(const std::string& image_name) {
-  DCHECK(image_binds_.contains(image_name))
-      << "No image bind with name " << image_name;
-  return image_binds_[image_name];
-}
-
-void Pass::OnRecord(vk::CommandBuffer,
-                    const std::vector<vk::CommandBuffer>&) noexcept {}
+void Pass::OnRecord(vk::CommandBuffer, const std::vector<vk::CommandBuffer>&) {}
 
 Pass::Pass(uint32_t secondary_cmd_count)
-    : secondary_cmd_count_(secondary_cmd_count) {}
+    : pass_idx_(-1), secondary_cmd_count_(secondary_cmd_count) {}
 
-void Pass::BindResources(uint32_t user_ind,
-                         gpu_resources::ResourceManager& resource_manager) {
-  DCHECK(user_ind_ == (uint32_t)(-1)) << "Resources already bound";
-  user_ind_ = user_ind;
-  for (auto& [name, buffer] : buffer_binds_) {
-    buffer.OnResourceBind(user_ind_, &resource_manager.GetBuffer(name));
-  }
-  for (auto& [name, image] : image_binds_) {
-    image.OnResourceBind(user_ind_, &resource_manager.GetImage(name));
-  }
+void Pass::OnRegister(uint32_t pass_idx,
+                      gpu_resources::PassAccessSyncronizer* access_syncronizer,
+                      pipeline_handler::DescriptorPool& pool) {
+  DCHECK(access_syncronizer != nullptr)
+      << "access_syncronizer must be valid PassAccessSyncronizer";
+  pass_idx_ = pass_idx;
+  access_syncronizer_ = access_syncronizer;
+  OnReserveDescriptorSets(pool);
 }
 
-void Pass::ReserveDescriptorSets(pipeline_handler::DescriptorPool&) noexcept {}
-
 void Pass::OnResourcesInitialized() noexcept {}
-
 void Pass::OnWorkloadRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer>& secondary_cmd) {
-  DCHECK(user_ind_ != uint32_t(-1))
-      << "Resources must be bound to use this method";
+  DCHECK(pass_idx_ != (uint32_t)-1) << "Pass was not registered";
   OnRecord(primary_cmd, secondary_cmd);
   RecordPostPassParriers(primary_cmd);
+}
+
+uint32_t Pass::GetPassIdx() const {
+  return pass_idx_;
 }
 
 uint32_t Pass::GetSecondaryCmdCount() const {

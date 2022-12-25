@@ -54,14 +54,15 @@ void DescriptorSet::SubmitUpdatesIfNeed() {
     if (!bindings_[i]->IsWriteUpdateNeeded()) {
       continue;
     }
-    uint32_t current_buffer_info_offset = buffer_info_offset.back();
-    uint32_t current_image_info_offset = image_info_offset.back();
     vk::WriteDescriptorSet vk_write = bindings_[i]->GenerateWrite(
         buffer_info, buffer_info_offset, image_info, image_info_offset);
-    vk_write.pBufferInfo = buffer_info.data() + current_buffer_info_offset;
-    vk_write.pImageInfo = image_info.data() + current_image_info_offset;
     vk_write.dstBinding = i;
     vk_write.dstSet = set_;
+    vk_writes.push_back(vk_write);
+  }
+  for (uint32_t i = 0; i < vk_writes.size(); i++) {
+    vk_writes[i].pBufferInfo = buffer_info.data() + buffer_info_offset[i];
+    vk_writes[i].pImageInfo = image_info.data() + image_info_offset[i];
   }
   auto device = base::Base::Get().GetContext().GetDevice();
   device.updateDescriptorSets(vk_writes, {});

@@ -12,7 +12,8 @@ struct ImageProperties {
   vk::MemoryPropertyFlags memory_flags = {};
   vk::ImageUsageFlags usage_flags = {};
 
-  ImageProperties Unite(const ImageProperties& lhs, const ImageProperties& rhs);
+  static ImageProperties Unite(const ImageProperties& lhs,
+                               const ImageProperties& rhs);
 };
 
 class PhysicalImage {
@@ -69,6 +70,10 @@ class PhysicalImage {
 
   void CreateImageView();
   vk::ImageView GetImageView() const;
+
+  static void RecordBlit(vk::CommandBuffer cmd,
+                         const PhysicalImage& src,
+                         const PhysicalImage& dst);
 };
 
 }  // namespace gpu_resources

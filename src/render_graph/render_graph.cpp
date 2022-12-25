@@ -10,11 +10,11 @@ void RenderGraph::AddPass(Pass* pass,
                           vk::Semaphore external_signal,
                           vk::Semaphore external_wait) {
   DCHECK(pass) << "Can't add null";
-  pass->BindResources(passes_.size(), resource_manager_);
-  pass->ReserveDescriptorSets(descriptor_pool_);
+  pass->OnRegister(passes_.size(), resource_manager_.GetAccessSyncronizer(),
+                   descriptor_pool_);
   executer_.ScheduleTask(pass, stage_flags, external_signal, external_wait,
                          pass->GetSecondaryCmdCount());
-  passes_.push_back(std::move(pass));
+  passes_.push_back(pass);
 }
 
 gpu_resources::ResourceManager& RenderGraph::GetResourceManager() {
@@ -23,18 +23,9 @@ gpu_resources::ResourceManager& RenderGraph::GetResourceManager() {
 
 void RenderGraph::Init() {
   LOG << "Initializing resources";
-  resource_manager_.InitResources();
+  resource_manager_.InitResources(passes_.size());
   LOG << "Creating descriptor pool";
   descriptor_pool_.Create();
-
-  LOG << "Performing initial layout transitions";
-  auto init_barriers_record = [this](vk::CommandBuffer primary_cmd,
-                                     const std::vector<vk::CommandBuffer>&) {
-    resource_manager_.RecordInitBarriers(primary_cmd);
-  };
-  gpu_executer::LambdaTask<decltype(init_barriers_record)> init_task(
-      init_barriers_record);
-  executer_.ExecuteOneTime(&init_task);
 
   LOG << "Notifying passes";
   for (auto& pass : passes_) {
@@ -44,6 +35,9 @@ void RenderGraph::Init() {
 }
 
 void RenderGraph::RenderFrame() {
+  for (Pass* pass : passes_) {
+    pass->OnPreRecord();
+  }
   executer_.Execute();
 }
 

@@ -41,8 +41,9 @@ vk::WriteDescriptorSet BufferDescriptorBinding::GenerateWrite(
       << "Offset vector should at least contain 0 offset of 1st element";
   buffer_info_offset.push_back(buffer_info_offset.back() + 1);
   buffer_info.push_back(vk::DescriptorBufferInfo{
-      buffer_to_bind_->GetBuffer(), 0, buffer_to_bind_->GetSize()});
+      buffer_to_bind_->GetVkBuffer(), 0, buffer_to_bind_->GetSize()});
   image_info_offset.push_back(image_info_offset.back());
+  buffer_to_bind_ = nullptr;
   return vk::WriteDescriptorSet{{}, {}, dst_array_element_, 1, type_};
 }
 
@@ -85,6 +86,7 @@ vk::WriteDescriptorSet ImageDescriptorBinding::GenerateWrite(
   image_info_offset.push_back(image_info_offset.back() + 1);
   image_info.push_back(vk::DescriptorImageInfo{
       {}, image_to_bind_->GetImageView(), expected_layout_});
+  image_to_bind_ = nullptr;
   return vk::WriteDescriptorSet{{}, {}, dst_array_element_, 1, type_};
 }
 

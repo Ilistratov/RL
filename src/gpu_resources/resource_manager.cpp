@@ -19,8 +19,19 @@ Buffer* ResourceManager::AddBuffer(BufferProperties properties) {
 }
 
 Image* ResourceManager::AddImage(ImageProperties properties) {
+  auto& swapchain = base::Base::Get().GetSwapchain();
+  if (properties.extent.width == 0 || properties.extent.height == 0) {
+    properties.extent = swapchain.GetExtent();
+  }
+  if (properties.format == vk::Format::eUndefined) {
+    properties.format = swapchain.GetFormat();
+  }
   images_.push_back(Image(properties, &syncronizer_));
   return &images_.back();
+}
+
+PassAccessSyncronizer* ResourceManager::GetAccessSyncronizer() {
+  return &syncronizer_;
 }
 
 // Simple 1:1 mapping for now. Can be replaced when transient resources are
@@ -30,13 +41,13 @@ uint32_t ResourceManager::CreateAndMapPhysicalResources() {
   for (auto& buffer : buffers_) {
     PhysicalBuffer physical_buffer(resource_count, buffer.required_properties_);
     resource_count += 1;
-    physical_buffers_.push_back(physical_buffer);
+    physical_buffers_.push_back(std::move(physical_buffer));
   }
 
   for (auto& image : images_) {
     PhysicalImage physical_image(resource_count, image.required_properties_);
     resource_count += 1;
-    physical_images_.push_back(physical_image);
+    physical_images_.push_back(std::move(physical_image));
   }
 
   uint32_t idx = 0;

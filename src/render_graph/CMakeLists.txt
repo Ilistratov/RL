@@ -1,6 +1,5 @@
 set(SRC
-  buffer_pass_bind.cpp
-  image_pass_bind.cpp
+  layout_initializer_pass.cpp
   pass.cpp
   render_graph.cpp
 )

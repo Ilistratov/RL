@@ -14,7 +14,7 @@ class Compute {
 
  public:
   Compute() = default;
-  Compute(const std::vector<const DescriptorBinding*>& bindings,
+  Compute(const std::vector<DescriptorBinding*>& bindings,
           DescriptorPool& descriptor_pool,
           const std::vector<vk::PushConstantRange>& push_constants,
           const std::string& shader_file_path,

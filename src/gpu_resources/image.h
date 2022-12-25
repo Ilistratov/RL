@@ -24,14 +24,13 @@ class Image {
   Image(ImageProperties properties, PassAccessSyncronizer* syncronizer);
 
  public:
+  void RequireProperties(ImageProperties properties);
   void DeclareAccess(ResourceAccess access, uint32_t pass_idx) const;
-
-  static void RecordBlit(vk::CommandBuffer cmd,
-                         const Image& src,
-                         const Image& dst);
 
   vk::ImageView GetImageView() const noexcept;
   void CreateImageView();
+
+  PhysicalImage* GetImage();
 };
 
 }  // namespace gpu_resources
