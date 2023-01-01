@@ -245,7 +245,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gind : SV_GroupIndex) {
   depth_target[DTid.xy] = 0.0f;
   if (res.trg_ind != (uint)-1) {
     color_target[DTid.xy] = CalcLightAtInterseption(res, camera_ray);
-    depth_target[DTid.xy] = res.dst;
+    depth_target[DTid.xy] = max(0, 1 - res.dst / 100);
   }
   // color_target[DTid.xy] = float4(res.it_count / 128.0, res.it_count / 256.0, res.it_count / 512.0, 1.0);
 }

@@ -4,47 +4,39 @@
 #include <string>
 
 #include "gpu_executer/task.h"
+#include "gpu_resources/pass_access_syncronizer.h"
 #include "gpu_resources/resource_manager.h"
 #include "pipeline_handler/descriptor_pool.h"
-#include "render_graph/buffer_pass_bind.h"
-#include "render_graph/image_pass_bind.h"
 
 namespace render_graph {
 
 class Pass : public gpu_executer::Task {
-  uint32_t user_ind_ = -1;
-  uint32_t secondary_cmd_count_ = 0;
-  std::map<std::string, BufferPassBind> buffer_binds_;
-  std::map<std::string, ImagePassBind> image_binds_;
-
-  void RecordPostPassParriers(vk::CommandBuffer cmd);
+  gpu_resources::PassAccessSyncronizer* access_syncronizer_;
+  uint32_t pass_idx_;
+  uint32_t secondary_cmd_count_;
 
  protected:
-  virtual void OnRecord(
-      vk::CommandBuffer primary_cmd,
-      const std::vector<vk::CommandBuffer>& secondary_cmd) noexcept;
+  virtual void OnReserveDescriptorSets(
+      pipeline_handler::DescriptorPool& pool) noexcept;
+  virtual void OnRecord(vk::CommandBuffer primary_cmd,
+                        const std::vector<vk::CommandBuffer>& secondary_cmd);
 
-  void AddBuffer(const std::string& buffer_name, BufferPassBind bind);
-  void AddImage(const std::string& image_name, ImagePassBind bind);
-
-  gpu_resources::Buffer* GetBuffer(const std::string& buffer_name);
-  BufferPassBind& GetBufferPassBind(const std::string& buffer_name);
-  gpu_resources::Image* GetImage(const std::string& image_name);
-  ImagePassBind& GetImagePassBind(const std::string& image_name);
+  void RecordPostPassParriers(vk::CommandBuffer cmd);
 
  public:
   Pass(uint32_t secondary_cmd_count = 0);
 
-  void BindResources(uint32_t user_ind,
-                     gpu_resources::ResourceManager& resource_manager);
-  virtual void ReserveDescriptorSets(
-      pipeline_handler::DescriptorPool& pool) noexcept;
+  void OnRegister(uint32_t pass_idx,
+                  gpu_resources::PassAccessSyncronizer* access_syncronizer,
+                  pipeline_handler::DescriptorPool& pool);
   virtual void OnResourcesInitialized() noexcept;
+  virtual void OnPreRecord();
 
   void OnWorkloadRecord(
       vk::CommandBuffer primary_cmd,
       const std::vector<vk::CommandBuffer>& secondary_cmd) override;
 
+  uint32_t GetPassIdx() const;
   uint32_t GetSecondaryCmdCount() const;
 };
 

@@ -1,7 +1,9 @@
 #include <chrono>
 #include <iostream>
 
+#include "examples/mandelbrot.h"
 #include "examples/raytracer.h"
+
 
 #include "base/base.h"
 #include "base/context.h"

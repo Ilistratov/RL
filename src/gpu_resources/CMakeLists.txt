@@ -1,9 +1,13 @@
 set(SRC
-  access_sync_manager.cpp
   buffer.cpp
+  common.cpp
   device_memory_allocator.cpp
   image.cpp
   memory_block.cpp
+  pass_access_syncronizer.cpp
+  physical_buffer.cpp
+  physical_image.cpp
+  resource_access_syncronizer.cpp
   resource_manager.cpp
 )
 

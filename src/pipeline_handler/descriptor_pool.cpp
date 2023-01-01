@@ -36,7 +36,7 @@ void DescriptorPool::AllocateSets() {
 }
 
 DescriptorSet* DescriptorPool::ReserveDescriptorSet(
-    const std::vector<const DescriptorBinding*>& bindings) {
+    const std::vector<DescriptorBinding*>& bindings) {
   for (uint32_t binding_ind = 0; binding_ind < bindings.size(); binding_ind++) {
     auto vk_binding = bindings[binding_ind]->GetVkBinding();
     descriptor_type_reserved_count_[vk_binding.descriptorType] +=

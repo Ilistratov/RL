@@ -10,14 +10,29 @@
 
 namespace render_graph {
 
+class PreFrameResourceInitializerTask : public gpu_executer::Task {
+  gpu_resources::PassAccessSyncronizer* access_syncronizer_ = nullptr;
+  uint32_t pass_count_ = 0;
+
+ public:
+  PreFrameResourceInitializerTask() = default;
+  PreFrameResourceInitializerTask(
+      gpu_resources::PassAccessSyncronizer* access_syncronizer,
+      uint32_t pass_count);
+
+  void OnWorkloadRecord(vk::CommandBuffer cmd,
+                        const std::vector<vk::CommandBuffer>&) override;
+};
+
 class RenderGraph {
   gpu_resources::ResourceManager resource_manager_;
   gpu_executer::Executer executer_;
   pipeline_handler::DescriptorPool descriptor_pool_;
+  PreFrameResourceInitializerTask initialize_task_;
   std::vector<Pass*> passes_;
 
  public:
-  RenderGraph() = default;
+  RenderGraph();
 
   RenderGraph(const RenderGraph&) = delete;
   void operator=(const RenderGraph&) = delete;

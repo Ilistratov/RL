@@ -30,7 +30,7 @@ vk::UniqueShaderModule LoadShaderModule(const std::string& file_path) {
 
 }  // namespace
 
-Compute::Compute(const std::vector<const DescriptorBinding*>& bindings,
+Compute::Compute(const std::vector<DescriptorBinding*>& bindings,
                  DescriptorPool& descriptor_pool,
                  const std::vector<vk::PushConstantRange>& push_constants,
                  const std::string& shader_file_path,
@@ -71,15 +71,11 @@ void Compute::Swap(Compute& other) noexcept {
   std::swap(descriptor_set_, other.descriptor_set_);
 }
 
-void Compute::UpdateDescriptorSet(
-    const std::vector<const DescriptorBinding*>& bindings) {
-  descriptor_set_->UpdateDescriptorSet(bindings);
-}
-
 void Compute::RecordDispatch(vk::CommandBuffer& cmd,
                              uint32_t group_count_x,
                              uint32_t group_count_y,
                              uint32_t group_count_z) {
+  descriptor_set_->SubmitUpdatesIfNeed();
   cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline_);
   cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, layout_, 0,
                          descriptor_set_->GetSet(), {});

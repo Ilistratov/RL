@@ -11,12 +11,13 @@ namespace pipeline_handler {
 class DescriptorSet {
   vk::DescriptorSetLayout layout_ = {};
   vk::DescriptorSet set_ = {};
+  std::vector<DescriptorBinding*> bindings_;
 
   friend class DescriptorPool;
 
  public:
   DescriptorSet() = default;
-  DescriptorSet(const std::vector<const DescriptorBinding*>& bindings);
+  DescriptorSet(const std::vector<DescriptorBinding*>& bindings);
 
   DescriptorSet(const DescriptorSet&) = delete;
   DescriptorSet& operator=(const DescriptorSet&) = delete;
@@ -28,8 +29,7 @@ class DescriptorSet {
   vk::DescriptorSetLayout GetLayout() const;
   vk::DescriptorSet GetSet() const;
 
-  void UpdateDescriptorSet(
-      const std::vector<const DescriptorBinding*>& bindings) const;
+  void SubmitUpdatesIfNeed();
 
   ~DescriptorSet();
 };
