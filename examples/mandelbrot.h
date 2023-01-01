@@ -3,7 +3,6 @@
 #include "blit_to_swapchain.h"
 #include "gpu_resources/image.h"
 #include "pipeline_handler/compute.h"
-#include "render_graph/layout_initializer_pass.h"
 #include "render_graph/render_graph.h"
 
 namespace examples {
@@ -36,7 +35,6 @@ class MandelbrotDrawPass : public render_graph::Pass {
 };
 
 class Mandelbrot {
-  render_graph::LayoutInitializerPass initialize_;
   MandelbrotDrawPass draw_;
   BlitToSwapchainPass present_;
   vk::Semaphore ready_to_present_;

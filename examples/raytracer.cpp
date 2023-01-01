@@ -13,7 +13,6 @@
 #include "pipeline_handler/descriptor_binding.h"
 #include "render_data/bvh.h"
 #include "render_data/mesh.h"
-#include "render_graph/layout_initializer_pass.h"
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
@@ -329,10 +328,6 @@ RayTracer::RayTracer() {
   buffer_properties.size = sizeof(CameraInfo);
   camera_info_ = resource_manager.AddBuffer(buffer_properties);
 
-  initializer_ =
-      render_graph::LayoutInitializerPass({}, {color_target_, depth_target_});
-  render_graph_.AddPass(&initializer_);
-
   resource_transfer_ =
       ResourceTransferPass(geometry_, staging_buffer_, camera_info_);
   render_graph_.AddPass(&resource_transfer_);
@@ -341,7 +336,7 @@ RayTracer::RayTracer() {
       RaytracerPass(geometry_, color_target_, depth_target_, camera_info_);
   render_graph_.AddPass(&raytrace_);
 
-  present_ = BlitToSwapchainPass(color_target_);
+  present_ = BlitToSwapchainPass(depth_target_);
   render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
                         ready_to_present_,
                         swapchain.GetImageAvaliableSemaphore());

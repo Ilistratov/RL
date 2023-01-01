@@ -1,5 +1,4 @@
 set(SRC
-  layout_initializer_pass.cpp
   pass.cpp
   render_graph.cpp
 )

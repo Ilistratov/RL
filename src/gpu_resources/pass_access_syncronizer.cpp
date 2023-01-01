@@ -15,8 +15,8 @@ using namespace error_messages;
 PassAccessSyncronizer::PassAccessSyncronizer(uint32_t resource_count,
                                              uint32_t pass_count)
     : resource_syncronizers_(resource_count),
-      pass_image_barriers_(pass_count),
-      pass_buffer_barriers_(pass_count) {}
+      pass_image_barriers_(pass_count + 1),
+      pass_buffer_barriers_(pass_count + 1) {}
 
 void PassAccessSyncronizer::AddAccess(PhysicalBuffer* buffer,
                                       ResourceAccess access,
@@ -31,6 +31,9 @@ void PassAccessSyncronizer::AddAccess(PhysicalBuffer* buffer,
     return;
   }
   DCHECK(dep.src_pass_idx < pass_buffer_barriers_.size()) << kErrInvalidPassIdx;
+  if (dep.src_pass_idx > pass_idx) {
+    dep.src_pass_idx = pass_buffer_barriers_.size() - 1;
+  }
   pass_buffer_barriers_[dep.src_pass_idx].push_back(
       buffer->GenerateBarrier(dep.src.stage_flags, dep.src.access_flags,
                               dep.dst.stage_flags, dep.dst.access_flags));
@@ -49,6 +52,9 @@ void PassAccessSyncronizer::AddAccess(PhysicalImage* image,
     return;
   }
   DCHECK(dep.src_pass_idx < pass_buffer_barriers_.size()) << kErrInvalidPassIdx;
+  if (dep.src_pass_idx > pass_idx) {
+    dep.src_pass_idx = pass_image_barriers_.size() - 1;
+  }
   pass_image_barriers_[dep.src_pass_idx].push_back(image->GenerateBarrier(
       dep.src.stage_flags, dep.src.access_flags, dep.dst.stage_flags,
       dep.dst.access_flags, dep.src.layout, dep.dst.layout));

@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <vulkan/vulkan_enums.hpp>
 
 #include "base/base.h"
 
@@ -10,6 +11,7 @@
 #include "gpu_resources/pass_access_syncronizer.h"
 #include "gpu_resources/physical_buffer.h"
 #include "gpu_resources/physical_image.h"
+#include "gpu_resources/resource_access_syncronizer.h"
 
 namespace gpu_resources {
 
@@ -110,6 +112,12 @@ void ResourceManager::InitResources(uint32_t pass_count) {
   InitPhysicalResources();
   allocator_.Allocate();
   BindPhysicalResourcesMemory();
+  ResourceAccess initial_access;
+  initial_access.layout = vk::ImageLayout::eUndefined;
+  initial_access.stage_flags = vk::PipelineStageFlagBits2KHR::eTopOfPipe;
+  for (auto& image : physical_images_) {
+    syncronizer_.AddAccess(&image, initial_access, pass_count);
+  }
 }
 
 }  // namespace gpu_resources

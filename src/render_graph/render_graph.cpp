@@ -1,9 +1,34 @@
 #include "render_graph/render_graph.h"
 
+#include <vulkan/vulkan_enums.hpp>
+#include "gpu_executer/task.h"
+#include "gpu_resources/pass_access_syncronizer.h"
+#include "gpu_resources/resource_manager.h"
 #include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace render_graph {
+
+PreFrameResourceInitializerTask::PreFrameResourceInitializerTask(
+    gpu_resources::PassAccessSyncronizer* access_syncronizer,
+    uint32_t pass_count)
+    : access_syncronizer_(access_syncronizer), pass_count_(pass_count) {}
+
+void PreFrameResourceInitializerTask::OnWorkloadRecord(
+    vk::CommandBuffer cmd,
+    const std::vector<vk::CommandBuffer>&) {
+  std::vector<vk::BufferMemoryBarrier2KHR> buffer_barriers_ =
+      access_syncronizer_->GetBufferPostPassBarriers(pass_count_);
+  std::vector<vk::ImageMemoryBarrier2KHR> image_barriers_ =
+      access_syncronizer_->GetImagePostPassBarriers(pass_count_);
+  vk::DependencyInfoKHR dep_info({}, {}, buffer_barriers_, image_barriers_);
+  cmd.pipelineBarrier2KHR(dep_info);
+}
+
+RenderGraph::RenderGraph() {
+  executer_.ScheduleTask(&initialize_task_,
+                         vk::PipelineStageFlagBits2KHR::eTopOfPipe);
+}
 
 void RenderGraph::AddPass(Pass* pass,
                           vk::PipelineStageFlags2KHR stage_flags,
@@ -23,6 +48,8 @@ gpu_resources::ResourceManager& RenderGraph::GetResourceManager() {
 
 void RenderGraph::Init() {
   LOG << "Initializing resources";
+  initialize_task_ = PreFrameResourceInitializerTask(
+      resource_manager_.GetAccessSyncronizer(), passes_.size());
   resource_manager_.InitResources(passes_.size());
   LOG << "Creating descriptor pool";
   descriptor_pool_.Create();

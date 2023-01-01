@@ -10,7 +10,6 @@
 #include "gpu_resources/resource_manager.h"
 #include "pipeline_handler/compute.h"
 #include "pipeline_handler/descriptor_binding.h"
-#include "render_graph/layout_initializer_pass.h"
 #include "render_graph/render_graph.h"
 #include "utill/transform.h"
 
@@ -98,7 +97,6 @@ class RaytracerPass : public render_graph::Pass {
 };
 
 class RayTracer {
-  render_graph::LayoutInitializerPass initializer_;
   ResourceTransferPass resource_transfer_;
   RaytracerPass raytrace_;
   BlitToSwapchainPass present_;

@@ -8,7 +8,6 @@
 #include "gpu_resources/physical_image.h"
 #include "gpu_resources/resource_access_syncronizer.h"
 #include "pipeline_handler/descriptor_binding.h"
-#include "render_graph/layout_initializer_pass.h"
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
@@ -100,9 +99,6 @@ Mandelbrot::Mandelbrot() {
       vk::MemoryPropertyFlagBits::eDeviceLocal;
   render_target_ =
       render_graph_.GetResourceManager().AddImage(render_target_propertires);
-
-  initialize_ = render_graph::LayoutInitializerPass({}, {render_target_});
-  render_graph_.AddPass(&initialize_);
 
   draw_ = MandelbrotDrawPass(render_target_);
   LOG << "Adding draw pass";
