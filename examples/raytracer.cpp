@@ -17,45 +17,14 @@
 #include "utill/input_manager.h"
 #include "utill/logger.h"
 
-using utill::Transform;
-
 namespace examples {
-
-const static std::string kColorRTName = "color_target";
-const static std::string kDepthRTName = "depth_target";
-const static std::string kVertexBufferName = "vertex_buffer";
-const static std::string kNormalBufferName = "vertex_normal";
-const static std::string kTexcoordBufferName = "vertex_texcoord";
-const static std::string kIndexBufferName = "index_buffer";
-const static std::string kLightBufferName = "light_buffer";
-const static std::string kCameraInfoBufferName = "camera_info";
-const static std::string kStagingBufferName = "staging_buffer";
-const static std::string kBVHBufferName = "bvh_buffer";
-const static float PI = acos(-1);
-
-const static std::vector<std::string> kGeometryBufferNames = {
-    kVertexBufferName, kNormalBufferName, kTexcoordBufferName,
-    kIndexBufferName};
 
 static render_data::Mesh g_scene_mesh;
 static render_data::BVH g_scene_bvh;
 static std::vector<glm::vec4> g_light_buffer = {{0, 500, 20, 1.0}};
-static CameraInfo g_camera_info;
-static bool g_is_update_camera_transform_ = false;
-static int g_move_axis[][2] = {{GLFW_KEY_A, GLFW_KEY_D},
-                               {GLFW_KEY_LEFT_SHIFT, GLFW_KEY_SPACE},
-                               {GLFW_KEY_S, GLFW_KEY_W}};
+static MainCamera g_main_camera_state;
 
 using gpu_resources::GetDataSize;
-
-static float GetAxisVal(int axis) {
-  if (utill::InputManager::IsKeyPressed(g_move_axis[axis][0])) {
-    return -1;
-  } else if (utill::InputManager::IsKeyPressed(g_move_axis[axis][1])) {
-    return 1;
-  }
-  return 0;
-}
 
 template <typename T>
 static void FillStagingBuffer(gpu_resources::Buffer* staging_buffer,
@@ -225,7 +194,8 @@ void ResourceTransferPass::OnRecord(
 
   void* camera_buffer_mapping = camera_info_->GetBuffer()->GetMappingStart();
   DCHECK(camera_buffer_mapping);
-  memcpy(camera_buffer_mapping, &g_camera_info, sizeof(g_camera_info));
+  memcpy(camera_buffer_mapping, &g_main_camera_state.GetCameraInfo(),
+         sizeof(CameraInfo));
 }
 
 RaytracerPass::RaytracerPass(GeometryBuffers geometry,
@@ -317,74 +287,41 @@ RayTracer::RayTracer() {
   g_scene_mesh.ReorderPrimitives(g_scene_bvh.GetPrimitiveOrd());
 
   gpu_resources::BufferProperties buffer_properties{};
-  buffer_properties.size = geometry_.AddBuffersToRenderGraph(resource_manager);
-  staging_buffer_ = resource_manager.AddBuffer(buffer_properties);
+  GeometryBuffers geometry{};
+  buffer_properties.size = geometry.AddBuffersToRenderGraph(resource_manager);
+  gpu_resources::Buffer* staging_buffer =
+      resource_manager.AddBuffer(buffer_properties);
 
   gpu_resources::ImageProperties image_properties{};
-  color_target_ = resource_manager.AddImage(image_properties);
+  gpu_resources::Image* color_target =
+      resource_manager.AddImage(image_properties);
   image_properties.format = vk::Format::eR32Sfloat;
-  depth_target_ = resource_manager.AddImage(image_properties);
+  gpu_resources::Image* depth_target =
+      resource_manager.AddImage(image_properties);
 
   buffer_properties.size = sizeof(CameraInfo);
-  camera_info_ = resource_manager.AddBuffer(buffer_properties);
+  gpu_resources::Buffer* camera_info =
+      resource_manager.AddBuffer(buffer_properties);
 
   resource_transfer_ =
-      ResourceTransferPass(geometry_, staging_buffer_, camera_info_);
+      ResourceTransferPass(geometry, staging_buffer, camera_info);
   render_graph_.AddPass(&resource_transfer_);
 
-  raytrace_ =
-      RaytracerPass(geometry_, color_target_, depth_target_, camera_info_);
+  raytrace_ = RaytracerPass(geometry, color_target, depth_target, camera_info);
   render_graph_.AddPass(&raytrace_);
 
-  present_ = BlitToSwapchainPass(depth_target_);
+  present_ = BlitToSwapchainPass(color_target);
   render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
                         ready_to_present_,
                         swapchain.GetImageAvaliableSemaphore());
   render_graph_.Init();
-}
-
-void UpdateCameraInfo() {
-  auto m_state = utill::InputManager::GetMouseState();
-  if (m_state.lmb_state.action == GLFW_PRESS &&
-      !g_is_update_camera_transform_) {
-    g_is_update_camera_transform_ = true;
-    utill::InputManager::SetCursorMode(GLFW_CURSOR_DISABLED);
-    m_state = utill::InputManager::GetMouseState();
-  } else if (utill::InputManager::IsKeyPressed(GLFW_KEY_ESCAPE) &&
-             g_is_update_camera_transform_) {
-    utill::InputManager::SetCursorMode(GLFW_CURSOR_NORMAL);
-    g_is_update_camera_transform_ = false;
-  }
-  if (!g_is_update_camera_transform_) {
-    return;
-  }
-
-  float c_ang_x = m_state.pos_y * (PI / 2);
-  float c_ang_y = m_state.pos_x * PI;
-
-  auto& cam_transform = g_camera_info.camera_to_world;
-  Transform rotate_y = Transform::RotationY(c_ang_y);
-  Transform rotate_x = Transform::Rotation(c_ang_x, rotate_y.GetDirX());
-  auto pos = cam_transform.GetPos();
-  cam_transform = Transform::Combine(rotate_y, rotate_x);
-  glm::vec3 move_dir = cam_transform.GetDirX() * GetAxisVal(0) +
-                       cam_transform.GetDirY() * GetAxisVal(1) +
-                       cam_transform.GetDirZ() * GetAxisVal(2);
-  if (glm::length(move_dir) >= 1) {
-    move_dir = glm::normalize(move_dir);
-  }
-  Transform translate = Transform::Translation(pos + move_dir * 1.0f);
-  cam_transform = Transform::Combine(cam_transform, translate);
+  g_main_camera_state =
+      MainCamera(swapchain.GetExtent().width, swapchain.GetExtent().height);
 }
 
 bool RayTracer::Draw() {
-  UpdateCameraInfo();
+  g_main_camera_state.Update();
   auto& swapchain = base::Base::Get().GetSwapchain();
-
-  g_camera_info.screen_width = swapchain.GetExtent().width;
-  g_camera_info.screen_height = swapchain.GetExtent().height;
-  g_camera_info.aspect =
-      float(g_camera_info.screen_width) / g_camera_info.screen_height;
 
   if (!swapchain.AcquireNextImage()) {
     LOG << "Failed to acquire next image";

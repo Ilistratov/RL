@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vcruntime.h>
 #include <vector>
 
 #include "blit_to_swapchain.h"
+#include "common.h"
 #include "gpu_resources/buffer.h"
 #include "gpu_resources/image.h"
 #include "gpu_resources/resource_access_syncronizer.h"
@@ -11,16 +11,8 @@
 #include "pipeline_handler/compute.h"
 #include "pipeline_handler/descriptor_binding.h"
 #include "render_graph/render_graph.h"
-#include "utill/transform.h"
 
 namespace examples {
-
-struct CameraInfo {
-  utill::Transform camera_to_world;
-  uint32_t screen_width;
-  uint32_t screen_height;
-  float aspect;
-};
 
 struct GeometryBuffers {
   gpu_resources::Buffer* position;
@@ -102,12 +94,6 @@ class RayTracer {
   BlitToSwapchainPass present_;
   render_graph::RenderGraph render_graph_;
   vk::Semaphore ready_to_present_;
-
-  GeometryBuffers geometry_;
-  gpu_resources::Image* color_target_;
-  gpu_resources::Image* depth_target_;
-  gpu_resources::Buffer* camera_info_;
-  gpu_resources::Buffer* staging_buffer_;
 
  public:
   RayTracer();
