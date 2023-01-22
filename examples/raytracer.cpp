@@ -158,6 +158,9 @@ void ResourceTransferPass::OnResourcesInitialized() noexcept {
 }
 
 void ResourceTransferPass::OnPreRecord() {
+  if (!is_first_record_) {
+    return;
+  }
   vk::PipelineStageFlags2KHR pass_stage =
       vk::PipelineStageFlagBits2KHR::eTransfer;
   gpu_resources::ResourceAccess transfer_src_access{};
@@ -263,6 +266,8 @@ void RaytracerPass::OnPreRecord() {
       vk::PipelineStageFlagBits2KHR::eComputeShader;
   geometry_.DeclareCommonAccess(scene_resource_access, GetPassIdx());
   scene_resource_access.layout = vk::ImageLayout::eGeneral;
+  scene_resource_access.access_flags =
+      vk::AccessFlagBits2KHR::eShaderStorageWrite;
   color_target_->DeclareAccess(scene_resource_access, GetPassIdx());
   depth_target_->DeclareAccess(scene_resource_access, GetPassIdx());
 }

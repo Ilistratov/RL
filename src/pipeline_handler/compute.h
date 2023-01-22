@@ -18,7 +18,7 @@ class Compute {
           DescriptorPool& descriptor_pool,
           const std::vector<vk::PushConstantRange>& push_constants,
           const std::string& shader_file_path,
-          const std::string& shader_main);
+          const std::string& shader_main = "main");
 
   Compute(const Compute&) = delete;
   void operator=(const Compute&) = delete;

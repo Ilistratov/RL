@@ -4,8 +4,11 @@ project(Examples)
 
 set(SRC
   blit_to_swapchain.cpp
+  common.cpp
   mandelbrot.cpp
   raytracer.cpp
+  raytracer-2.cpp
+  test.cpp
 )
 
 add_library(examples ${SRC})

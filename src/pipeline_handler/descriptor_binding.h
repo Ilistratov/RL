@@ -31,6 +31,7 @@ class DescriptorBinding {
   virtual bool IsWriteUpdateNeeded() const noexcept = 0;
 };
 
+// In it's current implementation can't be used with multiple descriptor sets!
 class BufferDescriptorBinding : public DescriptorBinding {
   gpu_resources::Buffer* buffer_to_bind_;
 
@@ -50,6 +51,7 @@ class BufferDescriptorBinding : public DescriptorBinding {
   bool IsWriteUpdateNeeded() const noexcept override;
 };
 
+// In it's current implementation can't be used with multiple descriptor sets!
 class ImageDescriptorBinding : public DescriptorBinding {
   vk::ImageLayout expected_layout_;
   gpu_resources::Image* image_to_bind_;

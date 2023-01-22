@@ -1,9 +1,9 @@
 #include <chrono>
 #include <iostream>
 
-#include "examples/mandelbrot.h"
-#include "examples/raytracer.h"
-
+// #include "examples/mandelbrot.h"
+// #include "examples/raytracer.h"
+#include "examples/test.h"
 
 #include "base/base.h"
 #include "base/context.h"
@@ -14,15 +14,15 @@
 #include "utill/logger.h"
 
 void Run() {
-  examples::RayTracer renderer;
-  auto& window = base::Base::Get().GetWindow();
-  while (!glfwWindowShouldClose(window.GetWindow())) {
-    glfwPollEvents();
-    if (!renderer.Draw()) {
-      LOG << "Failed to draw";
-      break;
-    }
-  }
+  examples::TestRenderer renderer;
+  // auto& window = base::Base::Get().GetWindow();
+  // while (!glfwWindowShouldClose(window.GetWindow())) {
+  //   glfwPollEvents();
+  //   if (!renderer.Draw()) {
+  //     LOG << "Failed to draw";
+  //     break;
+  //   }
+  // }
 }
 
 int main() {
@@ -32,6 +32,7 @@ int main() {
       {VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
        VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
       {"VK_LAYER_KHRONOS_validation"},
+      //{},
       "RL",
       "RL",
   };

@@ -1,6 +1,8 @@
 #include "base/base.h"
 
+#include <vulkan/vulkan_core.h>
 #include <iostream>
+
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -25,7 +27,7 @@ void Base::InitInstance(BaseConfig& config) {
     config.instance_extensions.push_back(glfw_ext_names_ptr[i]);
   }
 
-  vk::ApplicationInfo application_info(config.app_name, VK_API_VERSION_1_2,
+  vk::ApplicationInfo application_info(config.app_name, VK_API_VERSION_1_3,
                                        config.engine_name);
   vk::InstanceCreateInfo instance_info(
       vk::InstanceCreateFlags{}, &application_info,
