@@ -1,9 +1,13 @@
 #pragma once
 
+#include <vulkan/vulkan.hpp>
+
 #include "blit_to_swapchain.h"
 #include "gpu_resources/image.h"
 #include "pipeline_handler/compute.h"
+#include "pipeline_handler/descriptor_set.h"
 #include "render_graph/render_graph.h"
+#include "shader/loader.h"
 
 namespace examples {
 
@@ -17,16 +21,16 @@ struct PushConstants {
 
 class MandelbrotDrawPass : public render_graph::Pass {
   pipeline_handler::Compute compute_pipeline_;
-  pipeline_handler::ImageDescriptorBinding render_target_binding_;
   PushConstants push_constants_;
+  vk::PushConstantRange pc_range_;
   gpu_resources::Image* render_target_;
-
-  void OnReserveDescriptorSets(
-      pipeline_handler::DescriptorPool& pool) noexcept override;
+  pipeline_handler::DescriptorSet* d_set_;
 
  public:
   MandelbrotDrawPass() = default;
-  MandelbrotDrawPass(gpu_resources::Image* render_target);
+  MandelbrotDrawPass(const shader::Loader& shader,
+                     pipeline_handler::DescriptorSet* d_set,
+                     gpu_resources::Image* render_target);
   void OnPreRecord() override;
   void OnRecord(vk::CommandBuffer primary_cmd,
                 const std::vector<vk::CommandBuffer>&) noexcept override;

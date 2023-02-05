@@ -6,8 +6,10 @@
 #include "gpu_resources/physical_buffer.h"
 #include "pipeline_handler/compute.h"
 #include "pipeline_handler/descriptor_binding.h"
+#include "pipeline_handler/descriptor_set.h"
 #include "render_graph/pass.h"
 #include "render_graph/render_graph.h"
+#include "shader/loader.h"
 
 namespace examples {
 
@@ -37,16 +39,16 @@ class ScanPass : public render_graph::Pass {
   pipeline_handler::Compute aggregate_pipeline_;
   pipeline_handler::Compute scatter_pipeline_;
   gpu_resources::Buffer* values_ = nullptr;
-  pipeline_handler::BufferDescriptorBinding values_aggregate_binding_;
-  pipeline_handler::BufferDescriptorBinding values_scatter_binding_;
   ScanStageInfo stage_info_;
-  const static vk::PushConstantRange kStageInfoPC;
+  vk::PushConstantRange stage_info_pc_;
 
  public:
   ScanPass() = default;
-  ScanPass(gpu_resources::Buffer* values, uint32_t n);
-  void OnReserveDescriptorSets(
-      pipeline_handler::DescriptorPool& pool) noexcept override;
+  ScanPass(const shader::Loader& aggregate_shader,
+           const shader::Loader& scatter_loader,
+           pipeline_handler::DescriptorSet* d_set,
+           gpu_resources::Buffer* values,
+           uint32_t n);
 
   void OnPreRecord() override;
   void OnRecord(vk::CommandBuffer primary_cmd,

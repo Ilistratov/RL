@@ -13,16 +13,21 @@ target_link_directories(rl_common INTERFACE $ENV{VULKAN_SDK}/Lib)
 
 target_link_libraries(rl_common INTERFACE vulkan-1)
 target_link_libraries(rl_common INTERFACE glfw3)
+target_link_libraries(rl_common INTERFACE debug spirv-cross-c-sharedd optimized spirv-cross-c-shared)
+target_link_libraries(rl_common INTERFACE debug spirv-cross-reflectd optimized spirv-cross-reflect)
+target_link_libraries(rl_common INTERFACE debug spirv-cross-glsld optimized spirv-cross-glsl)
+target_link_libraries(rl_common INTERFACE debug spirv-cross-cored optimized spirv-cross-core)
 
 target_compile_options(rl_common INTERFACE -Wall)
 
 set(SUB_LIBS
   base
-  gpu_executer
+  gpu_executor
   gpu_resources
   pipeline_handler
   render_data
   render_graph
+  shader
   utill
 )
 

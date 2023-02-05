@@ -1,8 +1,10 @@
 #include "raytracer.h"
 
 #include <vcruntime.h>
+#include <cmath>
 #include <vector>
 #include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_structs.hpp>
 
 #include "base/base.h"
 #include "gpu_resources/buffer.h"
@@ -10,9 +12,12 @@
 #include "gpu_resources/physical_buffer.h"
 #include "gpu_resources/physical_image.h"
 #include "gpu_resources/resource_access_syncronizer.h"
+#include "pipeline_handler/compute.h"
 #include "pipeline_handler/descriptor_binding.h"
+#include "pipeline_handler/descriptor_set.h"
 #include "render_data/bvh.h"
 #include "render_data/mesh.h"
+#include "shader/loader.h"
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
@@ -97,23 +102,6 @@ void GeometryBuffers::DeclareCommonAccess(gpu_resources::ResourceAccess access,
   index->DeclareAccess(access, pass_idx);
   light->DeclareAccess(access, pass_idx);
   bvh->DeclareAccess(access, pass_idx);
-}
-
-GeometryBindings::GeometryBindings(GeometryBuffers buffers,
-                                   vk::ShaderStageFlags access_stage) {
-  vk::DescriptorType type = vk::DescriptorType::eStorageBuffer;
-  position = pipeline_handler::BufferDescriptorBinding(buffers.position, type,
-                                                       access_stage);
-  normal = pipeline_handler::BufferDescriptorBinding(buffers.normal, type,
-                                                     access_stage);
-  tex_coord = pipeline_handler::BufferDescriptorBinding(buffers.tex_coord, type,
-                                                        access_stage);
-  index = pipeline_handler::BufferDescriptorBinding(buffers.index, type,
-                                                    access_stage);
-  light = pipeline_handler::BufferDescriptorBinding(buffers.light, type,
-                                                    access_stage);
-  bvh = pipeline_handler::BufferDescriptorBinding(buffers.bvh, type,
-                                                  access_stage);
 }
 
 ResourceTransferPass::ResourceTransferPass(
@@ -201,19 +189,20 @@ void ResourceTransferPass::OnRecord(
          sizeof(CameraInfo));
 }
 
-RaytracerPass::RaytracerPass(GeometryBuffers geometry,
+RaytracerPass::RaytracerPass(const shader::Loader& raytrace_shader,
+                             pipeline_handler::DescriptorSet* d_set,
+                             GeometryBuffers geometry,
                              gpu_resources::Image* color_target,
                              gpu_resources::Image* depth_target,
                              gpu_resources::Buffer* camera_info)
     : geometry_(geometry),
       color_target_(color_target),
       depth_target_(depth_target),
-      camera_info_(camera_info) {
+      camera_info_(camera_info),
+      d_set_(d_set) {
   gpu_resources::BufferProperties requeired_buffer_propertires{};
   requeired_buffer_propertires.memory_flags =
       vk::MemoryPropertyFlagBits::eDeviceLocal;
-  requeired_buffer_propertires.usage_flags =
-      vk::BufferUsageFlagBits::eStorageBuffer;
   geometry_.AddCommonRequierment(requeired_buffer_propertires);
 
   gpu_resources::ImageProperties required_image_prperties{};
@@ -225,38 +214,17 @@ RaytracerPass::RaytracerPass(GeometryBuffers geometry,
 
   gpu_resources::BufferProperties requeired_camera_info_propertires{};
   requeired_camera_info_propertires.size = sizeof(CameraInfo);
-  requeired_camera_info_propertires.usage_flags =
-      vk::BufferUsageFlagBits::eUniformBuffer;
   camera_info_->RequireProperties(requeired_camera_info_propertires);
 
-  vk::ShaderStageFlags pass_shader_stage = vk::ShaderStageFlagBits::eCompute;
-  geometry_bindings_ = GeometryBindings(geometry_, pass_shader_stage);
-  color_target_binding_ = pipeline_handler::ImageDescriptorBinding(
-      color_target_, vk::DescriptorType::eStorageImage, pass_shader_stage,
-      vk::ImageLayout::eGeneral);
-  depth_target_binding_ = pipeline_handler::ImageDescriptorBinding(
-      depth_target_, vk::DescriptorType::eStorageImage, pass_shader_stage,
-      vk::ImageLayout::eGeneral);
-
-  camera_info_binding_ = pipeline_handler::BufferDescriptorBinding(
-      camera_info_, vk::DescriptorType::eUniformBuffer, pass_shader_stage);
-}
-
-void RaytracerPass::OnReserveDescriptorSets(
-    pipeline_handler::DescriptorPool& pool) noexcept {
-  pipeline_ = pipeline_handler::Compute(
-      {
-          &color_target_binding_,
-          &depth_target_binding_,
-          &geometry_bindings_.position,
-          &geometry_bindings_.normal,
-          &geometry_bindings_.tex_coord,
-          &geometry_bindings_.index,
-          &geometry_bindings_.light,
-          &camera_info_binding_,
-          &geometry_bindings_.bvh,
-      },
-      pool, {}, "raytrace.spv", "main");
+  d_set_->BulkBind(
+      std::vector<gpu_resources::Image*>{color_target, depth_target}, true);
+  d_set_->BulkBind(
+      std::vector<gpu_resources::Buffer*>{geometry.position, geometry.normal,
+                                          /*unused geometry.tex_coord*/
+                                          geometry.index, geometry.light,
+                                          camera_info, geometry.bvh},
+      true);
+  pipeline_ = pipeline_handler::Compute(raytrace_shader, {d_set_});
 }
 
 void RaytracerPass::OnPreRecord() {
@@ -312,7 +280,13 @@ RayTracer::RayTracer() {
       ResourceTransferPass(geometry, staging_buffer, camera_info);
   render_graph_.AddPass(&resource_transfer_);
 
-  raytrace_ = RaytracerPass(geometry, color_target, depth_target, camera_info);
+  shader::Loader raytrace_shader("shaders/raytrace.spv");
+  pipeline_handler::DescriptorSet* d_set =
+      raytrace_shader.GenerateDescriptorSet(render_graph_.GetDescriptorPool(),
+                                            0);
+
+  raytrace_ = RaytracerPass(raytrace_shader, d_set, geometry, color_target,
+                            depth_target, camera_info);
   render_graph_.AddPass(&raytrace_);
 
   present_ = BlitToSwapchainPass(color_target);

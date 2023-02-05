@@ -1,11 +1,11 @@
-#include "gpu_executer/command_pool.h"
+#include "gpu_executor/command_pool.h"
 
 #include "base/base.h"
 
 #include "utill/error_handling.h"
 #include "utill/logger.h"
 
-namespace gpu_executer {
+namespace gpu_executor {
 
 void CommandPool::CheckInprogressBatches() {
   auto device = base::Base::Get().GetContext().GetDevice();
@@ -103,4 +103,4 @@ CommandPool::~CommandPool() {
   device.destroyCommandPool(cmd_pool_);
 }
 
-}  // namespace gpu_executer
+}  // namespace gpu_executor

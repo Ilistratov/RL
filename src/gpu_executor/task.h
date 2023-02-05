@@ -4,9 +4,9 @@
 
 #include <vulkan/vulkan.hpp>
 
-namespace gpu_executer {
+namespace gpu_executor {
 
-class Executer;
+class Executor;
 
 class Task {
  public:
@@ -17,9 +17,10 @@ class Task {
 };
 
 template <typename T>
-concept CmdInvocable = std::is_invocable < T,
-        vk::CommandBuffer, const std::vector<vk::CommandBuffer>
-& > ::value;
+concept CmdInvocable =
+    std::is_invocable<T,
+                      vk::CommandBuffer,
+                      const std::vector<vk::CommandBuffer>&>::value;
 
 template <CmdInvocable Func>
 class LambdaTask : public Task {
@@ -36,4 +37,4 @@ class LambdaTask : public Task {
   }
 };
 
-}  // namespace gpu_executer
+}  // namespace gpu_executor

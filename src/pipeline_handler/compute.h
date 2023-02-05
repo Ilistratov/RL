@@ -1,24 +1,29 @@
 #pragma once
 
+#include <glm/fwd.hpp>
+#include <vector>
+
+#include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_structs.hpp>
 
 #include "pipeline_handler/descriptor_binding.h"
 #include "pipeline_handler/descriptor_pool.h"
+#include "pipeline_handler/descriptor_set.h"
+#include "shader/loader.h"
 
 namespace pipeline_handler {
 
 class Compute {
   vk::Pipeline pipeline_ = {};
   vk::PipelineLayout layout_ = {};
-  DescriptorSet* descriptor_set_ = nullptr;
+  std::vector<DescriptorSet*> descriptor_sets_;
 
  public:
   Compute() = default;
-  Compute(const std::vector<DescriptorBinding*>& bindings,
-          DescriptorPool& descriptor_pool,
-          const std::vector<vk::PushConstantRange>& push_constants,
-          const std::string& shader_file_path,
-          const std::string& shader_main = "main");
+  Compute(const shader::Loader& loader,
+          std::vector<DescriptorSet*> descriptor_sets,
+          const std::string& entry_point = "main");
 
   Compute(const Compute&) = delete;
   void operator=(const Compute&) = delete;

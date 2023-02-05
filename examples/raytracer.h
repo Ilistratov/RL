@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include <vulkan/vulkan.hpp>
+
 #include "blit_to_swapchain.h"
 #include "common.h"
 #include "gpu_resources/buffer.h"
@@ -10,7 +12,9 @@
 #include "gpu_resources/resource_manager.h"
 #include "pipeline_handler/compute.h"
 #include "pipeline_handler/descriptor_binding.h"
+#include "pipeline_handler/descriptor_set.h"
 #include "render_graph/render_graph.h"
+#include "shader/loader.h"
 
 namespace examples {
 
@@ -28,18 +32,6 @@ struct GeometryBuffers {
   void AddCommonRequierment(gpu_resources::BufferProperties requierment);
   void DeclareCommonAccess(gpu_resources::ResourceAccess access,
                            uint32_t pass_idx);
-};
-
-struct GeometryBindings {
-  pipeline_handler::BufferDescriptorBinding position;
-  pipeline_handler::BufferDescriptorBinding normal;
-  pipeline_handler::BufferDescriptorBinding tex_coord;
-  pipeline_handler::BufferDescriptorBinding index;
-  pipeline_handler::BufferDescriptorBinding light;
-  pipeline_handler::BufferDescriptorBinding bvh;
-
-  GeometryBindings() = default;
-  GeometryBindings(GeometryBuffers buffers, vk::ShaderStageFlags access_stage);
 };
 
 class ResourceTransferPass : public render_graph::Pass {
@@ -63,25 +55,22 @@ class ResourceTransferPass : public render_graph::Pass {
 
 class RaytracerPass : public render_graph::Pass {
   pipeline_handler::Compute pipeline_;
+
   GeometryBuffers geometry_;
   gpu_resources::Image* color_target_;
   gpu_resources::Image* depth_target_;
   gpu_resources::Buffer* camera_info_;
 
-  GeometryBindings geometry_bindings_;
-  pipeline_handler::ImageDescriptorBinding color_target_binding_;
-  pipeline_handler::ImageDescriptorBinding depth_target_binding_;
-  pipeline_handler::BufferDescriptorBinding camera_info_binding_;
+  pipeline_handler::DescriptorSet* d_set_;
 
  public:
   RaytracerPass() = default;
-  RaytracerPass(GeometryBuffers geometry,
+  RaytracerPass(const shader::Loader& raytrace_shader,
+                pipeline_handler::DescriptorSet* d_set,
+                GeometryBuffers geometry,
                 gpu_resources::Image* color_target,
                 gpu_resources::Image* depth_target,
                 gpu_resources::Buffer* camera_info);
-
-  void OnReserveDescriptorSets(
-      pipeline_handler::DescriptorPool& pool) noexcept override;
 
   void OnPreRecord() override;
   void OnRecord(vk::CommandBuffer primary_cmd,

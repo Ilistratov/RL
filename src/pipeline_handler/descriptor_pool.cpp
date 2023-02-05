@@ -2,6 +2,7 @@
 
 #include "base/base.h"
 
+#include "pipeline_handler/descriptor_set.h"
 #include "utill/error_handling.h"
 
 namespace pipeline_handler {
@@ -36,13 +37,18 @@ void DescriptorPool::AllocateSets() {
 }
 
 DescriptorSet* DescriptorPool::ReserveDescriptorSet(
-    const std::vector<DescriptorBinding*>& bindings) {
-  for (uint32_t binding_ind = 0; binding_ind < bindings.size(); binding_ind++) {
-    auto vk_binding = bindings[binding_ind]->GetVkBinding();
-    descriptor_type_reserved_count_[vk_binding.descriptorType] +=
-        vk_binding.descriptorCount;
+    uint32_t set_num,
+    std::vector<BufferDescriptorBinding> buffer_bindings,
+    std::vector<ImageDescriptorBinding> image_bindings) {
+  for (const auto& binding : buffer_bindings) {
+    descriptor_type_reserved_count_[binding.GetType()] += binding.GetCount();
   }
-  managed_sets_.emplace_back(bindings);
+  for (const auto& binding : image_bindings) {
+    descriptor_type_reserved_count_[binding.GetType()] += binding.GetCount();
+  }
+  pipeline_handler::DescriptorSet d_set(set_num, buffer_bindings,
+                                        image_bindings);
+  managed_sets_.push_back(std::move(d_set));
   return &managed_sets_.back();
 }
 

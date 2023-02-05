@@ -1,28 +1,29 @@
+#include <vulkan/vulkan_core.h>
 #include <chrono>
 #include <iostream>
 
 // #include "examples/mandelbrot.h"
-// #include "examples/raytracer.h"
-#include "examples/test.h"
+#include "examples/raytracer.h"
+// #include "examples/test.h"
 
 #include "base/base.h"
 #include "base/context.h"
-#include "gpu_executer/executer.h"
+#include "gpu_executor/executor.h"
 #include "pipeline_handler/compute.h"
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
 
 void Run() {
-  examples::TestRenderer renderer;
-  // auto& window = base::Base::Get().GetWindow();
-  // while (!glfwWindowShouldClose(window.GetWindow())) {
-  //   glfwPollEvents();
-  //   if (!renderer.Draw()) {
-  //     LOG << "Failed to draw";
-  //     break;
-  //   }
-  // }
+  examples::RayTracer renderer;
+  auto& window = base::Base::Get().GetWindow();
+  while (!glfwWindowShouldClose(window.GetWindow())) {
+    glfwPollEvents();
+    if (!renderer.Draw()) {
+      LOG << "Failed to draw";
+      break;
+    }
+  }
 }
 
 int main() {

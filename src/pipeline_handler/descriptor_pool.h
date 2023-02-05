@@ -26,7 +26,9 @@ class DescriptorPool {
   DescriptorPool& operator=(const DescriptorPool&) = delete;
 
   DescriptorSet* ReserveDescriptorSet(
-      const std::vector<DescriptorBinding*>& bindings);
+      uint32_t set_num,
+      std::vector<BufferDescriptorBinding> buffer_bindings,
+      std::vector<ImageDescriptorBinding> image_bindings);
   void Create();
 
   ~DescriptorPool();

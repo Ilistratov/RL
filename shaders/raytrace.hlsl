@@ -107,13 +107,11 @@ Interseption CastRay(Ray r) {
   // uint insp_l = 0;
   uint n_bvh_nodes = 0;
   uint memb_size = 0;
-  // uint it_count = 0;
   bvh_buffer.GetDimensions(n_bvh_nodes, memb_size);
 
   for (uint cur_vrt = 0, prv_vrt = -1, nxt_vrt = 0; nxt_vrt != -1;
        prv_vrt = cur_vrt, cur_vrt = nxt_vrt) {
     nxt_vrt = bvh_buffer[cur_vrt].parent;
-    // ++it_count;
 
     if (bvh_buffer[cur_vrt].bvh_level == (uint)(-1)) {
       for (uint t_ind = bvh_buffer[cur_vrt].left; t_ind < bvh_buffer[cur_vrt].right; t_ind++) {
@@ -194,6 +192,7 @@ float4 CalcLightAtInterseption(Interseption insp, Ray r) {
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint Gind : SV_GroupIndex) {
   Ray camera_ray = PixCordToRay(DTid.x, DTid.y);
+  //color_target[DTid.xy] = float4(0.3, 0.3, 0.3, 1);
   Interseption res = CastRay(camera_ray);
   color_target[DTid.xy] = float4(0.1, 0.1, 0.1, 1.0);
   depth_target[DTid.xy] = 0.0f;
@@ -201,5 +200,4 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gind : SV_GroupIndex) {
     color_target[DTid.xy] = CalcLightAtInterseption(res, camera_ray);
     depth_target[DTid.xy] = max(0, 1 - res.dst / 100);
   }
-  // color_target[DTid.xy] = float4(res.it_count / 128.0, res.it_count / 256.0, res.it_count / 512.0, 1.0);
 }

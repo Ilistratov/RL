@@ -1,4 +1,4 @@
-#include "gpu_executer/executer.h"
+#include "gpu_executor/executor.h"
 
 #include <algorithm>
 #include <list>
@@ -7,13 +7,13 @@
 #include "utill/error_handling.h"
 #include "utill/logger.h"
 
-namespace gpu_executer {
+namespace gpu_executor {
 
-bool Executer::TaskInfo::HasSemaphoreOperations() const {
+bool Executor::TaskInfo::HasSemaphoreOperations() const {
   return external_wait || external_signal;
 }
 
-void Executer::ScheduleTask(Task* task,
+void Executor::ScheduleTask(Task* task,
                             vk::PipelineStageFlags2KHR stage_flags,
                             vk::Semaphore external_signal,
                             vk::Semaphore external_wait,
@@ -26,7 +26,7 @@ void Executer::ScheduleTask(Task* task,
   tasks_.back().secondary_cmd_count = secondary_cmd_count;
 }
 
-Executer::SubmitInfo Executer::RecordCmdBatch(uint32_t batch_start,
+Executor::SubmitInfo Executor::RecordCmdBatch(uint32_t batch_start,
                                               uint32_t batch_end) {
   uint32_t secondary_cmd_count = 0;
   for (uint32_t i = batch_start; i < batch_end; i++) {
@@ -68,7 +68,7 @@ Executer::SubmitInfo Executer::RecordCmdBatch(uint32_t batch_start,
   return res;
 }
 
-void Executer::Execute() {
+void Executor::Execute() {
   std::list<SubmitInfo> batches;
   std::vector<vk::SubmitInfo2KHR> batch_submit_info;
   size_t primary_cmd_count = 0;
@@ -112,7 +112,7 @@ void Executer::Execute() {
   cmd_pool_.RecycleCmd(recycle_primary, recycle_secondary, fence);
 }
 
-void Executer::ExecuteOneTime(Task* task, uint32_t secondary_cmd_count) {
+void Executor::ExecuteOneTime(Task* task, uint32_t secondary_cmd_count) {
   vk::CommandBuffer primary_cmd =
       cmd_pool_.GetCmd(vk::CommandBufferLevel::ePrimary, 1)[0];
   std::vector<vk::CommandBuffer> secondary_cmd =
@@ -138,4 +138,4 @@ void Executer::ExecuteOneTime(Task* task, uint32_t secondary_cmd_count) {
   cmd_pool_.RecycleCmd({primary_cmd}, secondary_cmd, {});
 }
 
-}  // namespace gpu_executer
+}  // namespace gpu_executor

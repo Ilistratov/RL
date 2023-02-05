@@ -3,14 +3,14 @@
 #include <map>
 #include <string>
 
-#include "gpu_executer/task.h"
+#include "gpu_executor/task.h"
 #include "gpu_resources/pass_access_syncronizer.h"
 #include "gpu_resources/resource_manager.h"
 #include "pipeline_handler/descriptor_pool.h"
 
 namespace render_graph {
 
-class Pass : public gpu_executer::Task {
+class Pass : public gpu_executor::Task {
   gpu_resources::PassAccessSyncronizer* access_syncronizer_;
   uint32_t pass_idx_;
   uint32_t secondary_cmd_count_;

@@ -7,31 +7,24 @@
 
 #include "gpu_resources/physical_image.h"
 #include "gpu_resources/resource_access_syncronizer.h"
+#include "pipeline_handler/compute.h"
 #include "pipeline_handler/descriptor_binding.h"
+#include "pipeline_handler/descriptor_set.h"
+#include "shader/loader.h"
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
 
 namespace examples {
 
-MandelbrotDrawPass::MandelbrotDrawPass(gpu_resources::Image* render_target)
-    : Pass(0), render_target_(render_target) {
+MandelbrotDrawPass::MandelbrotDrawPass(const shader::Loader& shader,
+                                       pipeline_handler::DescriptorSet* d_set,
+                                       gpu_resources::Image* render_target)
+    : Pass(0), render_target_(render_target), d_set_(d_set) {
   LOG << "Initializing MandelbrotDrawPass";
-  gpu_resources::ImageProperties render_target_requierments{};
-  render_target_requierments.usage_flags = vk::ImageUsageFlagBits::eStorage;
-  render_target_->RequireProperties(render_target_requierments);
-
-  render_target_binding_ = pipeline_handler::ImageDescriptorBinding(
-      render_target_, vk::DescriptorType::eStorageImage,
-      vk::ShaderStageFlagBits::eCompute, vk::ImageLayout::eGeneral);
-}
-
-void MandelbrotDrawPass::OnReserveDescriptorSets(
-    pipeline_handler::DescriptorPool& pool) noexcept {
-  vk::PushConstantRange pc_range(vk::ShaderStageFlagBits::eCompute, 0,
-                                 sizeof(PushConstants));
-  compute_pipeline_ = pipeline_handler::Compute(
-      {&render_target_binding_}, pool, {pc_range}, "mandelbrot.spv", "main");
+  d_set->BulkBind({render_target_}, true);
+  compute_pipeline_ = pipeline_handler::Compute(shader, {d_set_});
+  pc_range_ = shader.GeneratePushConstantRanges()[0];
 }
 
 void MandelbrotDrawPass::OnPreRecord() {
@@ -99,8 +92,11 @@ Mandelbrot::Mandelbrot() {
       vk::MemoryPropertyFlagBits::eDeviceLocal;
   render_target_ =
       render_graph_.GetResourceManager().AddImage(render_target_propertires);
+  shader::Loader shader("shaders/mandelbrot.spv");
+  pipeline_handler::DescriptorSet* d_set =
+      shader.GenerateDescriptorSet(render_graph_.GetDescriptorPool(), 0);
 
-  draw_ = MandelbrotDrawPass(render_target_);
+  draw_ = MandelbrotDrawPass(shader, d_set, render_target_);
   LOG << "Adding draw pass";
   render_graph_.AddPass(&draw_, vk::PipelineStageFlagBits2KHR::eComputeShader,
                         {});

@@ -36,6 +36,7 @@ void Pass::OnRegister(uint32_t pass_idx,
 }
 
 void Pass::OnResourcesInitialized() noexcept {}
+
 void Pass::OnWorkloadRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer>& secondary_cmd) {

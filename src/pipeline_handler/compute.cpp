@@ -1,6 +1,9 @@
 #include "pipeline_handler/compute.h"
 
 #include <fstream>
+#include <vector>
+#include <vulkan/vulkan_handles.hpp>
+#include <vulkan/vulkan_structs.hpp>
 
 #include "base/base.h"
 #include "utill/error_handling.h"
@@ -8,48 +11,27 @@
 
 namespace pipeline_handler {
 
-namespace {
-
-vk::UniqueShaderModule LoadShaderModule(const std::string& file_path) {
-  DLOG << "Loading shader module from " << file_path;
-  std::ifstream file(file_path, std::ios::binary | std::ios::ate);
-  if (!file.good()) {
-    LOG << "Failed to open " << file_path;
-    return {};
+Compute::Compute(const shader::Loader& loader,
+                 std::vector<DescriptorSet*> descriptor_sets,
+                 const std::string& entry_point)
+    : descriptor_sets_(descriptor_sets) {
+  std::vector<vk::DescriptorSetLayout> vk_layouts(descriptor_sets_.size());
+  for (uint32_t i = 0; i < descriptor_sets_.size(); i++) {
+    DCHECK(descriptor_sets_[i]) << "Set with index " << i << " was nullptr";
+    vk_layouts[i] = descriptor_sets_[i]->GetLayout();
   }
-  size_t file_size = file.tellg();
-  std::vector<char> shader_binary_data(file_size);
-  file.seekg(0);
-  file.read(shader_binary_data.data(), file_size);
-  file.close();
+  std::vector<vk::PushConstantRange> push_constants =
+      loader.GeneratePushConstantRanges();
   auto device = base::Base::Get().GetContext().GetDevice();
-  return device.createShaderModuleUnique(vk::ShaderModuleCreateInfo(
-      vk::ShaderModuleCreateFlags{}, shader_binary_data.size(),
-      (const uint32_t*)shader_binary_data.data()));
-}
 
-}  // namespace
-
-Compute::Compute(const std::vector<DescriptorBinding*>& bindings,
-                 DescriptorPool& descriptor_pool,
-                 const std::vector<vk::PushConstantRange>& push_constants,
-                 const std::string& shader_file_path,
-                 const std::string& shader_main) {
-  auto device = base::Base::Get().GetContext().GetDevice();
-  descriptor_set_ = descriptor_pool.ReserveDescriptorSet(bindings);
-  DCHECK(descriptor_set_) << "Failed to reserve descriptor set";
-  std::vector<vk::DescriptorSetLayout> vk_layouts = {
-      descriptor_set_->GetLayout()};
   layout_ = device.createPipelineLayout(
       vk::PipelineLayoutCreateInfo({}, vk_layouts, push_constants));
-  vk::UniqueShaderModule shader_module = LoadShaderModule(shader_file_path);
-  DLOG << "Creating compute pipeline for " << shader_file_path;
   auto pipeline_create_res = device.createComputePipeline(
       {}, vk::ComputePipelineCreateInfo(
               {},
               vk::PipelineShaderStageCreateInfo(
-                  {}, vk::ShaderStageFlagBits::eCompute, shader_module.get(),
-                  shader_main.c_str(), {}),
+                  {}, vk::ShaderStageFlagBits::eCompute,
+                  loader.GetShaderModule(), entry_point.c_str(), {}),
               layout_));
   CHECK_VK_RESULT(pipeline_create_res.result) << "Failed to create pipeline";
   pipeline_ = pipeline_create_res.value;
@@ -68,17 +50,23 @@ void Compute::operator=(Compute&& other) noexcept {
 void Compute::Swap(Compute& other) noexcept {
   std::swap(pipeline_, other.pipeline_);
   std::swap(layout_, other.layout_);
-  std::swap(descriptor_set_, other.descriptor_set_);
+  descriptor_sets_.swap(other.descriptor_sets_);
 }
 
 void Compute::RecordDispatch(vk::CommandBuffer& cmd,
                              uint32_t group_count_x,
                              uint32_t group_count_y,
                              uint32_t group_count_z) {
-  descriptor_set_->SubmitUpdatesIfNeed();
+  std::vector<vk::DescriptorSet> sets_to_bind;
+  sets_to_bind.reserve(descriptor_sets_.size());
+  for (auto set : descriptor_sets_) {
+    set->SubmitUpdatesIfNeed();
+    sets_to_bind.push_back(set->GetSet());
+  }
+
   cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline_);
   cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, layout_, 0,
-                         descriptor_set_->GetSet(), {});
+                         sets_to_bind, {});
   cmd.dispatch(group_count_x, group_count_y, group_count_z);
 }
 

@@ -1,9 +1,10 @@
 #include "render_graph/render_graph.h"
 
 #include <vulkan/vulkan_enums.hpp>
-#include "gpu_executer/task.h"
+#include "gpu_executor/task.h"
 #include "gpu_resources/pass_access_syncronizer.h"
 #include "gpu_resources/resource_manager.h"
+#include "pipeline_handler/descriptor_pool.h"
 #include "utill/error_handling.h"
 #include "utill/logger.h"
 
@@ -26,7 +27,7 @@ void PreFrameResourceInitializerTask::OnWorkloadRecord(
 }
 
 RenderGraph::RenderGraph() {
-  executer_.ScheduleTask(&initialize_task_,
+  executor_.ScheduleTask(&initialize_task_,
                          vk::PipelineStageFlagBits2KHR::eTopOfPipe);
 }
 
@@ -37,13 +38,17 @@ void RenderGraph::AddPass(Pass* pass,
   DCHECK(pass) << "Can't add null";
   pass->OnRegister(passes_.size(), resource_manager_.GetAccessSyncronizer(),
                    descriptor_pool_);
-  executer_.ScheduleTask(pass, stage_flags, external_signal, external_wait,
+  executor_.ScheduleTask(pass, stage_flags, external_signal, external_wait,
                          pass->GetSecondaryCmdCount());
   passes_.push_back(pass);
 }
 
 gpu_resources::ResourceManager& RenderGraph::GetResourceManager() {
   return resource_manager_;
+}
+
+pipeline_handler::DescriptorPool& RenderGraph::GetDescriptorPool() {
+  return descriptor_pool_;
 }
 
 void RenderGraph::Init() {
@@ -65,7 +70,7 @@ void RenderGraph::RenderFrame() {
   for (Pass* pass : passes_) {
     pass->OnPreRecord();
   }
-  executer_.Execute();
+  executor_.Execute();
 }
 
 }  // namespace render_graph

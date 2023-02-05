@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-namespace gpu_executer {
+namespace gpu_executor {
 
 class TimelineSemaphore {
   vk::Semaphore semaphore_;
@@ -23,4 +23,4 @@ class TimelineSemaphore {
   ~TimelineSemaphore();
 };
 
-}  // namespace gpu_executer
+}  // namespace gpu_executor
