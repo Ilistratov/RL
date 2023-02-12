@@ -1,29 +1,41 @@
 #include "common.hlsl"
 
-groupshared int warp_local[KNElementsPerGroup][2];
+groupshared int value_local[KNElementsPerGroup][2];
+groupshared uint flag_local[KNElementsPerGroup][2];
 
 void CopyFromGlobalToLocal(uint global_idx, uint local_idx, uint dst_arr) {
   for (uint i = 0; i < kNElementsPerThread; i++) {
     uint idx = GetElemIdx(global_idx, i);
     int val = idx < stage_info.NElements ? val_arr[idx] : 0;
-    warp_local[local_idx * kNElementsPerThread + i][dst_arr] = val;
+    value_local[local_idx * kNElementsPerThread + i][dst_arr] = val;
+    if (stage_info.IsSegmented) {
+      uint flag = idx < stage_info.NElements ? head_flag[idx] : 0;
+      flag_local[local_idx * kNElementsPerThread + i][dst_arr] = flag;
+    }
   }
 }
 
 void DoScanStage(uint stage_offset, uint thread_idx, uint dst_arr) {
   for (uint i = 0; i < kNElementsPerThread; i++) {
     uint elem_idx = thread_idx * kNElementsPerThread + i;
-    int val_to_add = elem_idx >= stage_offset ? warp_local[elem_idx - stage_offset][1 - dst_arr] : 0;
-    warp_local[elem_idx][dst_arr] = warp_local[elem_idx][1 - dst_arr] + val_to_add;
+    int val_to_add = elem_idx >= stage_offset ? value_local[elem_idx - stage_offset][1 - dst_arr] : 0;
+    if (stage_info.IsSegmented) {
+      val_to_add *= (1 - flag_local[elem_idx][1 - dst_arr]);
+      uint other_flag = elem_idx >= stage_offset ? flag_local[elem_idx - stage_offset][1 - dst_arr] : 0;
+      flag_local[elem_idx][dst_arr] = flag_local[elem_idx][1 - dst_arr] | other_flag;
+    }
+    value_local[elem_idx][dst_arr] = value_local[elem_idx][1 - dst_arr] + val_to_add;
   }
 }
 
 void CopyFromLocalToGlobal(uint global_idx, uint local_idx, uint src_arr) {
   for (uint i = 0; i < kNElementsPerThread; i++) {
     uint dst_idx = GetElemIdx(global_idx, i);
-    int val = warp_local[local_idx * kNElementsPerThread + i][src_arr];
     if (dst_idx < stage_info.NElements) {
-      val_arr[dst_idx] = val;
+      val_arr[dst_idx] = value_local[local_idx * kNElementsPerThread + i][src_arr];
+      if (stage_info.IsSegmented) {
+        head_flag[dst_idx] = flag_local[local_idx * kNElementsPerThread + i][src_arr];
+      }
     }
   }
 }

@@ -1,8 +1,10 @@
 [[vk::binding(0, 0)]] RWStructuredBuffer<int> val_arr;
+[[vk::binding(1, 0)]] RWStructuredBuffer<uint> head_flag;
 
 struct StageInformation {
   uint StageSpacing;
   uint NElements;
+  uint IsSegmented;
 };
 
 [[vk::push_constant]] ConstantBuffer<StageInformation> stage_info;

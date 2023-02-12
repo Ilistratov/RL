@@ -24,6 +24,7 @@ set(SUB_LIBS
   base
   gpu_executor
   gpu_resources
+  mp_primitives
   pipeline_handler
   render_data
   render_graph

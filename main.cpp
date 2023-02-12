@@ -3,8 +3,8 @@
 #include <iostream>
 
 // #include "examples/mandelbrot.h"
-#include "examples/raytracer.h"
-// #include "examples/test.h"
+// #include "examples/raytracer.h"
+#include "examples/test.h"
 
 #include "base/base.h"
 #include "base/context.h"
@@ -15,15 +15,15 @@
 #include "utill/logger.h"
 
 void Run() {
-  examples::RayTracer renderer;
-  auto& window = base::Base::Get().GetWindow();
-  while (!glfwWindowShouldClose(window.GetWindow())) {
-    glfwPollEvents();
-    if (!renderer.Draw()) {
-      LOG << "Failed to draw";
-      break;
-    }
-  }
+  examples::TestRenderer renderer;
+  // auto& window = base::Base::Get().GetWindow();
+  // while (!glfwWindowShouldClose(window.GetWindow())) {
+  //   glfwPollEvents();
+  //   if (!renderer.Draw()) {
+  //     LOG << "Failed to draw";
+  //     break;
+  //   }
+  // }
 }
 
 int main() {
