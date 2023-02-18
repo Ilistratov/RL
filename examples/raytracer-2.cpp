@@ -32,10 +32,8 @@ RayGenPass::RayGenPass(const shader::Loader& raygen_shader,
   gpu_resources::BufferProperties buffer_properties{};
 
   buffer_properties.size = sizeof(CameraInfo);
-  buffer_properties.memory_flags = {};
   camera_info_->RequireProperties(buffer_properties);
 
-  buffer_properties.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
   uint32_t pixel_count_ =
       camera_info_source_->screen_height * camera_info_source_->screen_width;
   buffer_properties.size = pixel_count_ * 4 * 12;
@@ -73,11 +71,9 @@ DebugRenderPass::DebugRenderPass(const shader::Loader& debug_render_shader,
       per_pixel_state_(per_pixel_state),
       d_set_(d_set) {
   gpu_resources::ImageProperties image_properties;
-  image_properties.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
   color_target_->RequireProperties(image_properties);
 
   gpu_resources::BufferProperties buffer_properties;
-  buffer_properties.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
   ray_traversal_state_->RequireProperties(buffer_properties);
   per_pixel_state_->RequireProperties(buffer_properties);
 
@@ -120,8 +116,11 @@ RayTracer2::RayTracer2() {
       resource_manager.AddImage(gpu_resources::ImageProperties{});
   gpu_resources::Buffer* camera_info =
       resource_manager.AddBuffer(gpu_resources::BufferProperties{
-          sizeof(CameraInfo), vk::BufferUsageFlagBits::eUniformBuffer,
-          vk::MemoryPropertyFlagBits::eHostVisible});
+          sizeof(CameraInfo),
+          VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_MAPPED_BIT |
+              VmaAllocationCreateFlagBits::
+                  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+          vk::BufferUsageFlagBits::eUniformBuffer});
   gpu_resources::Buffer* ray_traversal_state =
       resource_manager.AddBuffer(gpu_resources::BufferProperties{});
   gpu_resources::Buffer* per_pixel_state =

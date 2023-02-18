@@ -1,5 +1,10 @@
 #include "base/context.h"
 
+#define VMA_IMPLEMENTATION
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+#include <vma/vk_mem_alloc.h>
+
 #include "base/base.h"
 #include "base/physical_device_picker.h"
 #include "utill/error_handling.h"
@@ -44,12 +49,31 @@ void Context::CreateDevice(ContextConfig& config) {
   }
 }
 
+void Context::InitializeAllocator() {
+  VmaVulkanFunctions vulkanFunctions = {};
+  vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+  vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+
+  VmaAllocatorCreateInfo allocateCreateInfo{
+      .physicalDevice = physical_device_,
+      .device = device_,
+      .pVulkanFunctions = &vulkanFunctions,
+      .instance = base::Base::Get().GetInstance(),
+      .vulkanApiVersion = VK_API_VERSION_1_2};
+  auto result = vmaCreateAllocator(&allocateCreateInfo, &allocator_);
+  CHECK(result == VK_SUCCESS) << "Failed to create vma allocator: "
+                              << vk::to_string((vk::Result)result);
+}
+
 Context::Context(ContextConfig config) {
   LOG << "Picking physical device";
   PickPhysicalDevice(config);
   LOG << "Creating device";
   CreateDevice(config);
-  LOG << "Initialized context";
+  VULKAN_HPP_DEFAULT_DISPATCHER.init(device_);
+  LOG << "Initializing vma";
+  InitializeAllocator();
+  LOG << "Device context initialized";
 }
 
 Context::Context(Context&& other) noexcept {
@@ -65,6 +89,7 @@ void Context::operator=(Context&& other) noexcept {
 void Context::Swap(Context& other) noexcept {
   std::swap(device_, other.device_);
   std::swap(physical_device_, other.physical_device_);
+  std::swap(allocator_, other.allocator_);
   std::swap(queue_family_index_, other.queue_family_index_);
   device_queues_.swap(other.device_queues_);
 }
@@ -75,6 +100,10 @@ vk::PhysicalDevice Context::GetPhysicalDevice() const {
 
 vk::Device Context::GetDevice() const {
   return device_;
+}
+
+VmaAllocator Context::GetAllocator() const {
+  return allocator_;
 }
 
 uint32_t Context::GetQueueFamilyIndex() const {
@@ -88,10 +117,12 @@ vk::Queue Context::GetQueue(uint32_t queue_ind) const {
 }
 
 Context::~Context() {
-  if (!device_) {
-    return;
+  if (allocator_) {
+    vmaDestroyAllocator(allocator_);
   }
-  device_.destroy();
+  if (device_) {
+    device_.destroy();
+  }
 }
 
 }  // namespace base

@@ -88,8 +88,6 @@ Mandelbrot::Mandelbrot() {
 
   LOG << "Adding resources to RenderGraph";
   gpu_resources::ImageProperties render_target_propertires;
-  render_target_propertires.memory_flags =
-      vk::MemoryPropertyFlagBits::eDeviceLocal;
   render_target_ =
       render_graph_.GetResourceManager().AddImage(render_target_propertires);
   shader::Loader shader("shaders/mandelbrot.spv");

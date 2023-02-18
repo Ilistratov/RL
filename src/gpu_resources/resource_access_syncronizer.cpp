@@ -1,6 +1,5 @@
 #include "gpu_resources/resource_access_syncronizer.h"
 
-#include <vulkan/vulkan_enums.hpp>
 #include "gpu_resources/common.h"
 #include "utill/error_handling.h"
 

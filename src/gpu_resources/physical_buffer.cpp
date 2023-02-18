@@ -1,5 +1,9 @@
 #include "gpu_resources/physical_buffer.h"
 
+#include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_structs.hpp>
 #include "base/base.h"
 #include "gpu_resources/common.h"
 #include "utill/error_handling.h"
@@ -11,17 +15,8 @@ using namespace error_messages;
 BufferProperties BufferProperties::Unite(const BufferProperties& lhs,
                                          const BufferProperties& rhs) {
   return BufferProperties{std::max(lhs.size, rhs.size),
-                          lhs.usage_flags | rhs.usage_flags,
-                          lhs.memory_flags | rhs.memory_flags};
-}
-
-void PhysicalBuffer::CreateVkBuffer() {
-  DCHECK(!buffer_) << kErrAlreadyInitialized;
-  DCHECK(properties_.size > 0) << kErrCantBeEmpty;
-  auto device = base::Base::Get().GetContext().GetDevice();
-  buffer_ = device.createBuffer(
-      vk::BufferCreateInfo({}, properties_.size, properties_.usage_flags,
-                           vk::SharingMode::eExclusive, {}));
+                          lhs.allocation_flags | rhs.allocation_flags,
+                          lhs.usage_flags | rhs.usage_flags};
 }
 
 void PhysicalBuffer::SetDebugName(const std::string& debug_name) const {
@@ -31,24 +26,23 @@ void PhysicalBuffer::SetDebugName(const std::string& debug_name) const {
       buffer_.objectType, (uint64_t)(VkBuffer)buffer_, debug_name.c_str()));
 }
 
-void PhysicalBuffer::RequestMemory(DeviceMemoryAllocator& allocator) {
-  DCHECK(buffer_) << kErrNotInitialized;
-  DCHECK(!memory_) << kErrMemoryAlreadyRequested;
-  auto device = base::Base::Get().GetContext().GetDevice();
-  auto mem_requierments = device.getBufferMemoryRequirements(buffer_);
-  memory_ = allocator.RequestMemory(mem_requierments, properties_.memory_flags);
-}
-
-vk::BindBufferMemoryInfo PhysicalBuffer::GetBindMemoryInfo() const {
-  DCHECK(buffer_) << kErrNotInitialized;
-  DCHECK(memory_) << kErrMemoryNotRequested;
-  DCHECK(memory_->memory) << kErrMemoryNotAllocated;
-  return vk::BindBufferMemoryInfo(buffer_, memory_->memory, memory_->offset);
-}
-
 PhysicalBuffer::PhysicalBuffer(uint32_t resource_idx,
                                BufferProperties properties)
-    : resource_idx_(resource_idx), properties_(properties) {}
+    : properties_(properties), resource_idx_(resource_idx) {
+  VkBufferCreateInfo buffer_create_info =
+      vk::BufferCreateInfo{{}, properties_.size, properties_.usage_flags};
+  VmaAllocationCreateInfo allocation_create_info{};
+  allocation_create_info.flags = properties_.allocation_flags;
+  allocation_create_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
+  VmaAllocator allocator = base::Base::Get().GetContext().GetAllocator();
+  VkBuffer res_buffer;
+  auto create_res =
+      vmaCreateBuffer(allocator, &buffer_create_info, &allocation_create_info,
+                      &res_buffer, &allocation_, nullptr);
+  CHECK(create_res == VK_SUCCESS)
+      << "Failed to create buffer: " << vk::to_string((vk::Result)create_res);
+  buffer_ = res_buffer;
+}
 
 PhysicalBuffer::PhysicalBuffer(PhysicalBuffer&& other) noexcept {
   Swap(other);
@@ -60,15 +54,15 @@ void PhysicalBuffer::operator=(PhysicalBuffer&& other) noexcept {
 }
 
 void PhysicalBuffer::Swap(PhysicalBuffer& other) noexcept {
+  std::swap(properties_, other.properties_);
   std::swap(resource_idx_, other.resource_idx_);
   std::swap(buffer_, other.buffer_);
-  std::swap(properties_, other.properties_);
-  std::swap(memory_, other.memory_);
+  std::swap(allocation_, other.allocation_);
 }
 
 PhysicalBuffer::~PhysicalBuffer() {
-  auto device = base::Base::Get().GetContext().GetDevice();
-  device.destroyBuffer(buffer_);
+  VmaAllocator allocator = base::Base::Get().GetContext().GetAllocator();
+  vmaDestroyBuffer(allocator, buffer_, allocation_);
 }
 
 uint32_t PhysicalBuffer::GetIdx() const {
@@ -84,15 +78,22 @@ vk::DeviceSize PhysicalBuffer::GetSize() const {
 }
 
 void* PhysicalBuffer::GetMappingStart() const {
-  DCHECK(memory_) << kErrMemoryNotRequested;
-  DCHECK(memory_->memory) << kErrMemoryNotAllocated;
-  return memory_->mapping_start;
+  DCHECK(buffer_) << kErrNotInitialized;
+  DCHECK(allocation_) << kErrMemoryNotAllocated;
+  VmaAllocator allocator = base::Base::Get().GetContext().GetAllocator();
+  VmaAllocationInfo alloc_info{};
+  vmaGetAllocationInfo(allocator, allocation_, &alloc_info);
+  return alloc_info.pMappedData;
 }
 
 vk::MappedMemoryRange PhysicalBuffer::GetMappedMemoryRange() const {
-  DCHECK(memory_) << kErrMemoryNotRequested;
-  DCHECK(memory_->memory) << kErrMemoryNotAllocated;
-  return vk::MappedMemoryRange(memory_->memory, memory_->offset, memory_->size);
+  DCHECK(buffer_) << kErrNotInitialized;
+  DCHECK(allocation_) << kErrMemoryNotAllocated;
+  VmaAllocator allocator = base::Base::Get().GetContext().GetAllocator();
+  VmaAllocationInfo alloc_info{};
+  vmaGetAllocationInfo(allocator, allocation_, &alloc_info);
+  return vk::MappedMemoryRange(alloc_info.deviceMemory, alloc_info.offset,
+                               alloc_info.size);
 }
 
 vk::BufferMemoryBarrier2KHR PhysicalBuffer::GenerateBarrier(

@@ -16,14 +16,14 @@
 
 void Run() {
   examples::TestRenderer renderer;
-  // auto& window = base::Base::Get().GetWindow();
-  // while (!glfwWindowShouldClose(window.GetWindow())) {
-  //   glfwPollEvents();
-  //   if (!renderer.Draw()) {
-  //     LOG << "Failed to draw";
-  //     break;
+  //   auto& window = base::Base::Get().GetWindow();
+  //   while (!glfwWindowShouldClose(window.GetWindow())) {
+  //     glfwPollEvents();
+  //     if (!renderer.Draw()) {
+  //       LOG << "Failed to draw";
+  //       break;
+  //     }
   //   }
-  // }
 }
 
 int main() {

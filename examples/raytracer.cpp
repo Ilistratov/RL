@@ -112,8 +112,10 @@ ResourceTransferPass::ResourceTransferPass(
       staging_buffer_(staging_buffer),
       camera_info_(camera_info) {
   gpu_resources::BufferProperties required_transfer_src_properties{};
-  required_transfer_src_properties.memory_flags =
-      vk::MemoryPropertyFlagBits::eHostVisible;
+  required_transfer_src_properties.allocation_flags =
+      VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_MAPPED_BIT |
+      VmaAllocationCreateFlagBits::
+          VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
   required_transfer_src_properties.usage_flags =
       vk::BufferUsageFlagBits::eTransferSrc;
   staging_buffer_->RequireProperties(required_transfer_src_properties);
@@ -124,8 +126,10 @@ ResourceTransferPass::ResourceTransferPass(
   geometry.AddCommonRequierment(required_transfer_dst_properties);
 
   gpu_resources::BufferProperties required_camera_info_properties{};
-  required_camera_info_properties.memory_flags =
-      vk::MemoryPropertyFlagBits::eHostVisible;
+  required_camera_info_properties.allocation_flags =
+      VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_MAPPED_BIT |
+      VmaAllocationCreateFlagBits::
+          VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
   required_camera_info_properties.size = sizeof(CameraInfo);
   camera_info_->RequireProperties(required_camera_info_properties);
 }
@@ -201,13 +205,9 @@ RaytracerPass::RaytracerPass(const shader::Loader& raytrace_shader,
       camera_info_(camera_info),
       d_set_(d_set) {
   gpu_resources::BufferProperties requeired_buffer_propertires{};
-  requeired_buffer_propertires.memory_flags =
-      vk::MemoryPropertyFlagBits::eDeviceLocal;
   geometry_.AddCommonRequierment(requeired_buffer_propertires);
 
   gpu_resources::ImageProperties required_image_prperties{};
-  required_image_prperties.memory_flags =
-      vk::MemoryPropertyFlagBits::eDeviceLocal;
   required_image_prperties.usage_flags = vk::ImageUsageFlagBits::eStorage;
   color_target_->RequireProperties(required_image_prperties);
   depth_target_->RequireProperties(required_image_prperties);

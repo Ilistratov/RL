@@ -1,15 +1,16 @@
 #pragma once
 
 #include <stdint.h>
+
+#include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
-#include "gpu_resources/device_memory_allocator.h"
 
 namespace gpu_resources {
 
 struct ImageProperties {
   vk::Extent2D extent = {0, 0};
   vk::Format format = vk::Format::eUndefined;
-  vk::MemoryPropertyFlags memory_flags = {};
+  VmaAllocationCreateFlags allocation_flags = {};
   vk::ImageUsageFlags usage_flags = {};
 
   static ImageProperties Unite(const ImageProperties& lhs,
@@ -17,18 +18,15 @@ struct ImageProperties {
 };
 
 class PhysicalImage {
+  ImageProperties properties_ = {};
   uint32_t resource_idx_ = 0;
   vk::Image image_ = {};
   vk::ImageView image_view_ = {};
-  ImageProperties properties_ = {};
-  MemoryBlock* memory_ = nullptr;
+  VmaAllocation allocation_ = {};
 
   friend class ResourceManager;
 
-  void CreateVkImage();
   void SetDebugName(const std::string& debug_name) const;
-  void RequestMemory(DeviceMemoryAllocator& allocator);
-  vk::BindImageMemoryInfo GetBindMemoryInfo() const;
 
   vk::ImageAspectFlags GetAspectFlags() const;
 

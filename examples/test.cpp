@@ -1,18 +1,12 @@
 #include "test.h"
 
-#include <concurrencysal.h>
-#include <corecrt_memcpy_s.h>
 #include <stdint.h>
-#include <time.h>
-#include <vcruntime_string.h>
 #include <algorithm>
 #include <cstddef>
 #include <fstream>
-#include <iostream>
 #include <vector>
+
 #include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_enums.hpp>
-#include <vulkan/vulkan_structs.hpp>
 
 #include "base/base.h"
 #include "gpu_resources/buffer.h"
@@ -35,8 +29,10 @@ LoadToGpuPass::LoadToGpuPass(gpu_resources::Buffer* staging,
                              gpu_resources::Buffer* head_flags)
     : staging_(staging), values_(values), head_flags_(head_flags) {
   gpu_resources::BufferProperties required_transfer_src_properties{};
-  required_transfer_src_properties.memory_flags =
-      vk::MemoryPropertyFlagBits::eHostVisible;
+  required_transfer_src_properties.allocation_flags =
+      VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_MAPPED_BIT |
+      VmaAllocationCreateFlagBits::
+          VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
   required_transfer_src_properties.usage_flags =
       vk::BufferUsageFlagBits::eTransferSrc;
   required_transfer_src_properties.size =
@@ -96,8 +92,10 @@ LoadToCpuPass::LoadToCpuPass(gpu_resources::Buffer* staging,
                              gpu_resources::Buffer* values)
     : staging_(staging), values_(values) {
   gpu_resources::BufferProperties required_transfer_src_properties{};
-  required_transfer_src_properties.memory_flags =
-      vk::MemoryPropertyFlagBits::eHostVisible;
+  required_transfer_src_properties.allocation_flags =
+      VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_MAPPED_BIT |
+      VmaAllocationCreateFlagBits::
+          VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
   required_transfer_src_properties.usage_flags =
       vk::BufferUsageFlagBits::eTransferSrc;
   values_->RequireProperties(required_transfer_src_properties);

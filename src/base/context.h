@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
 
 #define GLFW_INCLUDE_VULKAN
@@ -25,11 +26,13 @@ struct ContextConfig {
 class Context {
   vk::Device device_;
   vk::PhysicalDevice physical_device_;
+  VmaAllocator allocator_ = {};
   uint32_t queue_family_index_ = -1;
   std::vector<vk::Queue> device_queues_;
 
   void PickPhysicalDevice(ContextConfig& config);
   void CreateDevice(ContextConfig& config);
+  void InitializeAllocator();
 
  public:
   Context() = default;
@@ -41,6 +44,7 @@ class Context {
 
   vk::PhysicalDevice GetPhysicalDevice() const;
   vk::Device GetDevice() const;
+  VmaAllocator GetAllocator() const;
   uint32_t GetQueueFamilyIndex() const;
   vk::Queue GetQueue(uint32_t queue_ind) const;
 

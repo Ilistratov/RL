@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "gpu_resources/buffer.h"
-#include "gpu_resources/device_memory_allocator.h"
 #include "gpu_resources/image.h"
 #include "gpu_resources/pass_access_syncronizer.h"
 #include "gpu_resources/physical_buffer.h"
@@ -15,7 +14,6 @@
 namespace gpu_resources {
 
 class ResourceManager {
-  DeviceMemoryAllocator allocator_;
   PassAccessSyncronizer syncronizer_;
   std::list<Buffer> buffers_;
   std::list<Image> images_;
@@ -24,7 +22,6 @@ class ResourceManager {
 
   uint32_t CreateAndMapPhysicalResources();
   void InitPhysicalResources();
-  void BindPhysicalResourcesMemory();
 
  public:
   ResourceManager() = default;

@@ -3,7 +3,6 @@
 #include <vulkan/vulkan_core.h>
 #include <iostream>
 
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -103,7 +102,6 @@ void Base::Init(BaseConfig config,
   InitBase(config);
   CreateWindow(window_extent);
   CreateContext(context_config);
-  VULKAN_HPP_DEFAULT_DISPATCHER.init(context_.GetDevice());
   CreateSwapchain();
 }
 

@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include <vulkan/vulkan_enums.hpp>
-#include <vulkan/vulkan_handles.hpp>
+#include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan.hpp>
 
 #include "gpu_resources/buffer.h"
 #include "utill/error_handling.h"
@@ -22,8 +22,7 @@ ScanPass::ScanPass(const shader::Loader& aggregate_shader,
   stage_info_.is_segmented = head_flags_ ? 1 : 0;
 
   gpu_resources::BufferProperties requeired_buffer_propertires{};
-  requeired_buffer_propertires.memory_flags =
-      vk::MemoryPropertyFlagBits::eDeviceLocal;
+  requeired_buffer_propertires.size = n_elements * sizeof(int);
   values_->RequireProperties(requeired_buffer_propertires);
   if (head_flags_) {
     head_flags_->RequireProperties(requeired_buffer_propertires);

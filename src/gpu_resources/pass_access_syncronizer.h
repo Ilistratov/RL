@@ -4,7 +4,6 @@
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_structs.hpp>
 
 #include "gpu_resources/physical_buffer.h"
 #include "gpu_resources/physical_image.h"
