@@ -1,8 +1,9 @@
 cmake_minimum_required (VERSION 3.8)
 
 set(HLSL_SOURCE_FILES
-  mp-primitives/scan/aggregate.hlsl
-  mp-primitives/scan/scatter.hlsl
+  mp_primitives/scan/aggregate.hlsl
+  mp_primitives/scan/scatter.hlsl
+  mp_primitives/sort/block_presort.hlsl
 	mandelbrot.hlsl
 	raytrace.hlsl
 	raytrace/debug-render.hlsl

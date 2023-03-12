@@ -1,4 +1,5 @@
 #include "base/context.h"
+#include <vulkan/vulkan_handles.hpp>
 
 #define VMA_IMPLEMENTATION
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
@@ -29,12 +30,10 @@ void Context::CreateDevice(ContextConfig& config) {
                                    config.device_extensions, &device_features);
   vk::PhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features(true);
   vk::PhysicalDeviceSynchronization2FeaturesKHR synchronization2_features(true);
+  vk::PhysicalDevice8BitStorageFeaturesKHR storage_features(true, true, true);
 
-  vk::StructureChain<vk::DeviceCreateInfo,
-                     vk::PhysicalDeviceTimelineSemaphoreFeatures,
-                     vk::PhysicalDeviceSynchronization2FeaturesKHR>
-      info_chain(device_info, timeline_semaphore_features,
-                 synchronization2_features);
+  vk::StructureChain info_chain(device_info, timeline_semaphore_features,
+                                synchronization2_features, storage_features);
 
   LOG << "Creating device with:\nExt: " << config.device_extensions
       << "\nLayers: " << config.device_layers;
