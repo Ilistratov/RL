@@ -49,7 +49,7 @@ class LoadToCpuPass : public render_graph::Pass {
 class TestRenderer {
   render_graph::RenderGraph render_graph_;
   LoadToGpuPass load_to_gpu_;
-  mp_primitives::ScanPass scan_;
+  mp_primitives::Scan scan_;
   LoadToCpuPass load_to_cpu_;
 
  public:

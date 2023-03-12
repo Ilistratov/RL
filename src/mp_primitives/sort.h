@@ -89,7 +89,7 @@ const uint32_t kSortNPhases = kSortKeySize / kSortBitsPerPhase;
 
 class Sort {
   std::array<SortBlockPresortPass, kSortNPhases> block_presort_;
-  std::array<ScanPass, kSortNPhases> digit_offset_compute_;
+  std::array<Scan, kSortNPhases> digit_offset_compute_;
   std::array<SortScatterPass, kSortNPhases> scatter_;
 
  public:

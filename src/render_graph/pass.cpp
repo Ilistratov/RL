@@ -1,6 +1,7 @@
 #include "render_graph/pass.h"
 
 #include <stdint.h>
+#include <type_traits>
 #include "utill/error_handling.h"
 
 namespace render_graph {
@@ -13,6 +14,23 @@ void Pass::RecordPostPassParriers(vk::CommandBuffer cmd) {
 
   vk::DependencyInfoKHR dep_info({}, {}, buffer_barriers_, image_barriers_);
   cmd.pipelineBarrier2KHR(dep_info);
+}
+
+Pass::Pass(Pass&& other) noexcept {
+  Swap(other);
+}
+
+void Pass::operator=(Pass&& other) noexcept {
+  Pass tmp(std::move(other));
+  Swap(tmp);
+}
+
+void Pass::Swap(Pass& other) noexcept {
+  DCHECK(pass_idx_ == uint32_t(-1)) << "Bound passes can not be moved";
+  DCHECK(other.pass_idx_ == uint32_t(-1)) << "Bound passes can not be moved";
+  std::swap(access_syncronizer_, other.access_syncronizer_);
+  std::swap(pass_idx_, other.pass_idx_);
+  std::swap(secondary_cmd_count_, other.secondary_cmd_count_);
 }
 
 void Pass::OnReserveDescriptorSets(pipeline_handler::DescriptorPool&) noexcept {

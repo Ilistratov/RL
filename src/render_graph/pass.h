@@ -11,9 +11,9 @@
 namespace render_graph {
 
 class Pass : public gpu_executor::Task {
-  gpu_resources::PassAccessSyncronizer* access_syncronizer_;
-  uint32_t pass_idx_;
-  uint32_t secondary_cmd_count_;
+  gpu_resources::PassAccessSyncronizer* access_syncronizer_ = nullptr;
+  uint32_t pass_idx_ = uint32_t(-1);
+  uint32_t secondary_cmd_count_ = uint32_t(0);
 
  protected:
   virtual void OnReserveDescriptorSets(
@@ -23,8 +23,14 @@ class Pass : public gpu_executor::Task {
 
   void RecordPostPassParriers(vk::CommandBuffer cmd);
 
+  Pass(Pass&& other) noexcept;
+  void operator=(Pass&& other) noexcept;
+  void Swap(Pass& other) noexcept;
+
  public:
   Pass(uint32_t secondary_cmd_count = 0);
+  Pass(Pass const&) = delete;
+  void operator=(Pass const&) = delete;
 
   void OnRegister(uint32_t pass_idx,
                   gpu_resources::PassAccessSyncronizer* access_syncronizer,

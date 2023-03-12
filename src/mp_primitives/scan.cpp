@@ -1,49 +1,69 @@
 #include "mp_primitives/scan.h"
 
+#include <stdint.h>
 #include <vector>
 
 #include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_structs.hpp>
 
 #include "gpu_resources/buffer.h"
+#include "gpu_resources/physical_buffer.h"
+#include "pipeline_handler/descriptor_set.h"
+#include "render_graph/pass.h"
 #include "utill/error_handling.h"
 
 namespace mp_primitives {
+namespace detail {
 
-ScanPass::ScanPass(const shader::Loader& aggregate_shader,
-                   const shader::Loader& scatter_shader,
-                   pipeline_handler::DescriptorSet* d_set,
-                   uint32_t n_elements,
-                   gpu_resources::Buffer* values,
-                   gpu_resources::Buffer* head_flags)
-    : values_(values), head_flags_(head_flags) {
-  stage_info_.stage_spacing = 1;
-  stage_info_.n_elements = n_elements;
-  stage_info_.is_segmented = head_flags_ ? 1 : 0;
+const static uint32_t kScanNElementSize = sizeof(uint32_t);
+const static uint32_t kScanNElementsPerThtead = 8;
+const static uint32_t kScanNThreadsPerGroup = 32;
+const static uint32_t kScanNElementsPerGroup =
+    kScanNElementsPerThtead * kScanNThreadsPerGroup;
 
-  gpu_resources::BufferProperties requeired_buffer_propertires{};
-  requeired_buffer_propertires.size = n_elements * sizeof(int);
-  values_->RequireProperties(requeired_buffer_propertires);
-  if (head_flags_) {
-    head_flags_->RequireProperties(requeired_buffer_propertires);
-  }
+const static char* kScanAggregateShaderPath =
+    "shaders/mp-primitives/scan/aggregate.spv";
+const static char* kScanScatterShaderPath =
+    "shaders/mp-primitives/scan/scatter.spv";
 
-  if (head_flags_) {
-    d_set->BulkBind(std::vector<gpu_resources::Buffer*>{values_, head_flags_},
-                    true);
-  } else {
-    // so that second binding is also valid. Should reserach and start using
-    // VK_EXT_descriptor_indexing to avoid this mess in the future
-    d_set->BulkBind(std::vector<gpu_resources::Buffer*>{values_, values_},
-                    true);
-  }
-  stage_info_pc_ = aggregate_shader.GeneratePushConstantRanges()[0];
+ScanStagePass::ScanStagePass(vk::PushConstantRange stage_info_pc,
+                             pipeline_handler::Compute* pipeline,
+                             uint32_t stage_spacing,
+                             uint32_t n_elements,
+                             uint32_t n_groups,
+                             gpu_resources::Buffer* values,
+                             gpu_resources::Buffer* head_flags)
+    : stage_info_pc_(stage_info_pc),
+      pipeline_(pipeline),
+      values_(values),
+      head_flags_(head_flags),
+      stage_spacing_(stage_spacing),
+      n_elements_(n_elements),
+      n_groups_(n_groups) {}
 
-  aggregate_pipeline_ = pipeline_handler::Compute(aggregate_shader, {d_set});
-  scatter_pipeline_ = pipeline_handler::Compute(scatter_shader, {d_set});
+ScanStagePass::ScanStagePass(ScanStagePass&& other) noexcept {
+  Swap(other);
 }
 
-void ScanPass::OnPreRecord() {
+void ScanStagePass::operator=(ScanStagePass&& other) noexcept {
+  ScanStagePass tmp(std::move(other));
+  Swap(tmp);
+}
+
+void ScanStagePass::Swap(ScanStagePass& other) noexcept {
+  render_graph::Pass::Swap(other);
+  std::swap(stage_info_pc_, other.stage_info_pc_);
+  std::swap(pipeline_, other.pipeline_);
+  std::swap(values_, other.values_);
+  std::swap(head_flags_, other.head_flags_);
+  std::swap(stage_spacing_, other.stage_spacing_);
+  std::swap(n_elements_, other.n_elements_);
+  std::swap(n_groups_, other.n_groups_);
+}
+
+void ScanStagePass::OnPreRecord() {
   gpu_resources::ResourceAccess access{};
   access.access_flags = vk::AccessFlagBits2KHR::eShaderStorageRead |
                         vk::AccessFlagBits2KHR::eShaderStorageWrite;
@@ -54,73 +74,77 @@ void ScanPass::OnPreRecord() {
   }
 }
 
-static inline vk::BufferMemoryBarrier2KHR GenerateScanStageBattier(
-    gpu_resources::Buffer* buffer) {
-  DCHECK(buffer);
-  return buffer->GetBuffer()->GenerateBarrier(
-      vk::PipelineStageFlagBits2KHR::eComputeShader,
-      vk::AccessFlagBits2KHR::eShaderStorageWrite |
-          vk::AccessFlagBits2KHR::eShaderStorageRead,
-      vk::PipelineStageFlagBits2KHR::eComputeShader,
-      vk::AccessFlagBits2KHR::eShaderStorageWrite |
-          vk::AccessFlagBits2KHR::eShaderStorageRead);
+void ScanStagePass::OnRecord(vk::CommandBuffer primary_cmd,
+                             const std::vector<vk::CommandBuffer>&) {
+  ScanStageInfo pc;
+  pc.stage_spacing = stage_spacing_;
+  pc.n_elements = n_elements_;
+  pc.is_segmented = (head_flags_ == nullptr) ? 0 : 1;
+  primary_cmd.pushConstants(pipeline_->GetLayout(), stage_info_pc_.stageFlags,
+                            stage_info_pc_.offset, stage_info_pc_.size, &pc);
+  pipeline_->RecordDispatch(primary_cmd, n_groups_, 1, 1);
 }
 
-void ScanPass::OnRecord(vk::CommandBuffer primary_cmd,
-                        const std::vector<vk::CommandBuffer>&) noexcept {
-  const uint32_t elements_per_thread = 8;
-  const uint32_t threads_per_group = 32;
-  const uint32_t elements_per_group = elements_per_thread * threads_per_group;
-  const std::vector<vk::BufferMemoryBarrier2KHR> barriers =
-      head_flags_ ? std::vector{GenerateScanStageBattier(values_),
-                                GenerateScanStageBattier(head_flags_)}
-                  : std::vector{GenerateScanStageBattier(values_)};
+void Scan::Apply(render_graph::RenderGraph& render_graph,
+                 uint32_t n_elements,
+                 gpu_resources::Buffer* values,
+                 gpu_resources::Buffer* head_flags) {
+  DCHECK(passes_.empty()) << "This instance is already bound";
+  DCHECK(n_elements > 0) << "Cant scan empty array";
+  DCHECK(values != nullptr) << "Must specify valid buffer to scan";
+  shader::Loader aggregate_shader(kScanAggregateShaderPath);
+  shader::Loader scatter_shader(kScanScatterShaderPath);
+  vk::PushConstantRange pc_range =
+      aggregate_shader.GeneratePushConstantRanges()[0];
+  pipeline_handler::DescriptorSet* dset =
+      aggregate_shader.GenerateDescriptorSet(render_graph.GetDescriptorPool(),
+                                             0);
+  gpu_resources::BufferProperties properties{
+      .size = n_elements * kScanNElementSize,
+      .usage_flags = vk::BufferUsageFlagBits::eStorageBuffer};
+  values->RequireProperties(properties);
+  if (head_flags) {
+    head_flags->RequireProperties(properties);
+    dset->BulkBind(std::vector<gpu_resources::Buffer*>{values, head_flags},
+                   true);
+  } else {
+    // so that second binding is also valid. Should reserach and start using
+    // VK_EXT_descriptor_indexing to avoid this mess in the future
+    dset->BulkBind(std::vector<gpu_resources::Buffer*>{values, values}, true);
+  }
+  aggregate_pipeline_ = pipeline_handler::Compute(aggregate_shader, {dset});
+  scatter_pipeline_ = pipeline_handler::Compute(scatter_shader, {dset});
 
   uint32_t head_count =
-      (stage_info_.n_elements + elements_per_group - 1) / elements_per_group;
-  while (head_count > 0) {
-    primary_cmd.pushConstants(aggregate_pipeline_.GetLayout(),
-                              stage_info_pc_.stageFlags, stage_info_pc_.offset,
-                              stage_info_pc_.size, &stage_info_);
-    aggregate_pipeline_.RecordDispatch(primary_cmd, head_count, 1, 1);
+      (n_elements + kScanNElementsPerGroup - 1) / kScanNElementsPerGroup;
+  uint32_t stage_spacing = 1;
 
-    primary_cmd.pipelineBarrier2KHR(vk::DependencyInfoKHR({}, {}, barriers));
+  while (head_count > 0) {
+    passes_.push_back(ScanStagePass(pc_range, &aggregate_pipeline_,
+                                    stage_spacing, n_elements, head_count,
+                                    values, head_flags));
     if (head_count == 1) {
       break;
     }
-    stage_info_.stage_spacing *= elements_per_group;
-    head_count = (head_count + elements_per_group - 1) / elements_per_group;
+    stage_spacing *= kScanNElementsPerGroup;
+    head_count =
+        (head_count + kScanNElementsPerGroup - 1) / kScanNElementsPerGroup;
   }
-  uint32_t head_spacing = stage_info_.stage_spacing;
-  stage_info_.stage_spacing /= elements_per_group;
-  head_count = (stage_info_.n_elements + head_spacing - 1) / head_spacing;
-  while (stage_info_.stage_spacing > 0) {
-    primary_cmd.pushConstants(scatter_pipeline_.GetLayout(),
-                              stage_info_pc_.stageFlags, stage_info_pc_.offset,
-                              stage_info_pc_.size, &stage_info_);
-    scatter_pipeline_.RecordDispatch(primary_cmd, head_count - 1, 1, 1);
-    head_spacing = stage_info_.stage_spacing;
-    stage_info_.stage_spacing /= elements_per_group;
-    head_count = (stage_info_.n_elements + head_spacing - 1) / head_spacing;
-    if (stage_info_.stage_spacing > 0) {
-      primary_cmd.pipelineBarrier2KHR(vk::DependencyInfoKHR({}, {}, barriers));
-    }
+
+  head_count = (n_elements + stage_spacing - 1) / stage_spacing;
+  while (stage_spacing / kScanNElementsPerGroup > 0) {
+    passes_.push_back(ScanStagePass(
+        pc_range, &scatter_pipeline_, stage_spacing / kScanNElementsPerGroup,
+        n_elements, head_count - 1, values, head_flags));
+    stage_spacing /= kScanNElementsPerGroup;
+    head_count = (n_elements + stage_spacing - 1) / stage_spacing;
+  }
+
+  for (auto& pass : passes_) {
+    render_graph.AddPass(&pass, vk::PipelineStageFlagBits2KHR::eComputeShader);
   }
 }
 
-void ScanPass::Apply(render_graph::RenderGraph& render_graph,
-                     ScanPass& dst_pass,
-                     uint32_t n_elements,
-                     gpu_resources::Buffer* values,
-                     gpu_resources::Buffer* head_falgs) {
-  shader::Loader aggregate_shader("shaders/mp-primitives/scan/aggregate.spv");
-  shader::Loader scatter_shader("shaders/mp-primitives/scan/scatter.spv");
-  pipeline_handler::DescriptorSet* d_set =
-      aggregate_shader.GenerateDescriptorSet(render_graph.GetDescriptorPool(),
-                                             0);
-  dst_pass = ScanPass(aggregate_shader, scatter_shader, d_set, n_elements,
-                      values, head_falgs);
-  render_graph.AddPass(&dst_pass, vk::PipelineStageFlagBits2::eComputeShader);
-}
+}  // namespace detail
 
 }  // namespace mp_primitives

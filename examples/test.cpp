@@ -140,8 +140,7 @@ TestRenderer::TestRenderer() {
   load_to_gpu_ = LoadToGpuPass(staging, values, head_flags);
   render_graph_.AddPass(&load_to_gpu_,
                         vk::PipelineStageFlagBits2KHR::eTransfer);
-  mp_primitives::ScanPass::Apply(render_graph_, scan_, g_values.size(), values,
-                                 head_flags);
+  scan_.Apply(render_graph_, g_values.size(), values, head_flags);
   load_to_cpu_ = LoadToCpuPass(staging, values);
   render_graph_.AddPass(&load_to_cpu_,
                         vk::PipelineStageFlagBits2KHR::eTransfer);

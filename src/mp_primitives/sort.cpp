@@ -170,8 +170,9 @@ void Sort::Apply(render_graph::RenderGraph& render_graph,
                              bit_offset, key, pos, key_hist);
     render_graph.AddPass(&block_presort_[phase_idx],
                          vk::PipelineStageFlagBits2KHR::eComputeShader);
-    ScanPass::Apply(render_graph, digit_offset_compute_[phase_idx],
-                    GroupsPerInvocation(n_elements) * kNHistBuckets, key_hist);
+    digit_offset_compute_[phase_idx].Apply(
+        render_graph, GroupsPerInvocation(n_elements) * kNHistBuckets,
+        key_hist);
     scatter_[phase_idx] =
         SortScatterPass(scatter_shader, dpool, hist_dset, n_elements,
                         bit_offset, key, pos, key_hist, key_tmp, pos_tmp);

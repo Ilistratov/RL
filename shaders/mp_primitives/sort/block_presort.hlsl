@@ -14,7 +14,7 @@ void main(uint3 global_thread_idx : SV_DispatchThreadID, uint in_group_thread_id
     l_key[l_idx] = is_in_range ? g_key[g_idx] : (uint)-1;
     l_pos[l_idx] = is_in_range ? g_pos[g_idx] : (uint)-1;
     if (is_in_range && stage_info.bit_offset == 0) {
-      l_key = g_idx;
+      l_key[l_idx] = g_idx;
     }
   }
   GroupMemoryBarrierWithGroupSync();
