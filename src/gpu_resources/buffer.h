@@ -45,6 +45,8 @@ class Buffer {
   vk::Buffer GetVkBuffer() const noexcept;
   PhysicalBuffer* GetBuffer() const noexcept;
   vk::DeviceSize GetSize() const noexcept;
+
+  explicit operator vk::Buffer() const noexcept;
 };
 
 template <typename T>

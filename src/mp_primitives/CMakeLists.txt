@@ -1,5 +1,7 @@
 set(SRC
+  copy.cpp
   scan.cpp
+  sort.cpp
 )
 
 add_library(mp_primitives OBJECT ${SRC})

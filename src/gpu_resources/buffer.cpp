@@ -2,6 +2,7 @@
 
 #include "base/base.h"
 
+#include <vulkan/vulkan_core.h>
 #include "gpu_resources/common.h"
 #include "gpu_resources/physical_buffer.h"
 #include "utill/error_handling.h"
@@ -77,6 +78,13 @@ PhysicalBuffer* Buffer::GetBuffer() const noexcept {
 vk::DeviceSize Buffer::GetSize() const noexcept {
   DCHECK(buffer_) << kErrNotInitialized;
   return buffer_->GetSize();
+}
+
+Buffer::operator vk::Buffer() const noexcept {
+  if (!buffer_) {
+    return VK_NULL_HANDLE;
+  }
+  return buffer_->GetBuffer();
 }
 
 }  // namespace gpu_resources

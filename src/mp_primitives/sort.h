@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "gpu_resources/buffer.h"
+#include "mp_primitives/copy.h"
 #include "mp_primitives/scan.h"
 #include "pipeline_handler/compute.h"
 #include "pipeline_handler/descriptor_pool.h"
@@ -91,6 +92,8 @@ class Sort {
   std::array<SortBlockPresortPass, kSortNPhases> block_presort_;
   std::array<Scan, kSortNPhases> digit_offset_compute_;
   std::array<SortScatterPass, kSortNPhases> scatter_;
+  TinyCopy key_final_copy_;
+  TinyCopy pos_final_copy_;
 
  public:
   Sort() = default;

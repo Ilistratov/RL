@@ -1,4 +1,5 @@
 #include "mp_primitives/sort.h"
+#include <stdint.h>
 #include <vector>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_handles.hpp>
@@ -181,7 +182,13 @@ void Sort::Apply(render_graph::RenderGraph& render_graph,
     std::swap(key, key_tmp);
     std::swap(pos, pos_tmp);
   }
-  static_assert(false, "COPY RESULT BACK TO THE ORIGINAL BUFFER");
+
+  if (kSortNPhases % 2 == 0) {
+    key_final_copy_.Apply(render_graph, key, key_tmp,
+                          vk::BufferCopy2(0, 0, sizeof(uint32_t) * n_elements));
+    pos_final_copy_.Apply(render_graph, pos, pos_tmp,
+                          vk::BufferCopy2(0, 0, sizeof(uint32_t) * n_elements));
+  }
 }
 
 }  // namespace detail
