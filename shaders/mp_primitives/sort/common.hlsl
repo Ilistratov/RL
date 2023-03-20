@@ -11,7 +11,7 @@ struct StageInformation {
 [[vk::push_constant]] ConstantBuffer<StageInformation> stage_info;
 
 const static uint kNBitPerPass = 4;
-const static uint kNElementsPerThread = 8;
+const static uint kNElementsPerThread = 16;
 const static uint KNThreadsPerGroup = 64;
 const static uint KNElementsPerGroup = kNElementsPerThread * KNThreadsPerGroup;
 const static uint kNHistBuckets = 1U << kNBitPerPass;

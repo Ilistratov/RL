@@ -28,7 +28,7 @@ const static char* kBlockPresortShaderPath =
 const static char* kScatterShaderPath =
     "shaders/mp_primitives/sort/scatter.spv";
 // Should be coherent with shaders/mp-primitives/sort/common.hlsl
-const static uint32_t kNElementsPerThread = 8;
+const static uint32_t kNElementsPerThread = 16;
 const static uint32_t kNThreadsPerGroup = 64;
 const static uint32_t kNElementsPerGroup =
     kNThreadsPerGroup * kNElementsPerThread;

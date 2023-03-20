@@ -15,12 +15,13 @@
 #include "pipeline_handler/descriptor_binding.h"
 #include "pipeline_handler/descriptor_set.h"
 #include "shader/loader.h"
+#include "utill/error_handling.h"
 #include "utill/logger.h"
 
 namespace examples {
 
 // const uint32_t kNVals = 256 * 256 * 256 * 2;
-const uint32_t kNVals = 512 * 4;
+const uint32_t kNVals = 512 * 512 * 64;
 std::vector<int> g_values;
 // std::vector<uint32_t> g_head_flags;
 
@@ -147,22 +148,8 @@ TestRenderer::TestRenderer() {
            staging->GetBuffer()->GetMappingStart(),
            g_values.size() * sizeof(int));
   LOG << "memcpy done";
-  std::ofstream f("a.out");
-  for (uint32_t i = 0; i < g_values.size(); i += 1) {
-    // if (g_head_flags[i] && g_values[i] != 1) {
-    //   f << i << " is head, should be 1, got " << g_values[i] << '\n';
-    // } else if (g_values[i] - g_values[i - 1] != 1 && !g_head_flags[i]) {
-    //   f << "Error at index " << i << " expected " << g_values[i - 1] + 1
-    //     << " got " << g_values[i] << '\n';
-    // }
-    // for (uint32_t j = 0; j < 3; j++) {
-    //  f << (g_values[i] & 15) << ' ';
-    //  g_values[i] >>= 4;
-    //}
-    f << g_values[i] << '\n';
-  }
+  DCHECK(std::is_sorted(g_values.begin(), g_values.end())) << "Not sorted";
   LOG << "check done";
-  f.close();
 }
 
 }  // namespace examples
