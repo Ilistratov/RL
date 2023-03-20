@@ -24,9 +24,9 @@ const static uint32_t kScanNElementsPerGroup =
     kScanNElementsPerThtead * kScanNThreadsPerGroup;
 
 const static char* kScanAggregateShaderPath =
-    "shaders/mp-primitives/scan/aggregate.spv";
+    "shaders/mp_primitives/scan/aggregate.spv";
 const static char* kScanScatterShaderPath =
-    "shaders/mp-primitives/scan/scatter.spv";
+    "shaders/mp_primitives/scan/scatter.spv";
 
 ScanStagePass::ScanStagePass(vk::PushConstantRange stage_info_pc,
                              pipeline_handler::Compute* pipeline,

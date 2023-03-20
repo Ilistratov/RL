@@ -18,9 +18,9 @@ namespace detail {
 
 class SortBlockPresortPass : public render_graph::Pass {
   pipeline_handler::Compute pipeline_;
-  const vk::PushConstantRange pc_range_;
-  const uint32_t n_elements_ = 0;
-  const uint32_t n_bit_offset_ = 0;
+  vk::PushConstantRange pc_range_;
+  uint32_t n_elements_ = 0;
+  uint32_t n_bit_offset_ = 0;
   gpu_resources::Buffer* key_buffer_ = nullptr;
   gpu_resources::Buffer* pos_buffer_ = nullptr;
   gpu_resources::Buffer* key_hist_buffer_ = nullptr;
@@ -50,9 +50,9 @@ class SortBlockPresortPass : public render_graph::Pass {
 
 class SortScatterPass : public render_graph::Pass {
   pipeline_handler::Compute pipeline_;
-  const vk::PushConstantRange pc_range_;
-  const uint32_t n_elements_ = 0;
-  const uint32_t n_bit_offset_ = 0;
+  vk::PushConstantRange pc_range_;
+  uint32_t n_elements_ = 0;
+  uint32_t n_bit_offset_ = 0;
   gpu_resources::Buffer* src_key_buffer_ = nullptr;
   gpu_resources::Buffer* src_pos_buffer_ = nullptr;
   gpu_resources::Buffer* key_hist_buffer_ = nullptr;

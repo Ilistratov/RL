@@ -26,10 +26,7 @@ namespace {
 std::vector<uint32_t> LoadSpirvIR(const char* path) {
   DLOG << "Reading spirv IR from " << path;
   std::ifstream file(path, std::ios::binary | std::ios::ate);
-  if (!file.good()) {
-    LOG << "Failed to open " << path;
-    return {};
-  }
+  CHECK(file.good()) << "Failed to open " << path;
   size_t file_size = file.tellg();
   DCHECK(file_size % sizeof(uint32_t) == 0);
   std::vector<uint32_t> shader_binary(file_size / sizeof(uint32_t));
@@ -83,7 +80,7 @@ Loader::Loader(const std::vector<uint32_t>& spirv_binary)
   auto device = base::Base::Get().GetContext().GetDevice();
   shader_module_ = device.createShaderModule(
       vk::ShaderModuleCreateInfo(vk::ShaderModuleCreateFlags{}, spirv_binary));
-  DCHECK(shader_module_) << "Failed to create shader module";
+  CHECK(shader_module_) << "Failed to create shader module";
 }
 
 pipeline_handler::DescriptorSet* Loader::GenerateDescriptorSet(
