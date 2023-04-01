@@ -1,3 +1,6 @@
+#ifndef SCAN_COMMON
+#define SCAN_COMMON
+
 [[vk::binding(0, 0)]] RWStructuredBuffer<int> val_arr;
 [[vk::binding(1, 0)]] RWStructuredBuffer<uint> head_flag;
 
@@ -17,3 +20,5 @@ const static uint KNElementsPerGroup = kNElementsPerThread * KNThreadsPerGroup;
 uint GetElemIdx(uint thread_idx, uint elem_idx) {
   return (thread_idx * kNElementsPerThread + elem_idx + 1) * stage_info.StageSpacing - 1;
 }
+
+#endif // SCAN_COMMON

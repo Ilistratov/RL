@@ -6,7 +6,7 @@ struct Ray {
   float3 direction;
 };
 
-struct Intersection {
+struct Interception {
   uint primitive_ind;
   float t;
   float u;
@@ -16,7 +16,7 @@ struct Intersection {
 struct RayTraversalState {
   float4 ray_origin;
   float4 ray_direction;
-  Intersection intersection;
+  Interception intersection;
 };
 
 const static uint VECTORIZED_STRUCT_SIZE = 16;
@@ -24,7 +24,7 @@ const static uint VECTORIZED_STRUCT_SIZE = 16;
 struct VectorizedRayTraversalState {
   float4 ray_origin[VECTORIZED_STRUCT_SIZE];
   float4 ray_direction[VECTORIZED_STRUCT_SIZE];
-  Intersection intersection[VECTORIZED_STRUCT_SIZE];
+  Interception intersection[VECTORIZED_STRUCT_SIZE];
 
   Ray GetRay(uint tind) {
     Ray r;
@@ -45,4 +45,4 @@ struct PerPixelState {
   uint shadow_ray_ind;
 };
 
-#endif
+#endif // RAYTRACE_COMMON

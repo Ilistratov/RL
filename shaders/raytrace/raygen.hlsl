@@ -7,9 +7,9 @@ struct CameraInfo {
   float aspect;
 };
 
-[[vk::binding(0, 0)]] ConstantBuffer<CameraInfo> camera_info_in;
-[[vk::binding(1, 0)]] RWStructuredBuffer<RayTraversalState> traversal_state_out;
-[[vk::binding(2, 0)]] RWStructuredBuffer<PerPixelState> per_pixel_state_out;
+[[vk::binding(0, 0)]] RWStructuredBuffer<RayTraversalState> traversal_state_out;
+[[vk::binding(1, 0)]] RWStructuredBuffer<PerPixelState> per_pixel_state_out;
+[[vk::push_constant]] ConstantBuffer<CameraInfo> camera_info_in;
 
 float4 PixCordToCameraSpace(uint pix_x, uint pix_y) {
   float uss_x = (float)(pix_x) / camera_info_in.screen_width;
@@ -38,7 +38,7 @@ void main(uint3 pixel_cord : SV_DispatchThreadID, uint local_index : SV_GroupInd
   RayTraversalState traversal_state;
   traversal_state.ray_origin = float4(r.origin, 1.0);
   traversal_state.ray_direction = float4(r.direction, 0.0);
-  Intersection intersection;
+  Interception intersection;
   intersection.primitive_ind = (uint)-1;
   intersection.t = -1.0;
   intersection.u = 0.0;
