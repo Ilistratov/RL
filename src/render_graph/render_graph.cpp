@@ -36,8 +36,7 @@ void RenderGraph::AddPass(Pass* pass,
                           vk::Semaphore external_signal,
                           vk::Semaphore external_wait) {
   DCHECK(pass) << "Can't add null";
-  pass->OnRegister(passes_.size(), resource_manager_.GetAccessSyncronizer(),
-                   descriptor_pool_);
+  pass->OnRegister(passes_.size(), resource_manager_.GetAccessSyncronizer());
   executor_.ScheduleTask(pass, stage_flags, external_signal, external_wait,
                          pass->GetSecondaryCmdCount());
   passes_.push_back(pass);

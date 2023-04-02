@@ -16,8 +16,6 @@ class Pass : public gpu_executor::Task {
   uint32_t secondary_cmd_count_ = uint32_t(0);
 
  protected:
-  virtual void OnReserveDescriptorSets(
-      pipeline_handler::DescriptorPool& pool) noexcept;
   virtual void OnRecord(vk::CommandBuffer primary_cmd,
                         const std::vector<vk::CommandBuffer>& secondary_cmd);
 
@@ -33,8 +31,7 @@ class Pass : public gpu_executor::Task {
   void operator=(Pass const&) = delete;
 
   void OnRegister(uint32_t pass_idx,
-                  gpu_resources::PassAccessSyncronizer* access_syncronizer,
-                  pipeline_handler::DescriptorPool& pool);
+                  gpu_resources::PassAccessSyncronizer* access_syncronizer);
   virtual void OnResourcesInitialized() noexcept;
   virtual void OnPreRecord();
 

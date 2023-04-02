@@ -6,8 +6,8 @@
 
 [[vk::binding(0, 0)]] StructuredBuffer<float4> g_vertex_pos;
 [[vk::binding(1, 0)]] StructuredBuffer<uint4> g_vertex_ind;
-[[vk::binding(2, 0)]] StructuredBuffer<BVHNode> g_bvh_buffer;
 [[vk::binding(3, 0)]] StructuredBuffer<float4> g_vertex_normal;
+[[vk::binding(4, 0)]] StructuredBuffer<BVHNode> g_bvh_buffer;
 
 const static uint kQueueSize = 16;
 const static uint kThreadsPerGroup = 16;
