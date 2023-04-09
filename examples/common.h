@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <cstdint>
+#include <glm/fwd.hpp>
 
 #include "utill/transform.h"
 
@@ -24,8 +25,7 @@ class MainCamera {
 
   const CameraInfo& GetCameraInfo() const;
   void Update();
+  void SetPos(glm::vec3 pos);
 };
-
-const static float PI = acos(-1);
 
 }  // namespace examples

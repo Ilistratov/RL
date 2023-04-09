@@ -247,14 +247,13 @@ void RaytracerPass::OnRecord(vk::CommandBuffer primary_cmd,
                            swapchain.GetExtent().height / 8, 1);
 }
 
-RayTracer::RayTracer() {
+RayTracer::RayTracer(const std::string scene_obj_file_path) {
   auto device = base::Base::Get().GetContext().GetDevice();
   auto& swapchain = base::Base::Get().GetSwapchain();
   ready_to_present_ = device.createSemaphore({});
   auto& resource_manager = render_graph_.GetResourceManager();
 
-  g_scene_mesh =
-      render_data::Mesh::LoadFromObj("../assets/objects/serpentine_city.obj");
+  g_scene_mesh = render_data::Mesh::LoadFromObj(scene_obj_file_path);
   g_scene_bvh =
       render_data::BVH(render_data::BVH::BuildPrimitivesBB(g_scene_mesh));
   g_scene_mesh.ReorderPrimitives(g_scene_bvh.GetPrimitiveOrd());
@@ -296,6 +295,7 @@ RayTracer::RayTracer() {
   render_graph_.Init();
   g_main_camera_state =
       MainCamera(swapchain.GetExtent().width, swapchain.GetExtent().height);
+  g_main_camera_state.SetPos(glm::vec3(0, 250, 0));
 }
 
 bool RayTracer::Draw() {

@@ -8,7 +8,7 @@ namespace gpu_resources {
 using namespace error_messages;
 
 bool ResourceAccess::IsModify() const {
-  return (access_flags |
+  return (access_flags &
           (vk::AccessFlagBits2KHR::eAccelerationStructureWriteKHR |
            vk::AccessFlagBits2KHR::eColorAttachmentWrite |
            vk::AccessFlagBits2KHR::eDepthStencilAttachmentWrite |

@@ -6,8 +6,8 @@
 
 [[vk::binding(0, 0)]] StructuredBuffer<float4> g_vertex_pos;
 [[vk::binding(1, 0)]] StructuredBuffer<uint4> g_vertex_ind;
-[[vk::binding(3, 0)]] StructuredBuffer<float4> g_vertex_normal;
-[[vk::binding(4, 0)]] StructuredBuffer<BVHNode> g_bvh_buffer;
+[[vk::binding(2, 0)]] StructuredBuffer<float4> g_vertex_normal;
+[[vk::binding(3, 0)]] StructuredBuffer<BVHNode> g_bvh_buffer;
 
 const static uint kQueueSize = 16;
 const static uint kThreadsPerGroup = 16;
@@ -142,7 +142,6 @@ void CastRay(uint l_ts_ind, bool any_hit) {
   l_cur_vrt = 0;
   l_prv_vrt = uint(-1);
   l_queue_end = 0;
-  GroupMemoryBarrierWithGroupSync();
   while (l_cur_vrt != (uint)-1) {
     l_nxt_vrt = g_bvh_buffer[l_cur_vrt].parent;
     float2 cur_t = g_bvh_buffer[l_cur_vrt].bounds.GetInspT(r);
@@ -162,6 +161,9 @@ void CastRay(uint l_ts_ind, bool any_hit) {
       if (any_hit && l_traversal_state.intersection[l_ts_ind].t > 0) {
         return;
       }
+      l_prv_vrt = l_cur_vrt;
+      l_cur_vrt = l_nxt_vrt;
+      continue;
     }
 
     uint fst = g_bvh_buffer[l_cur_vrt].left;
@@ -185,11 +187,16 @@ void CastRay(uint l_ts_ind, bool any_hit) {
     }
 
     if (l_ts_ind == 0) {
+      if (l_prv_vrt == l_nxt_vrt) {
+        l_nxt_vrt = fst;
+      } else if (l_prv_vrt == fst) {
+        l_nxt_vrt = snd;
+      }
       l_prv_vrt = l_cur_vrt;
       l_cur_vrt = l_nxt_vrt;
     }
-    GroupMemoryBarrierWithGroupSync();
   }
+  ProcessBvhLeafInspQueue(l_ts_ind);
 }
 
 #endif // RAYTRACE_TRAVERSE

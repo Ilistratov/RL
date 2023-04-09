@@ -3,8 +3,9 @@
 #include <iostream>
 
 // #include "examples/mandelbrot.h"
+#include "examples/raytracer-2.h"
 // #include "examples/raytracer.h"
-#include "examples/test.h"
+//  #include "examples/test.h"
 
 #include "base/base.h"
 #include "base/context.h"
@@ -14,16 +15,18 @@
 #include "utill/input_manager.h"
 #include "utill/logger.h"
 
+const static std::string kSceneObjPath = "../assets/objects/Container.obj";
+
 void Run() {
-  examples::TestRenderer renderer;
-  //   auto& window = base::Base::Get().GetWindow();
-  //   while (!glfwWindowShouldClose(window.GetWindow())) {
-  //     glfwPollEvents();
-  //     if (!renderer.Draw()) {
-  //       LOG << "Failed to draw";
-  //       break;
-  //     }
-  //   }
+  examples::RayTracer2 renderer(kSceneObjPath);
+  auto& window = base::Base::Get().GetWindow();
+  while (!glfwWindowShouldClose(window.GetWindow())) {
+    glfwPollEvents();
+    if (!renderer.Draw()) {
+      LOG << "Failed to draw";
+      break;
+    }
+  }
 }
 
 int main() {
@@ -32,7 +35,9 @@ int main() {
   base::BaseConfig base_config = {
       {VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
        VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
-      {"VK_LAYER_KHRONOS_validation"},
+      {
+          //"VK_LAYER_KHRONOS_validation"
+      },
       //{},
       "RL",
       "RL",

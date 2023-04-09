@@ -5,6 +5,8 @@
 
 namespace examples {
 
+const static float PI = acos(-1);
+
 MainCamera::MainCamera(uint32_t screen_width, uint32_t screen_height)
     : camera_info_{utill::Transform(), screen_width, screen_height,
                    float(screen_width) / screen_height},
@@ -60,6 +62,13 @@ void MainCamera::Update() {
       utill::Transform::Translation(pos + move_dir * 1.0f);
   camera_info_.camera_to_world =
       utill::Transform::Combine(camera_info_.camera_to_world, translate);
+}
+
+void MainCamera::SetPos(glm::vec3 pos) {
+  utill::Transform& current = camera_info_.camera_to_world;
+  utill::Transform translate =
+      utill::Transform::Translation(pos - current.GetPos());
+  current = utill::Transform::Combine(current, translate);
 }
 
 }  // namespace examples

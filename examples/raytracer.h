@@ -85,7 +85,7 @@ class RayTracer {
   vk::Semaphore ready_to_present_;
 
  public:
-  RayTracer();
+  RayTracer(const std::string scene_obj_file_path);
   RayTracer(const RayTracer&) = delete;
   void operator=(const RayTracer&) = delete;
 

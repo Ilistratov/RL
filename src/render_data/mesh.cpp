@@ -25,6 +25,7 @@ Mesh Mesh::LoadFromObj(const std::string& obj_file_path) {
   tinyobj::ObjReader reader;
   tinyobj::ObjReaderConfig cfg;
   cfg.triangulate = true;
+  LOG << "Loading mesh from " << obj_file_path;
 
   if (!reader.ParseFromFile(obj_file_path, cfg)) {
     LOG << "Failed to parse obj file: " << obj_file_path
@@ -59,7 +60,8 @@ Mesh Mesh::LoadFromObj(const std::string& obj_file_path) {
                                         0});
     }
   }
-  LOG << "Loaded mesh from obj: " << obj_file_path;
+  LOG << "Loaded mesh from obj: " << obj_file_path
+      << " Face count: " << result.index.size() / 3;
   return result;
 }
 

@@ -42,8 +42,8 @@ float4 CalcLightAtInterseption(Interception insp, Ray r) {
 [numthreads(16, 1, 1)]
 void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_GroupIndex) {
   Ray r;
-  r.origin = g_traversal_state[global_tidx.x].ray_origin;
-  r.direction = g_traversal_state[global_tidx.x].ray_direction;
+  r.origin = g_traversal_state[global_tidx.x].ray_origin.xyz;
+  r.direction = g_traversal_state[global_tidx.x].ray_direction.xyz;
   l_traversal_state.SetRay(in_group_tidx, r);
   CastRay(in_group_tidx, false);
   Interception insp = l_traversal_state.intersection[in_group_tidx];
