@@ -26,7 +26,7 @@ namespace examples {
 
 static render_data::Mesh g_scene_mesh;
 static render_data::BVH g_scene_bvh;
-static std::vector<glm::vec4> g_light_buffer = {{0, 500, 20, 1.0}};
+static std::vector<glm::vec4> g_light_buffer = {{0, 0, 0, 1.0}};
 static MainCamera g_main_camera_state;
 
 using gpu_resources::GetDataSize;
@@ -247,16 +247,16 @@ void RaytracerPass::OnRecord(vk::CommandBuffer primary_cmd,
                            swapchain.GetExtent().height / 8, 1);
 }
 
-RayTracer::RayTracer(const std::string scene_obj_file_path) {
+RayTracer::RayTracer(render_data::Mesh& mesh, render_data::BVH const& bvh) {
   auto device = base::Base::Get().GetContext().GetDevice();
   auto& swapchain = base::Base::Get().GetSwapchain();
   ready_to_present_ = device.createSemaphore({});
   auto& resource_manager = render_graph_.GetResourceManager();
 
-  g_scene_mesh = render_data::Mesh::LoadFromObj(scene_obj_file_path);
-  g_scene_bvh =
-      render_data::BVH(render_data::BVH::BuildPrimitivesBB(g_scene_mesh));
-  g_scene_mesh.ReorderPrimitives(g_scene_bvh.GetPrimitiveOrd());
+  // This is bad, but i'm too tired to deal with it RN.
+  // This renderer is only for comparsion with a new one anyway
+  g_scene_mesh.Swap(mesh);
+  g_scene_bvh = bvh;
 
   gpu_resources::BufferProperties buffer_properties{};
   GeometryBuffers geometry{};
@@ -295,7 +295,6 @@ RayTracer::RayTracer(const std::string scene_obj_file_path) {
   render_graph_.Init();
   g_main_camera_state =
       MainCamera(swapchain.GetExtent().width, swapchain.GetExtent().height);
-  g_main_camera_state.SetPos(glm::vec3(0, 250, 0));
 }
 
 bool RayTracer::Draw() {

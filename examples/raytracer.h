@@ -13,6 +13,8 @@
 #include "pipeline_handler/compute.h"
 #include "pipeline_handler/descriptor_binding.h"
 #include "pipeline_handler/descriptor_set.h"
+#include "render_data/bvh.h"
+#include "render_data/mesh.h"
 #include "render_graph/render_graph.h"
 #include "shader/loader.h"
 
@@ -85,7 +87,7 @@ class RayTracer {
   vk::Semaphore ready_to_present_;
 
  public:
-  RayTracer(const std::string scene_obj_file_path);
+  RayTracer(render_data::Mesh& mesh, render_data::BVH const& bvh);
   RayTracer(const RayTracer&) = delete;
   void operator=(const RayTracer&) = delete;
 

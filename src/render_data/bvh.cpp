@@ -1,15 +1,18 @@
 #include "render_data/bvh.h"
 
+#include <stdint.h>
+#include <algorithm>
+#include <glm/fwd.hpp>
 #include "utill/logger.h"
 
 namespace render_data {
 
-static void interseptRange(glm::vec2& a, const glm::vec2& b) {
+static void InterseptRange(glm::vec2& a, const glm::vec2& b) {
   a.x = std::max(a.x, b.x);
   a.y = std::min(a.y, b.y);
 }
 
-static void uniteRange(glm::vec2& a, const glm::vec2& b) {
+static void UniteRange(glm::vec2& a, const glm::vec2& b) {
   a.x = std::min(a.x, b.x);
   a.y = std::max(a.y, b.y);
 }
@@ -19,9 +22,9 @@ static bool containsRange(const glm::vec2& a, const glm::vec2& b) {
 }
 
 BoundingBox& BoundingBox::Intersept(const BoundingBox& other) {
-  interseptRange(x_range, other.x_range);
-  interseptRange(y_range, other.y_range);
-  interseptRange(z_range, other.z_range);
+  InterseptRange(x_range, other.x_range);
+  InterseptRange(y_range, other.y_range);
+  InterseptRange(z_range, other.z_range);
 
   return *this;
 }
@@ -31,9 +34,9 @@ BoundingBox BoundingBox::GetInterseption(BoundingBox other) const {
 }
 
 BoundingBox& BoundingBox::Unite(const BoundingBox& other) {
-  uniteRange(x_range, other.x_range);
-  uniteRange(y_range, other.y_range);
-  uniteRange(z_range, other.z_range);
+  UniteRange(x_range, other.x_range);
+  UniteRange(y_range, other.y_range);
+  UniteRange(z_range, other.z_range);
 
   return *this;
 }
@@ -53,13 +56,18 @@ glm::vec3 BoundingBox::GetSize() const {
 }
 
 float BoundingBox::GetVolume() const {
-  glm::vec3 sz = GetSize();
-  return sz.x * sz.y * sz.z;
+  glm::vec3 size = GetSize();
+  return size.x * size.y * size.z;
+}
+
+float BoundingBox::GetSurfaceArea() const {
+  glm::vec3 size = GetSize();
+  return (size.x * size.y + size.y * size.z + size.z * size.x) * 2;
 }
 
 bool BoundingBox::IsEmpty() const {
-  glm::vec3 sz = GetSize();
-  return sz.x == 0 || sz.y == 0 || sz.z == 0;
+  glm::vec3 size = GetSize();
+  return size.x == 0 || size.y == 0 || size.z == 0;
 }
 
 bool BoundingBox::Contains(const BoundingBox& other) const {
@@ -109,14 +117,15 @@ BVH::NodeSeparation BVH::CalcOptimalSeparation(
 
   BoundingBox left_bb;
   NodeSeparation res;
-  float cur_vol = node_[v].bounds.GetVolume();
+  float cur_surf_area = node_[v].bounds.GetSurfaceArea();
   res.sep_ind = l;
   res.cost = r - l;
 
   for (uint32_t i = l; i + 1 < r; i++) {
     left_bb.Unite(primitives[i].first);
-    float cur_cost = (i - l + 1) * (left_bb.GetVolume() / cur_vol) +
-                     (r - i - 1) * (bb_pool_[i + 1].GetVolume() / cur_vol);
+    float cur_cost =
+        (i - l + 1) * (left_bb.GetSurfaceArea() / cur_surf_area) +
+        (r - i - 1) * (bb_pool_[i + 1].GetSurfaceArea() / cur_surf_area);
 
     if (cur_cost < res.cost) {
       res.left_bb = left_bb;
@@ -160,32 +169,50 @@ void BVH::Construct(std::vector<std::pair<BoundingBox, uint32_t>>& primitives,
     return;
   }
 
-  node_[v].left = v + 1;
-  node_[v + 1].bounds = sep.left_bb;
-  node_[v + 1].parent = v;
-  node_[v + 1].bvh_level = node_[v].bvh_level;
-  Construct(primitives, v + 1, l, sep.sep_ind, d + 1, max_d,
+  node_[v].left = node_.size();
+  node_.push_back(BVHNode{sep.left_bb, 0, 0, v, node_[v].bvh_level + 1u});
+  Construct(primitives, node_[v].left, l, sep.sep_ind, d + 1, max_d,
             min_node_primitives);
 
-  uint32_t left_size = 2 * (sep.sep_ind - l);
-  node_[v].right = v + left_size;
-  node_[v + left_size].bounds = sep.right_bb;
-  node_[v + left_size].parent = v;
-  node_[v + left_size].bvh_level = node_[v].bvh_level;
-  Construct(primitives, v + left_size, sep.sep_ind, r, d + 1, max_d,
+  node_[v].right = node_.size();
+  node_.push_back(BVHNode{sep.right_bb, 0, 0, v, node_[v].bvh_level + 1u});
+  Construct(primitives, node_[v].right, sep.sep_ind, r, d + 1, max_d,
             min_node_primitives);
 }
 
-BVH::BVH(std::vector<std::pair<BoundingBox, uint32_t>>&& primitives) {
+static inline void PrintBvhStats(std::vector<BVHNode> const& nodes) {
+  uint32_t max_depth = 0;
+  uint32_t leaf_count = 0;
+  uint32_t primitive_count = 0;
+  for (BVHNode const& node : nodes) {
+    if (node.bvh_level == (uint32_t)-1) {
+      ++leaf_count;
+      primitive_count += node.right - node.left;
+    } else {
+      max_depth = std::max(max_depth, node.bvh_level);
+    }
+  }
+  DLOG << "Constructed BVH. Nodes: " << nodes.size()
+       << " Max depth: " << max_depth << " Leafs: " << leaf_count
+       << " Avg primitives per leaf: " << (double)primitive_count / leaf_count;
+}
+
+BVH::BVH(std::vector<std::pair<BoundingBox, uint32_t>>&& primitives,
+         uint32_t max_depth,
+         uint32_t min_node_primitives) {
   primitive_ord_.resize(primitives.size());
   bb_pool_.resize(primitives.size() + 1);
-  node_.resize(primitives.size() * 2 - 1);
+  node_.reserve(primitives.size() * 2 - 1);
+  node_.push_back({});
   for (const auto& [pbb, ind] : primitives) {
     node_[0].bounds.Unite(pbb);
   }
-  Construct(primitives, 0, 0, primitives.size(), 0, 32, 8);
+  Construct(primitives, 0, 0, primitives.size(), 0, max_depth,
+            min_node_primitives);
   bb_pool_.clear();
   bb_pool_.shrink_to_fit();
+  node_.shrink_to_fit();
+  PrintBvhStats(node_);
 }
 
 std::vector<std::pair<BoundingBox, uint32_t>> BVH::BuildPrimitivesBB(

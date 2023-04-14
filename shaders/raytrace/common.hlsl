@@ -19,12 +19,12 @@ struct RayTraversalState {
   Interception intersection;
 };
 
-const static uint VECTORIZED_STRUCT_SIZE = 16;
+const static uint kTraversThreadsPerGroup = 64;
 
 struct VectorizedRayTraversalState {
-  float4 ray_origin[VECTORIZED_STRUCT_SIZE];
-  float4 ray_direction[VECTORIZED_STRUCT_SIZE];
-  Interception intersection[VECTORIZED_STRUCT_SIZE];
+  float4 ray_origin[kTraversThreadsPerGroup];
+  float4 ray_direction[kTraversThreadsPerGroup];
+  Interception intersection[kTraversThreadsPerGroup];
 
   Ray GetRay(uint tind) {
     Ray r;

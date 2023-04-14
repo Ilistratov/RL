@@ -1,5 +1,7 @@
 #include "common.hlsl"
 #include "bvh.hlsl"
+
+#define ENABLE_TRAVERSAL_ORDER_OPTIMIZATION
 #include "traverse.hlsl"
 
 [[vk::binding(0, 1)]] RWStructuredBuffer<RayTraversalState> g_traversal_state;
@@ -29,7 +31,7 @@ float4 CalcLightAtInterseption(Interception insp, Ray r) {
   float specular = 0;
   uint light_cnt = 0;
   uint light_struct_size = 0;
-  float3 light_pos = float3(0, 50, 0); //TODO
+  float3 light_pos = float3(0, 0, 0); //TODO
   float3 to_light = light_pos - insp_point;
   float light_dst = length(to_light);
   to_light = normalize(to_light);
@@ -39,15 +41,17 @@ float4 CalcLightAtInterseption(Interception insp, Ray r) {
   return float4(materialColor * (diffuse + specular + 0.2), 1.0);
 }
 
-[numthreads(16, 1, 1)]
+[numthreads(64, 1, 1)]
 void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_GroupIndex) {
   Ray r;
   r.origin = g_traversal_state[global_tidx.x].ray_origin.xyz;
   r.direction = g_traversal_state[global_tidx.x].ray_direction.xyz;
   l_traversal_state.SetRay(in_group_tidx, r);
-  CastRay(in_group_tidx, false);
+  uint vrt_visited = CastRay(in_group_tidx, false);
+  float visited_fraction = ((float)vrt_visited * 3) / 200;
   Interception insp = l_traversal_state.intersection[in_group_tidx];
   uint2 pix_coord = g_per_pixel_state[global_tidx.x].pix_cord;
+
   if (insp.t > 0) {
     g_color_target[pix_coord] = CalcLightAtInterseption(l_traversal_state.intersection[in_group_tidx], r);
     g_depth_target[pix_coord] = 1 - exp(-1 / insp.t);
@@ -58,4 +62,6 @@ void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_Group
     g_color_target[pix_coord] = skybox_color;
     g_depth_target[pix_coord] = 0;
   }
+  //g_color_target[pix_coord] = float4(clamp(visited_fraction, 0, 1), clamp(visited_fraction - 1, 0, 1), clamp(visited_fraction - 2, 0, 1), 1);
+  //g_color_target[pix_coord] = float4((vrt_visited & 31) / 32.0, ((vrt_visited >> 5) & 31) / 31.0, ((vrt_visited >> 10) & 31) / 31.0, 1);
 }

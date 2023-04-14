@@ -18,6 +18,7 @@
 #include "pipeline_handler/descriptor_binding.h"
 #include "pipeline_handler/descriptor_set.h"
 #include "render_data/bvh.h"
+#include "render_data/mesh.h"
 #include "shader/loader.h"
 #include "utill/error_handling.h"
 #include "utill/logger.h"
@@ -330,16 +331,12 @@ void TracePrimaryPass::OnRecord(
     const std::vector<vk::CommandBuffer>&) noexcept {
   vk::Extent2D extent = base::Base::Get().GetSwapchain().GetExtent();
   uint32_t ray_count = extent.width * extent.height;
-  const static uint32_t kRaysPerGroup = 16;
+  const static uint32_t kRaysPerGroup = 64;
   pipeline_.RecordDispatch(primary_cmd, ray_count / kRaysPerGroup, 1, 1);
 }
 
-RayTracer2::RayTracer2(const std::string& scene_obj_path) {
-  scene_mesh_ = render_data::Mesh::LoadFromObj(scene_obj_path);
-  scene_bvh_ =
-      render_data::BVH(render_data::BVH::BuildPrimitivesBB(scene_mesh_));
-  scene_mesh_.ReorderPrimitives(scene_bvh_.GetPrimitiveOrd());
-
+RayTracer2::RayTracer2(render_data::Mesh const& mesh,
+                       render_data::BVH const& bvh) {
   auto device = base::Base::Get().GetContext().GetDevice();
   auto& swapchain = base::Base::Get().GetSwapchain();
   camera_state_ =
@@ -364,26 +361,26 @@ RayTracer2::RayTracer2(const std::string& scene_obj_path) {
           0, {}, vk::BufferUsageFlagBits::eStorageBuffer});
   gpu_resources::Buffer* vertex_nrm =
       resource_manager.AddBuffer(gpu_resources::BufferProperties{
-          scene_mesh_.normal.size() * sizeof(scene_mesh_.normal[0]),
+          mesh.normal.size() * sizeof(mesh.normal[0]),
           {},
           vk::BufferUsageFlagBits::eStorageBuffer});
   gpu_resources::Buffer* bvh_buffer =
       resource_manager.AddBuffer(gpu_resources::BufferProperties{
-          scene_bvh_.GetNodes().size() * sizeof(scene_bvh_.GetNodes()[0]),
+          bvh.GetNodes().size() * sizeof(bvh.GetNodes()[0]),
           {},
           vk::BufferUsageFlagBits::eStorageBuffer});
   TransferToGPUPass::TransferRequest pos_transfer{
-      vertex_pos, (void*)scene_mesh_.position.data(),
-      scene_mesh_.position.size() * sizeof(scene_mesh_.position[0])};
+      vertex_pos, (void*)mesh.position.data(),
+      mesh.position.size() * sizeof(mesh.position[0])};
   TransferToGPUPass::TransferRequest ind_transfer{
-      vertex_ind, (void*)scene_mesh_.index.data(),
-      scene_mesh_.index.size() * sizeof(scene_mesh_.index[0])};
+      vertex_ind, (void*)mesh.index.data(),
+      mesh.index.size() * sizeof(mesh.index[0])};
   TransferToGPUPass::TransferRequest nrm_transfer{
-      vertex_nrm, (void*)scene_mesh_.normal.data(),
-      scene_mesh_.normal.size() * sizeof(scene_mesh_.normal[0])};
+      vertex_nrm, (void*)mesh.normal.data(),
+      mesh.normal.size() * sizeof(mesh.normal[0])};
   TransferToGPUPass::TransferRequest bvh_transfer{
-      bvh_buffer, (void*)scene_bvh_.GetNodes().data(),
-      scene_bvh_.GetNodes().size() * sizeof(scene_bvh_.GetNodes()[0])};
+      bvh_buffer, (void*)bvh.GetNodes().data(),
+      bvh.GetNodes().size() * sizeof(bvh.GetNodes()[0])};
   transfer_ = TransferToGPUPass(
       {pos_transfer, ind_transfer, nrm_transfer, bvh_transfer},
       resource_manager);
@@ -414,7 +411,7 @@ RayTracer2::RayTracer2(const std::string& scene_obj_path) {
                         ready_to_present_,
                         swapchain.GetImageAvaliableSemaphore());
   render_graph_.Init();
-  camera_state_.SetPos(glm::vec3{0, 250, 0});
+  // camera_state_.SetPos(glm::vec3{0, 250, 0});
 }
 
 bool RayTracer2::Draw() {

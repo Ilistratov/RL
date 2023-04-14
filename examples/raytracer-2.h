@@ -184,11 +184,9 @@ class RayTracer2 {
   render_graph::RenderGraph render_graph_;
   vk::Semaphore ready_to_present_;
   MainCamera camera_state_;
-  render_data::Mesh scene_mesh_;
-  render_data::BVH scene_bvh_;
 
  public:
-  RayTracer2(const std::string& scene_obj_path);
+  RayTracer2(render_data::Mesh const& mesh, render_data::BVH const& bvh);
   RayTracer2(const RayTracer2&) = delete;
   void operator=(const RayTracer2&) = delete;
 

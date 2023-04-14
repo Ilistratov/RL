@@ -4,21 +4,27 @@
 
 // #include "examples/mandelbrot.h"
 #include "examples/raytracer-2.h"
-// #include "examples/raytracer.h"
+#include "examples/raytracer.h"
 //  #include "examples/test.h"
 
 #include "base/base.h"
 #include "base/context.h"
 #include "gpu_executor/executor.h"
 #include "pipeline_handler/compute.h"
+#include "render_data/bvh.h"
+#include "render_data/mesh.h"
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
 
-const static std::string kSceneObjPath = "../assets/objects/Container.obj";
+const static std::string kSceneObjPath = "../assets/objects/squares.obj";
 
 void Run() {
-  examples::RayTracer2 renderer(kSceneObjPath);
+  render_data::Mesh mesh = render_data::Mesh::LoadFromObj(kSceneObjPath);
+  render_data::BVH bvh =
+      render_data::BVH(render_data::BVH::BuildPrimitivesBB(mesh), 16, 16);
+  mesh.ReorderPrimitives(bvh.GetPrimitiveOrd());
+  examples::RayTracer2 renderer(mesh, bvh);
   auto& window = base::Base::Get().GetWindow();
   while (!glfwWindowShouldClose(window.GetWindow())) {
     glfwPollEvents();
