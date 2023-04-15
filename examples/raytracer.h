@@ -1,5 +1,6 @@
 #pragma once
 
+#include <glm/fwd.hpp>
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
@@ -92,6 +93,7 @@ class RayTracer {
   void operator=(const RayTracer&) = delete;
 
   bool Draw();
+  void SetCameraPosition(glm::vec3 pos);
 
   ~RayTracer();
 };

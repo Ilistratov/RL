@@ -1,6 +1,7 @@
 #include "common.hlsl"
 #include "bvh.hlsl"
 
+#define VECTORIZED_TRAVERSAL
 #define ENABLE_TRAVERSAL_ORDER_OPTIMIZATION
 #include "traverse.hlsl"
 
@@ -41,7 +42,7 @@ float4 CalcLightAtInterseption(Interception insp, Ray r) {
   return float4(materialColor * (diffuse + specular + 0.2), 1.0);
 }
 
-[numthreads(64, 1, 1)]
+[numthreads(32, 1, 1)]
 void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_GroupIndex) {
   Ray r;
   r.origin = g_traversal_state[global_tidx.x].ray_origin.xyz;

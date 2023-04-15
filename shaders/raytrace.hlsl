@@ -181,8 +181,9 @@ float4 CalcLightAtInterseption(Interseption insp, Ray r) {
     Ray shadow_ray;
     shadow_ray.direction = to_light;
     shadow_ray.origin = insp_point + to_light * 1e-4;
-    Interseption shadow_ray_insp = CastRay(shadow_ray);
-    bool isValid = shadow_ray_insp.trg_ind == (uint)(-1) | light_dst < shadow_ray_insp.dst;
+    //Interseption shadow_ray_insp = CastRay(shadow_ray);
+    //bool isValid = shadow_ray_insp.trg_ind == (uint)(-1) | light_dst < shadow_ray_insp.dst;
+    bool isValid = true;
     diffuse += isValid ? max(0, dot(trg_n, to_light)) : 0;
 		specular += isValid ? pow(max(0, dot(to_light, reflect(r.direction, trg_n))), 128) : 0;
   }

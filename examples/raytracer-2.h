@@ -191,6 +191,7 @@ class RayTracer2 {
   void operator=(const RayTracer2&) = delete;
 
   bool Draw();
+  void SetCameraPosition(glm::vec3 pos);
 
   ~RayTracer2();
 };

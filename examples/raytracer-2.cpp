@@ -331,7 +331,7 @@ void TracePrimaryPass::OnRecord(
     const std::vector<vk::CommandBuffer>&) noexcept {
   vk::Extent2D extent = base::Base::Get().GetSwapchain().GetExtent();
   uint32_t ray_count = extent.width * extent.height;
-  const static uint32_t kRaysPerGroup = 64;
+  const static uint32_t kRaysPerGroup = 32;
   pipeline_.RecordDispatch(primary_cmd, ray_count / kRaysPerGroup, 1, 1);
 }
 
@@ -429,6 +429,10 @@ bool RayTracer2::Draw() {
     return false;
   }
   return true;
+}
+
+void RayTracer2::SetCameraPosition(glm::vec3 pos) {
+  camera_state_.SetPos(pos);
 }
 
 RayTracer2::~RayTracer2() {

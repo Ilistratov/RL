@@ -56,7 +56,7 @@ static void DisabledCursorPosCallback(GLFWwindow* window,
   g_input_state.mouse.pos_y = pos_y / size_y;
 }
 
-static void MouseButtonCallbeck(GLFWwindow* /*window*/,
+static void MouseButtonCallback(GLFWwindow* /*window*/,
                                 int button,
                                 int action,
                                 int mods) {
@@ -77,7 +77,7 @@ void InputManager::Init() {
   GLFWwindow* window = base::Base::Get().GetWindow().GetWindow();
   glfwSetKeyCallback(window, KeyCallback);
   glfwSetCursorPosCallback(window, NormalCursorPosCallback);
-  glfwSetMouseButtonCallback(window, MouseButtonCallbeck);
+  glfwSetMouseButtonCallback(window, MouseButtonCallback);
 }
 
 KeyState InputManager::GetKeyState(int key) {

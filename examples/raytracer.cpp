@@ -314,6 +314,10 @@ bool RayTracer::Draw() {
   return true;
 }
 
+void RayTracer::SetCameraPosition(glm::vec3 pos) {
+  g_main_camera_state.SetPos(pos);
+}
+
 RayTracer::~RayTracer() {
   auto device = base::Base::Get().GetContext().GetDevice();
   device.waitIdle();

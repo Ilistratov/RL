@@ -19,7 +19,7 @@ struct RayTraversalState {
   Interception intersection;
 };
 
-const static uint kTraversThreadsPerGroup = 64;
+const static uint kTraversThreadsPerGroup = 32;
 
 struct VectorizedRayTraversalState {
   float4 ray_origin[kTraversThreadsPerGroup];
