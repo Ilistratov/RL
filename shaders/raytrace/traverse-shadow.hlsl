@@ -39,19 +39,31 @@ float4 CalcLightAtInterseption(Interception primary_insp, Ray primary_ray, Inter
   return float4(materialColor * (diffuse + specular + 0.2), 1.0);
 }
 
+float4 CounterToHeat(uint counter) {
+  float val = counter / 100.0;
+  return float4(clamp(val, 0, 1), clamp(val - 1, 0, 1), clamp(val - 2, 0, 1), 1.0);
+}
+
 [numthreads(32, 1, 1)]
 void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_GroupIndex) {
   uint pix_state_idx = g_shadow_ray_ord[global_tidx.x];
+  //uint pix_state_idx = global_tidx.x;
   uint2 pix_coord = g_per_pixel_state[pix_state_idx].pix_cord;
   Ray primary_ray;
   primary_ray.origin = g_traversal_state[pix_state_idx].ray_origin.xyz;
   primary_ray.direction = g_traversal_state[pix_state_idx].ray_direction.xyz;
   Interception primary_insp = g_traversal_state[pix_state_idx].intersection;
+  l_traversal_counters[in_group_tidx] = 0;
   if (primary_insp.t > 0) {
     Ray shadow_ray;
     shadow_ray.origin = g_shadow_ray_traversal_state[pix_state_idx].ray_origin.xyz;
     shadow_ray.direction = g_shadow_ray_traversal_state[pix_state_idx].ray_direction.xyz;
-    Interception shadow_insp = CastRay(shadow_ray, in_group_tidx);
+    Interception shadow_insp;
+    if (length(shadow_ray.direction) == 0) {
+      shadow_insp.t = -1;
+    } else {
+      shadow_insp = CastRay(shadow_ray, in_group_tidx);
+    }
     g_color_target[pix_coord] = CalcLightAtInterseption(primary_insp, primary_ray, shadow_insp, shadow_ray);
     g_depth_target[pix_coord] = 1 - exp(-1 / primary_insp.t);
   } else {
@@ -61,4 +73,5 @@ void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_Group
     g_color_target[pix_coord] = skybox_color;
     g_depth_target[pix_coord] = 0;
   }
+  //g_color_target[pix_coord] *= CounterToHeat(l_traversal_counters[in_group_tidx]);
 }

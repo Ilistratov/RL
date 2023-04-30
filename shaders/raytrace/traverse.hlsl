@@ -72,6 +72,9 @@ const static uint kTraversalOrderLeftRight = 4;
 const static uint kTraversalOrderRightLeft = 5;
 const static uint kTraversalOrderMax = 6;
 
+
+groupshared uint l_traversal_counters[kTraverseThreadsPerGroup];
+
 groupshared uint l_traversal_order_votes[kTraverseThreadsPerGroup];
 const static uint kMaxBVHDepth = 64;
 groupshared uint l_traversal_order_stack[kMaxBVHDepth];
@@ -130,6 +133,17 @@ uint VoteForTraversalOrder(uint t_idx, uint vote) {
   return kTraversalOrderRightLeft;
 }
 
+bool VoteForTraversalOmission(uint t_idx, uint vote) {
+  l_traversal_order_votes[t_idx] = vote;
+  GroupMemoryBarrierWithGroupSync();
+  for (uint vote_idx = 0; vote_idx < kTraverseThreadsPerGroup; vote_idx++) {
+    if (l_traversal_order_votes[vote_idx] == 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 uint DecideNext(uint left, uint right, uint parent, uint prv, uint order) {
   switch (order) {
     case kTraversalOrderOnlyLeft: {
@@ -153,9 +167,14 @@ Interception CastRay(Ray r, uint t_idx) {
   cur_res.t = -1;
   l_traversal_order_stack[0] = kTraversalOrderUndefined;
   l_traversal_order_stack[t_idx] = 0;
+  l_traversal_counters[t_idx] = 0;
   for (uint cur_vrt = 0, prv_vrt = (uint)-1, nxt_vrt = (uint)-1; cur_vrt != (uint)-1; prv_vrt = cur_vrt, cur_vrt = nxt_vrt) {
     GroupMemoryBarrierWithGroupSync();
     nxt_vrt = g_bvh_buffer[cur_vrt].parent;
+    uint vrt_ommitable = (uint)IsTraversalOmittable(g_bvh_buffer[cur_vrt].bounds.GetInspT(r), cur_res.t);
+    if (VoteForTraversalOmission(t_idx, vrt_ommitable)) {
+      continue;
+    }
 
     uint current_depth = g_bvh_buffer[cur_vrt].bvh_level;
     if (current_depth == (uint)(-1)) {
