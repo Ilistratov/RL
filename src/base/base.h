@@ -11,10 +11,10 @@
 namespace base {
 
 struct BaseConfig {
-  std::vector<const char*> instance_extensions;
-  std::vector<const char*> instance_layers;
-  const char* app_name;
-  const char* engine_name;
+  std::vector<const char *> instance_extensions;
+  std::vector<const char *> instance_layers;
+  const char *app_name;
+  const char *engine_name;
 };
 
 /*
@@ -33,27 +33,26 @@ class Base {
 
   Base() = default;
 
-  void InitInstance(BaseConfig& config);
+  void InitInstance(BaseConfig &config);
   void InitDebugLogger();
-  void InitBase(BaseConfig& config);
+  void InitBase(BaseConfig &config);
   void CreateWindow(vk::Extent2D window_extent);
-  void CreateContext(ContextConfig& context_config);
+  void CreateContext(ContextConfig &context_config);
   void CreateSwapchain();
 
- public:
-  static Base& Get();
+public:
+  static Base &Get();
 
-  void Init(BaseConfig config,
-            vk::Extent2D window_extent,
+  void Init(BaseConfig config, vk::Extent2D window_extent,
             ContextConfig context_config);
 
-  Window& GetWindow();
-  Context& GetContext();
-  Swapchain& GetSwapchain();
+  Window &GetWindow();
+  Context &GetContext();
+  Swapchain &GetSwapchain();
 
   vk::Instance GetInstance() const;
 
   ~Base();
 };
 
-}  // namespace base
+} // namespace base

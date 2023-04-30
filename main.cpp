@@ -29,27 +29,27 @@ void Run() {
       render_data::BVH(render_data::BVH::BuildPrimitivesBB(mesh), 24, 8);
   mesh.ReorderPrimitives(bvh.GetPrimitiveOrd());
   examples::RayTracer2 renderer(mesh, bvh);
-  auto& window = base::Base::Get().GetWindow();
+  auto &window = base::Base::Get().GetWindow();
   glm::vec3 pos = {0, 0, 0};
   renderer.SetCameraPosition(pos);
-  int skip = 10;
+  // int skip = 10;
   while (!glfwWindowShouldClose(window.GetWindow())) {
     glfwPollEvents();
     if (!renderer.Draw()) {
       LOG << "Failed to draw";
       break;
     }
-    utill::MouseState ms = utill::InputManager::GetMouseState();
-    if (ms.lmb_state.action == GLFW_PRESS && skip == 0) {
-      pos.z += 25;
-      skip = 10;
-    } else if (ms.rmb_state.action == GLFW_PRESS && skip == 0) {
-      pos.z -= 25;
-      skip = 10;
-    } else if (skip > 0) {
-      --skip;
-    }
-    renderer.SetCameraPosition(pos);
+    // utill::MouseState ms = utill::InputManager::GetMouseState();
+    // if (ms.lmb_state.action == GLFW_PRESS && skip == 0) {
+    //   pos.z += 25;
+    //   skip = 10;
+    // } else if (ms.rmb_state.action == GLFW_PRESS && skip == 0) {
+    //   pos.z -= 25;
+    //   skip = 10;
+    // } else if (skip > 0) {
+    //   --skip;
+    // }
+    // renderer.SetCameraPosition(pos);
   }
 }
 

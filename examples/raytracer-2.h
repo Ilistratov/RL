@@ -13,6 +13,7 @@
 #include "gpu_resources/physical_buffer.h"
 #include "gpu_resources/resource_access_syncronizer.h"
 #include "gpu_resources/resource_manager.h"
+#include "mp_primitives/sort.h"
 #include "pipeline_handler/compute.h"
 #include "pipeline_handler/descriptor_binding.h"
 #include "pipeline_handler/descriptor_pool.h"
@@ -27,98 +28,97 @@
 namespace examples {
 
 class TransferToGPUPass : public render_graph::Pass {
- public:
+public:
   struct TransferRequest {
-    gpu_resources::Buffer* dst_buffer = nullptr;
-    void* data_source = nullptr;
+    gpu_resources::Buffer *dst_buffer = nullptr;
+    void *data_source = nullptr;
     vk::DeviceSize size = 0;
   };
 
   TransferToGPUPass() = default;
   TransferToGPUPass(std::vector<TransferRequest> transfer_requests,
-                    gpu_resources::ResourceManager& resource_manager);
+                    gpu_resources::ResourceManager &resource_manager);
 
-  TransferToGPUPass(TransferToGPUPass const&) = delete;
-  void operator=(TransferToGPUPass const&) = delete;
+  TransferToGPUPass(TransferToGPUPass const &) = delete;
+  void operator=(TransferToGPUPass const &) = delete;
 
-  TransferToGPUPass(TransferToGPUPass&&) noexcept;
-  void operator=(TransferToGPUPass&&) noexcept;
-  void Swap(TransferToGPUPass&) noexcept;
+  TransferToGPUPass(TransferToGPUPass &&) noexcept;
+  void operator=(TransferToGPUPass &&) noexcept;
+  void Swap(TransferToGPUPass &) noexcept;
 
- private:
+private:
   void OnResourcesInitialized() noexcept override;
   void OnPreRecord() override;
   void OnRecord(vk::CommandBuffer primary_cmd,
-                const std::vector<vk::CommandBuffer>&) noexcept override;
+                const std::vector<vk::CommandBuffer> &) noexcept override;
 
   vk::DeviceSize AllignedOffset(vk::DeviceSize offset);
 
   std::vector<TransferRequest> transfer_requests_;
-  gpu_resources::Buffer* staging_buffer_;
+  gpu_resources::Buffer *staging_buffer_;
   vk::DeviceSize alingnment_ = 0x1;
 };
 
 class RayGenPass : public render_graph::Pass {
- public:
+public:
   RayGenPass() = default;
-  RayGenPass(const shader::Loader& raygen_shader,
-             pipeline_handler::DescriptorSet* d_set,
-             const CameraInfo* camera_info_source,
-             gpu_resources::Buffer* ray_traversal_state,
-             gpu_resources::Buffer* per_pixel_state);
+  RayGenPass(const shader::Loader &raygen_shader,
+             pipeline_handler::DescriptorSet *d_set,
+             const CameraInfo *camera_info_source,
+             gpu_resources::Buffer *ray_traversal_state,
+             gpu_resources::Buffer *per_pixel_state);
 
-  RayGenPass(RayGenPass&&) noexcept;
-  void operator=(RayGenPass&&) noexcept;
-  void Swap(RayGenPass&) noexcept;
+  RayGenPass(RayGenPass &&) noexcept;
+  void operator=(RayGenPass &&) noexcept;
+  void Swap(RayGenPass &) noexcept;
 
- private:
+private:
   void OnPreRecord() override;
   void OnRecord(vk::CommandBuffer primary_cmd,
-                const std::vector<vk::CommandBuffer>&) noexcept override;
+                const std::vector<vk::CommandBuffer> &) noexcept override;
 
   pipeline_handler::Compute pipeline_;
 
   vk::PushConstantRange camera_info_pc_range_ = {};
-  const CameraInfo* camera_info_source_ = nullptr;
-  gpu_resources::Buffer* ray_traversal_state_ = nullptr;
-  gpu_resources::Buffer* per_pixel_state_ = nullptr;
+  const CameraInfo *camera_info_source_ = nullptr;
+  gpu_resources::Buffer *ray_traversal_state_ = nullptr;
+  gpu_resources::Buffer *per_pixel_state_ = nullptr;
 };
 
 class DebugRenderPass : public render_graph::Pass {
- public:
+public:
   DebugRenderPass() = default;
-  DebugRenderPass(const shader::Loader& debug_render_shader,
-                  pipeline_handler::DescriptorSet* d_set,
-                  gpu_resources::Image* color_target,
-                  gpu_resources::Buffer* ray_traversal_state,
-                  gpu_resources::Buffer* per_pixel_state);
+  DebugRenderPass(const shader::Loader &debug_render_shader,
+                  pipeline_handler::DescriptorSet *d_set,
+                  gpu_resources::Image *color_target,
+                  gpu_resources::Buffer *ray_traversal_state,
+                  gpu_resources::Buffer *per_pixel_state);
 
-  DebugRenderPass(DebugRenderPass&&) noexcept;
-  void operator=(DebugRenderPass&&) noexcept;
-  void Swap(DebugRenderPass&) noexcept;
+  DebugRenderPass(DebugRenderPass &&) noexcept;
+  void operator=(DebugRenderPass &&) noexcept;
+  void Swap(DebugRenderPass &) noexcept;
 
- private:
+private:
   void OnPreRecord() override;
   void OnRecord(vk::CommandBuffer primary_cmd,
-                const std::vector<vk::CommandBuffer>&) noexcept override;
+                const std::vector<vk::CommandBuffer> &) noexcept override;
 
   pipeline_handler::Compute pipeline_;
-  gpu_resources::Image* color_target_ = nullptr;
-  gpu_resources::Buffer* ray_traversal_state_ = nullptr;
-  gpu_resources::Buffer* per_pixel_state_ = nullptr;
+  gpu_resources::Image *color_target_ = nullptr;
+  gpu_resources::Buffer *ray_traversal_state_ = nullptr;
+  gpu_resources::Buffer *per_pixel_state_ = nullptr;
 };
 
-template <uint32_t N>
-class BufferBatch {
-  gpu_resources::Buffer* buffers_[N];
-  pipeline_handler::DescriptorSet* dset_ = nullptr;
+template <uint32_t N> class BufferBatch {
+  std::array<gpu_resources::Buffer *, N> buffers_;
+  pipeline_handler::DescriptorSet *dset_ = nullptr;
 
- public:
+public:
   BufferBatch() = default;
-  BufferBatch(gpu_resources::Buffer* buffers[N]) {
+  BufferBatch(std::array<gpu_resources::Buffer *, N> buffers) {
+    buffers_ = buffers;
     for (uint32_t idx = 0; idx < N; idx++) {
       DCHECK(buffers[idx] != nullptr);
-      buffers_[idx] = buffers[idx];
     }
   }
 
@@ -135,65 +135,110 @@ class BufferBatch {
     }
   }
 
-  pipeline_handler::DescriptorSet* GetDSet() const { return dset_; }
+  pipeline_handler::DescriptorSet *GetDSet() const { return dset_; }
 
-  void SetDSet(pipeline_handler::DescriptorSet* dset) {
+  void SetDSet(pipeline_handler::DescriptorSet *dset) {
     DCHECK(dset != nullptr);
     DCHECK(dset_ == nullptr) << "Descriptor set is already set";
     dset_ = dset;
     for (uint32_t idx = 0; idx < N; idx++) {
-      dset_->GetBufferBinding(idx)->SetBuffer(buffers_[idx], true);
+      auto binding = dset_->GetBufferBinding(idx);
+      if (binding == nullptr) {
+        DLOG << "Warning, binding #" << idx
+             << " is unused, ignoring corresponding buffer";
+      } else {
+        binding->SetBuffer(buffers_[idx], true);
+      }
     }
   }
 };
 
 class TracePrimaryPass : public render_graph::Pass {
- public:
+public:
   TracePrimaryPass() = default;
-  TracePrimaryPass(const shader::Loader& trace_primary_shader,
-                   pipeline_handler::DescriptorPool& pool,
-                   gpu_resources::Image* color_target,
-                   gpu_resources::Image* depth_target,
-                   gpu_resources::Buffer* ray_traversal_state,
-                   gpu_resources::Buffer* per_pixel_state,
-                   BufferBatch<4> geometry_buffers);
+  TracePrimaryPass(const shader::Loader &trace_primary_shader,
+                   pipeline_handler::DescriptorPool &pool,
+                   BufferBatch<4> geometry_buffers,
+                   gpu_resources::Buffer *ray_traversal_state,
+                   gpu_resources::Buffer *per_pixel_state,
+                   gpu_resources::Buffer *shadow_ray_traversal_state,
+                   gpu_resources::Buffer *shadow_ray_hash);
 
-  TracePrimaryPass(TracePrimaryPass&&) noexcept;
-  void operator=(TracePrimaryPass&&) noexcept;
-  void Swap(TracePrimaryPass&) noexcept;
+  TracePrimaryPass(TracePrimaryPass &&) noexcept;
+  void operator=(TracePrimaryPass &&) noexcept;
+  void Swap(TracePrimaryPass &) noexcept;
 
- private:
+private:
   void OnPreRecord() override;
   void OnRecord(vk::CommandBuffer primary_cmd,
-                const std::vector<vk::CommandBuffer>&) noexcept override;
+                const std::vector<vk::CommandBuffer> &) noexcept override;
 
   pipeline_handler::Compute pipeline_;
-  gpu_resources::Image* color_target_ = nullptr;
-  gpu_resources::Image* depth_target_ = nullptr;
-  gpu_resources::Buffer* ray_traversal_state_ = nullptr;
-  gpu_resources::Buffer* per_pixel_state_ = nullptr;
   BufferBatch<4> geometry_buffers_;
+  gpu_resources::Buffer *ray_traversal_state_ = nullptr;
+  gpu_resources::Buffer *per_pixel_state_ = nullptr;
+  gpu_resources::Buffer *shadow_ray_traversal_state_ = nullptr;
+  gpu_resources::Buffer *shadow_ray_hash_ = nullptr;
+};
+
+class TraceShadowPass : public render_graph::Pass {
+public:
+  TraceShadowPass() = default;
+  TraceShadowPass(const shader::Loader &trace_shadow_shader,
+                  pipeline_handler::DescriptorPool &pool,
+                  BufferBatch<4> geometry_buffers,
+                  gpu_resources::Buffer *ray_traversal_state,
+                  gpu_resources::Buffer *per_pixel_state,
+                  gpu_resources::Image *color_target,
+                  gpu_resources::Image *depth_target,
+                  gpu_resources::Buffer *shadow_ray_traversal_state,
+                  gpu_resources::Buffer *shadow_ray_ord);
+
+  TraceShadowPass(TraceShadowPass &&) noexcept;
+  void operator=(TraceShadowPass &&) noexcept;
+  void Swap(TraceShadowPass &) noexcept;
+
+private:
+  void OnPreRecord() override;
+  void OnRecord(vk::CommandBuffer primary_cmd,
+                const std::vector<vk::CommandBuffer> &) noexcept override;
+
+  pipeline_handler::Compute pipeline_;
+  BufferBatch<4> geometry_buffers_;
+  gpu_resources::Buffer *ray_traversal_state_ = nullptr;
+  gpu_resources::Buffer *per_pixel_state_ = nullptr;
+  gpu_resources::Image *color_target_ = nullptr;
+  gpu_resources::Image *depth_target_ = nullptr;
+  gpu_resources::Buffer *shadow_ray_traversal_state_ = nullptr;
+  gpu_resources::Buffer *shadow_ray_ord_ = nullptr;
 };
 
 class RayTracer2 {
-  TransferToGPUPass transfer_;
-  RayGenPass raygen_;
-  TracePrimaryPass trace_primary_;
-  // DebugRenderPass debug_render_;
-  BlitToSwapchainPass present_;
-  render_graph::RenderGraph render_graph_;
-  vk::Semaphore ready_to_present_;
-  MainCamera camera_state_;
-
- public:
-  RayTracer2(render_data::Mesh const& mesh, render_data::BVH const& bvh);
-  RayTracer2(const RayTracer2&) = delete;
-  void operator=(const RayTracer2&) = delete;
+public:
+  RayTracer2(render_data::Mesh const &mesh, render_data::BVH const &bvh);
+  RayTracer2(const RayTracer2 &) = delete;
+  void operator=(const RayTracer2 &) = delete;
 
   bool Draw();
   void SetCameraPosition(glm::vec3 pos);
 
   ~RayTracer2();
+
+private:
+  void PrepareGeometryBuffersTransfer(render_data::Mesh const &mesh,
+                                      render_data::BVH const &bvh,
+                                      BufferBatch<4> &buffers);
+
+  TransferToGPUPass transfer_;
+  RayGenPass raygen_;
+  TracePrimaryPass trace_primary_;
+  mp_primitives::Sort shadow_ray_sort_;
+  TraceShadowPass trace_shadow_;
+  // DebugRenderPass debug_render_;
+  BlitToSwapchainPass present_;
+  render_graph::RenderGraph render_graph_;
+  vk::Semaphore ready_to_present_;
+  MainCamera camera_state_;
 };
 
-}  // namespace examples
+} // namespace examples

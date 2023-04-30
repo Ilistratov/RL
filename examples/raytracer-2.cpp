@@ -1,5 +1,6 @@
 #include "raytracer-2.h"
 
+#include <array>
 #include <stdint.h>
 #include <type_traits>
 #include <vector>
@@ -25,15 +26,20 @@
 
 namespace examples {
 
-const static char* kRayGenShaderPath = "shaders/raytrace/raygen.spv";
-const static char* kTraversePrimaryShaderPath =
+const static char *kRayGenShaderPath = "shaders/raytrace/raygen.spv";
+const static char *kTraversePrimaryShaderPath =
     "shaders/raytrace/traverse-primary.spv";
-const static char* kDebugRendererShaderPath =
-    "shaders/raytrace/debug_render.spv";
+const static char *kTraverseShadowShaderPath =
+    "shaders/raytrace/traverse-shadow.spv";
+// const static char *kDebugRendererShaderPath =
+//     "shaders/raytrace/debug_render.spv";
+
+const static uint32_t kTraversalStateSize = 48;
+const static uint32_t kPerPixelStateSize = 16;
 
 TransferToGPUPass::TransferToGPUPass(
     std::vector<TransferRequest> transfer_requests,
-    gpu_resources::ResourceManager& resource_manager)
+    gpu_resources::ResourceManager &resource_manager)
     : transfer_requests_(transfer_requests) {
   DCHECK(!transfer_requests_.empty());
   alingnment_ = base::Base::Get()
@@ -70,16 +76,16 @@ TransferToGPUPass::TransferToGPUPass(
   staging_buffer_ = resource_manager.AddBuffer(transfer_src_props);
 }
 
-TransferToGPUPass::TransferToGPUPass(TransferToGPUPass&& other) noexcept {
+TransferToGPUPass::TransferToGPUPass(TransferToGPUPass &&other) noexcept {
   Swap(other);
 }
 
-void TransferToGPUPass::operator=(TransferToGPUPass&& other) noexcept {
+void TransferToGPUPass::operator=(TransferToGPUPass &&other) noexcept {
   TransferToGPUPass tmp(std::move(other));
   Swap(tmp);
 }
 
-void TransferToGPUPass::Swap(TransferToGPUPass& other) noexcept {
+void TransferToGPUPass::Swap(TransferToGPUPass &other) noexcept {
   Pass::Swap(other);
   transfer_requests_.swap(other.transfer_requests_);
   std::swap(staging_buffer_, other.staging_buffer_);
@@ -88,7 +94,7 @@ void TransferToGPUPass::Swap(TransferToGPUPass& other) noexcept {
 
 void TransferToGPUPass::OnResourcesInitialized() noexcept {
   vk::DeviceSize dst_offset = 0;
-  for (auto& transfer_request : transfer_requests_) {
+  for (auto &transfer_request : transfer_requests_) {
     dst_offset = staging_buffer_->LoadDataFromPtr(
         transfer_request.data_source, transfer_request.size, dst_offset);
     dst_offset = AllignedOffset(dst_offset);
@@ -105,7 +111,7 @@ void TransferToGPUPass::OnPreRecord() {
   gpu_resources::ResourceAccess transfer_dst_access;
   transfer_dst_access.access_flags = vk::AccessFlagBits2::eTransferWrite;
   transfer_dst_access.stage_flags = vk::PipelineStageFlagBits2KHR::eTransfer;
-  for (auto& transfer_request : transfer_requests_) {
+  for (auto &transfer_request : transfer_requests_) {
     transfer_request.dst_buffer->DeclareAccess(transfer_dst_access,
                                                GetPassIdx());
   }
@@ -117,9 +123,9 @@ void TransferToGPUPass::OnPreRecord() {
 
 void TransferToGPUPass::OnRecord(
     vk::CommandBuffer primary_cmd,
-    const std::vector<vk::CommandBuffer>&) noexcept {
+    const std::vector<vk::CommandBuffer> &) noexcept {
   vk::DeviceSize src_offset = 0;
-  for (auto& transfer_request : transfer_requests_) {
+  for (auto &transfer_request : transfer_requests_) {
     gpu_resources::Buffer::RecordCopy(primary_cmd, *staging_buffer_,
                                       *transfer_request.dst_buffer, src_offset,
                                       0, transfer_request.size);
@@ -135,11 +141,11 @@ vk::DeviceSize TransferToGPUPass::AllignedOffset(vk::DeviceSize offset) {
   return offset;
 }
 
-RayGenPass::RayGenPass(const shader::Loader& raygen_shader,
-                       pipeline_handler::DescriptorSet* d_set,
-                       const CameraInfo* camera_info_source,
-                       gpu_resources::Buffer* ray_traversal_state,
-                       gpu_resources::Buffer* per_pixel_state)
+RayGenPass::RayGenPass(const shader::Loader &raygen_shader,
+                       pipeline_handler::DescriptorSet *d_set,
+                       const CameraInfo *camera_info_source,
+                       gpu_resources::Buffer *ray_traversal_state,
+                       gpu_resources::Buffer *per_pixel_state)
     : camera_info_pc_range_(raygen_shader.GeneratePushConstantRanges()[0]),
       camera_info_source_(camera_info_source),
       ray_traversal_state_(ray_traversal_state),
@@ -156,21 +162,19 @@ RayGenPass::RayGenPass(const shader::Loader& raygen_shader,
   buffer_properties.size = pixel_count_ * 4 * 4;
   per_pixel_state_->RequireProperties(buffer_properties);
 
-  d_set->BulkBind(std::vector<gpu_resources::Buffer*>{ray_traversal_state_,
-                                                      per_pixel_state_});
+  d_set->BulkBind(std::vector<gpu_resources::Buffer *>{ray_traversal_state_,
+                                                       per_pixel_state_});
   pipeline_ = pipeline_handler::Compute(raygen_shader, {d_set});
 }
 
-RayGenPass::RayGenPass(RayGenPass&& other) noexcept {
-  Swap(other);
-}
+RayGenPass::RayGenPass(RayGenPass &&other) noexcept { Swap(other); }
 
-void RayGenPass::operator=(RayGenPass&& other) noexcept {
+void RayGenPass::operator=(RayGenPass &&other) noexcept {
   RayGenPass tmp(std::move(other));
   Swap(tmp);
 }
 
-void RayGenPass::Swap(RayGenPass& other) noexcept {
+void RayGenPass::Swap(RayGenPass &other) noexcept {
   pipeline_.Swap(other.pipeline_);
   std::swap(camera_info_pc_range_, other.camera_info_pc_range_);
   std::swap(camera_info_source_, other.camera_info_source_);
@@ -187,8 +191,8 @@ void RayGenPass::OnPreRecord() {
 }
 
 void RayGenPass::OnRecord(vk::CommandBuffer primary_cmd,
-                          const std::vector<vk::CommandBuffer>&) noexcept {
-  auto& swapchain = base::Base::Get().GetSwapchain();
+                          const std::vector<vk::CommandBuffer> &) noexcept {
+  auto &swapchain = base::Base::Get().GetSwapchain();
   primary_cmd.pushConstants(pipeline_.GetLayout(),
                             vk::ShaderStageFlagBits::eCompute,
                             camera_info_pc_range_.offset,
@@ -197,13 +201,12 @@ void RayGenPass::OnRecord(vk::CommandBuffer primary_cmd,
                            swapchain.GetExtent().height / 8, 1);
 }
 
-DebugRenderPass::DebugRenderPass(const shader::Loader& debug_render_shader,
-                                 pipeline_handler::DescriptorSet* d_set,
-                                 gpu_resources::Image* color_target,
-                                 gpu_resources::Buffer* ray_traversal_state,
-                                 gpu_resources::Buffer* per_pixel_state)
-    : color_target_(color_target),
-      ray_traversal_state_(ray_traversal_state),
+DebugRenderPass::DebugRenderPass(const shader::Loader &debug_render_shader,
+                                 pipeline_handler::DescriptorSet *d_set,
+                                 gpu_resources::Image *color_target,
+                                 gpu_resources::Buffer *ray_traversal_state,
+                                 gpu_resources::Buffer *per_pixel_state)
+    : color_target_(color_target), ray_traversal_state_(ray_traversal_state),
       per_pixel_state_(per_pixel_state) {
   gpu_resources::ImageProperties image_properties;
   color_target_->RequireProperties(image_properties);
@@ -212,23 +215,23 @@ DebugRenderPass::DebugRenderPass(const shader::Loader& debug_render_shader,
   ray_traversal_state_->RequireProperties(buffer_properties);
   per_pixel_state_->RequireProperties(buffer_properties);
 
-  d_set->BulkBind(std::vector<gpu_resources::Buffer*>{ray_traversal_state,
-                                                      per_pixel_state_},
+  d_set->BulkBind(std::vector<gpu_resources::Buffer *>{ray_traversal_state,
+                                                       per_pixel_state_},
                   true);
   d_set->BulkBind({color_target_}, true);
   pipeline_ = pipeline_handler::Compute(debug_render_shader, {d_set});
 }
 
-DebugRenderPass::DebugRenderPass(DebugRenderPass&& other) noexcept {
+DebugRenderPass::DebugRenderPass(DebugRenderPass &&other) noexcept {
   Swap(other);
 }
 
-void DebugRenderPass::operator=(DebugRenderPass&& other) noexcept {
+void DebugRenderPass::operator=(DebugRenderPass &&other) noexcept {
   DebugRenderPass tmp(std::move(other));
   Swap(tmp);
 }
 
-void DebugRenderPass::Swap(DebugRenderPass& other) noexcept {
+void DebugRenderPass::Swap(DebugRenderPass &other) noexcept {
   pipeline_.Swap(other.pipeline_);
   std::swap(color_target_, other.color_target_);
   std::swap(ray_traversal_state_, other.ray_traversal_state_);
@@ -247,72 +250,72 @@ void DebugRenderPass::OnPreRecord() {
   color_target_->DeclareAccess(access, GetPassIdx());
 }
 
-void DebugRenderPass::OnRecord(vk::CommandBuffer primary_cmd,
-                               const std::vector<vk::CommandBuffer>&) noexcept {
-  auto& swapchain = base::Base::Get().GetSwapchain();
+void DebugRenderPass::OnRecord(
+    vk::CommandBuffer primary_cmd,
+    const std::vector<vk::CommandBuffer> &) noexcept {
+  auto &swapchain = base::Base::Get().GetSwapchain();
   pipeline_.RecordDispatch(
       primary_cmd,
       (swapchain.GetExtent().width * swapchain.GetExtent().height) / 64, 1, 1);
 }
 
-TracePrimaryPass::TracePrimaryPass(const shader::Loader& trace_primary_shader,
-                                   pipeline_handler::DescriptorPool& pool,
-                                   gpu_resources::Image* color_target,
-                                   gpu_resources::Image* depth_target,
-                                   gpu_resources::Buffer* ray_traversal_state,
-                                   gpu_resources::Buffer* per_pixel_state,
-                                   BufferBatch<4> geometry_buffers)
-    : color_target_(color_target),
-      depth_target_(depth_target),
+TracePrimaryPass::TracePrimaryPass(
+    const shader::Loader &trace_primary_shader,
+    pipeline_handler::DescriptorPool &pool, BufferBatch<4> geometry_buffers,
+    gpu_resources::Buffer *ray_traversal_state,
+    gpu_resources::Buffer *per_pixel_state,
+    gpu_resources::Buffer *shadow_ray_traversal_state,
+    gpu_resources::Buffer *shadow_ray_hash)
+    : geometry_buffers_(geometry_buffers),
       ray_traversal_state_(ray_traversal_state),
       per_pixel_state_(per_pixel_state),
-      geometry_buffers_(geometry_buffers) {
-  gpu_resources::ImageProperties required_image_props;
-  required_image_props.usage_flags = vk::ImageUsageFlagBits::eStorage;
-  color_target_->RequireProperties(required_image_props);
-  depth_target_->RequireProperties(required_image_props);
+      shadow_ray_traversal_state_(shadow_ray_traversal_state),
+      shadow_ray_hash_(shadow_ray_hash) {
+  vk::Extent2D swapchain_ext = base::Base::Get().GetSwapchain().GetExtent();
+  uint32_t ray_count = swapchain_ext.width * swapchain_ext.height;
+  ray_traversal_state_->RequireProperties(
+      {.size = ray_count * kTraversalStateSize});
+  per_pixel_state_->RequireProperties({.size = ray_count * kPerPixelStateSize});
+  shadow_ray_traversal_state_->RequireProperties(
+      {.size = ray_count * kTraversalStateSize});
+  shadow_ray_hash_->RequireProperties({.size = ray_count * 4});
 
-  pipeline_handler::DescriptorSet* ray_trace_state_dset =
+  pipeline_handler::DescriptorSet *primary_ray_state =
       trace_primary_shader.GenerateDescriptorSet(pool, 1);
-  ray_trace_state_dset->BulkBind(
-      std::vector<gpu_resources::Buffer*>{ray_traversal_state, per_pixel_state},
+  primary_ray_state->BulkBind(
+      std::vector<gpu_resources::Buffer *>{ray_traversal_state_,
+                                           per_pixel_state_},
       true);
-
-  pipeline_handler::DescriptorSet* image_target_dset =
+  pipeline_handler::DescriptorSet *shadow_ray_state =
       trace_primary_shader.GenerateDescriptorSet(pool, 2);
-  image_target_dset->BulkBind(
-      std::vector<gpu_resources::Image*>{color_target_, depth_target_}, true);
-
+  shadow_ray_state->BulkBind(
+      std::vector<gpu_resources::Buffer *>{shadow_ray_traversal_state_,
+                                           shadow_ray_hash_},
+      true);
   pipeline_ = pipeline_handler::Compute(
       trace_primary_shader,
-      {geometry_buffers_.GetDSet(), ray_trace_state_dset, image_target_dset});
+      {geometry_buffers_.GetDSet(), primary_ray_state, shadow_ray_state});
 }
 
-TracePrimaryPass::TracePrimaryPass(TracePrimaryPass&& other) noexcept {
+TracePrimaryPass::TracePrimaryPass(TracePrimaryPass &&other) noexcept {
   Swap(other);
 }
 
-void TracePrimaryPass::operator=(TracePrimaryPass&& other) noexcept {
+void TracePrimaryPass::operator=(TracePrimaryPass &&other) noexcept {
   TracePrimaryPass tmp(std::move(other));
   Swap(tmp);
 }
 
-void TracePrimaryPass::Swap(TracePrimaryPass& other) noexcept {
+void TracePrimaryPass::Swap(TracePrimaryPass &other) noexcept {
   pipeline_.Swap(other.pipeline_);
-  std::swap(color_target_, other.color_target_);
-  std::swap(depth_target_, other.depth_target_);
+  std::swap(geometry_buffers_, other.geometry_buffers_);
   std::swap(ray_traversal_state_, other.ray_traversal_state_);
   std::swap(per_pixel_state_, other.per_pixel_state_);
-  std::swap(geometry_buffers_, other.geometry_buffers_);
+  std::swap(shadow_ray_traversal_state_, other.shadow_ray_traversal_state_);
+  std::swap(shadow_ray_hash_, other.shadow_ray_hash_);
 }
 
 void TracePrimaryPass::OnPreRecord() {
-  gpu_resources::ResourceAccess image_access{
-      vk::PipelineStageFlagBits2KHR::eComputeShader,
-      vk::AccessFlagBits2KHR::eShaderStorageWrite, vk::ImageLayout::eGeneral};
-  color_target_->DeclareAccess(image_access, GetPassIdx());
-  depth_target_->DeclareAccess(image_access, GetPassIdx());
-
   gpu_resources::ResourceAccess static_data_access{
       vk::PipelineStageFlagBits2KHR::eComputeShader,
       vk::AccessFlagBits2KHR::eShaderStorageRead};
@@ -320,103 +323,170 @@ void TracePrimaryPass::OnPreRecord() {
 
   gpu_resources::ResourceAccess ray_trace_state_access{
       vk::PipelineStageFlagBits2KHR::eComputeShader,
-      vk::AccessFlagBits2KHR::eShaderStorageRead |
-          vk::AccessFlagBits2KHR::eShaderStorageWrite};
+      vk::AccessFlagBits2KHR::eShaderStorageWrite |
+          vk::AccessFlagBits2KHR::eShaderStorageRead};
   ray_traversal_state_->DeclareAccess(ray_trace_state_access, GetPassIdx());
   per_pixel_state_->DeclareAccess(ray_trace_state_access, GetPassIdx());
+  shadow_ray_traversal_state_->DeclareAccess(ray_trace_state_access,
+                                             GetPassIdx());
+  shadow_ray_hash_->DeclareAccess(ray_trace_state_access, GetPassIdx());
 }
 
 void TracePrimaryPass::OnRecord(
     vk::CommandBuffer primary_cmd,
-    const std::vector<vk::CommandBuffer>&) noexcept {
+    const std::vector<vk::CommandBuffer> &) noexcept {
   vk::Extent2D extent = base::Base::Get().GetSwapchain().GetExtent();
   uint32_t ray_count = extent.width * extent.height;
   const static uint32_t kRaysPerGroup = 32;
   pipeline_.RecordDispatch(primary_cmd, ray_count / kRaysPerGroup, 1, 1);
 }
 
-RayTracer2::RayTracer2(render_data::Mesh const& mesh,
-                       render_data::BVH const& bvh) {
+TraceShadowPass::TraceShadowPass(
+    const shader::Loader &trace_shadow_shader,
+    pipeline_handler::DescriptorPool &pool, BufferBatch<4> geometry_buffers,
+    gpu_resources::Buffer *ray_traversal_state,
+    gpu_resources::Buffer *per_pixel_state, gpu_resources::Image *color_target,
+    gpu_resources::Image *depth_target,
+    gpu_resources::Buffer *shadow_ray_traversal_state,
+    gpu_resources::Buffer *shadow_ray_ord)
+    : geometry_buffers_(geometry_buffers),
+      ray_traversal_state_(ray_traversal_state),
+      per_pixel_state_(per_pixel_state), color_target_(color_target),
+      depth_target_(depth_target),
+      shadow_ray_traversal_state_(shadow_ray_traversal_state),
+      shadow_ray_ord_(shadow_ray_ord) {
+  pipeline_handler::DescriptorSet *primary_ray_state =
+      trace_shadow_shader.GenerateDescriptorSet(pool, 1);
+  primary_ray_state->BulkBind(
+      std::vector<gpu_resources::Buffer *>{ray_traversal_state_,
+                                           per_pixel_state_},
+      true);
+  pipeline_handler::DescriptorSet *image_target =
+      trace_shadow_shader.GenerateDescriptorSet(pool, 2);
+  image_target->BulkBind(
+      std::vector<gpu_resources::Image *>{color_target_, depth_target_}, true);
+  pipeline_handler::DescriptorSet *shadow_ray_state =
+      trace_shadow_shader.GenerateDescriptorSet(pool, 3);
+  shadow_ray_state->BulkBind(
+      std::vector<gpu_resources::Buffer *>{shadow_ray_traversal_state_,
+                                           shadow_ray_ord_},
+      true);
+  pipeline_ = pipeline_handler::Compute(
+      trace_shadow_shader, {geometry_buffers_.GetDSet(), primary_ray_state,
+                            image_target, shadow_ray_state});
+}
+
+TraceShadowPass::TraceShadowPass(TraceShadowPass &&other) noexcept {
+  Swap(other);
+}
+
+void TraceShadowPass::operator=(TraceShadowPass &&other) noexcept {
+  TraceShadowPass tmp(std::move(other));
+  Swap(tmp);
+}
+
+void TraceShadowPass::Swap(TraceShadowPass &other) noexcept {
+  pipeline_.Swap(other.pipeline_);
+  std::swap(geometry_buffers_, other.geometry_buffers_);
+  std::swap(ray_traversal_state_, other.ray_traversal_state_);
+  std::swap(per_pixel_state_, other.per_pixel_state_);
+  std::swap(color_target_, other.color_target_);
+  std::swap(depth_target_, other.depth_target_);
+  std::swap(shadow_ray_traversal_state_, other.shadow_ray_traversal_state_);
+  std::swap(shadow_ray_ord_, other.shadow_ray_ord_);
+}
+
+void TraceShadowPass::OnPreRecord() {
+  gpu_resources::ResourceAccess static_data_access{
+      vk::PipelineStageFlagBits2KHR::eComputeShader,
+      vk::AccessFlagBits2KHR::eShaderStorageRead};
+  geometry_buffers_.DeclareCommonAccess(static_data_access, GetPassIdx());
+  ray_traversal_state_->DeclareAccess(static_data_access, GetPassIdx());
+  per_pixel_state_->DeclareAccess(static_data_access, GetPassIdx());
+  shadow_ray_ord_->DeclareAccess(static_data_access, GetPassIdx());
+
+  gpu_resources::ResourceAccess shadow_ray_state_access{
+      vk::PipelineStageFlagBits2KHR::eComputeShader,
+      vk::AccessFlagBits2KHR::eShaderStorageWrite |
+          vk::AccessFlagBits2KHR::eShaderStorageRead};
+  shadow_ray_traversal_state_->DeclareAccess(shadow_ray_state_access,
+                                             GetPassIdx());
+  gpu_resources::ResourceAccess image_target_access{
+      vk::PipelineStageFlagBits2KHR::eComputeShader,
+      vk::AccessFlagBits2KHR::eShaderStorageWrite, vk::ImageLayout::eGeneral};
+  color_target_->DeclareAccess(image_target_access, GetPassIdx());
+  depth_target_->DeclareAccess(image_target_access, GetPassIdx());
+}
+
+void TraceShadowPass::OnRecord(
+    vk::CommandBuffer primary_cmd,
+    const std::vector<vk::CommandBuffer> &) noexcept {
+  vk::Extent2D extent = base::Base::Get().GetSwapchain().GetExtent();
+  uint32_t ray_count = extent.width * extent.height;
+  const static uint32_t kRaysPerGroup = 32;
+  pipeline_.RecordDispatch(primary_cmd, ray_count / kRaysPerGroup, 1, 1);
+}
+
+RayTracer2::RayTracer2(render_data::Mesh const &mesh,
+                       render_data::BVH const &bvh) {
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto& swapchain = base::Base::Get().GetSwapchain();
+  auto &resource_manager = render_graph_.GetResourceManager();
+  auto &swapchain = base::Base::Get().GetSwapchain();
+
+  BufferBatch<4> geometry_buffers;
+  PrepareGeometryBuffersTransfer(mesh, bvh, geometry_buffers);
   camera_state_ =
       MainCamera(swapchain.GetExtent().width, swapchain.GetExtent().height);
-  ready_to_present_ = device.createSemaphore({});
-  auto& resource_manager = render_graph_.GetResourceManager();
-
-  gpu_resources::Image* color_target =
-      resource_manager.AddImage(gpu_resources::ImageProperties{});
-  gpu_resources::Image* depth_target =
-      resource_manager.AddImage(gpu_resources::ImageProperties{});
-  gpu_resources::Buffer* ray_traversal_state =
-      resource_manager.AddBuffer(gpu_resources::BufferProperties{});
-  gpu_resources::Buffer* per_pixel_state =
-      resource_manager.AddBuffer(gpu_resources::BufferProperties{});
-
-  gpu_resources::Buffer* vertex_pos =
-      resource_manager.AddBuffer(gpu_resources::BufferProperties{
-          0, {}, vk::BufferUsageFlagBits::eStorageBuffer});
-  gpu_resources::Buffer* vertex_ind =
-      resource_manager.AddBuffer(gpu_resources::BufferProperties{
-          0, {}, vk::BufferUsageFlagBits::eStorageBuffer});
-  gpu_resources::Buffer* vertex_nrm =
-      resource_manager.AddBuffer(gpu_resources::BufferProperties{
-          mesh.normal.size() * sizeof(mesh.normal[0]),
-          {},
-          vk::BufferUsageFlagBits::eStorageBuffer});
-  gpu_resources::Buffer* bvh_buffer =
-      resource_manager.AddBuffer(gpu_resources::BufferProperties{
-          bvh.GetNodes().size() * sizeof(bvh.GetNodes()[0]),
-          {},
-          vk::BufferUsageFlagBits::eStorageBuffer});
-  TransferToGPUPass::TransferRequest pos_transfer{
-      vertex_pos, (void*)mesh.position.data(),
-      mesh.position.size() * sizeof(mesh.position[0])};
-  TransferToGPUPass::TransferRequest ind_transfer{
-      vertex_ind, (void*)mesh.index.data(),
-      mesh.index.size() * sizeof(mesh.index[0])};
-  TransferToGPUPass::TransferRequest nrm_transfer{
-      vertex_nrm, (void*)mesh.normal.data(),
-      mesh.normal.size() * sizeof(mesh.normal[0])};
-  TransferToGPUPass::TransferRequest bvh_transfer{
-      bvh_buffer, (void*)bvh.GetNodes().data(),
-      bvh.GetNodes().size() * sizeof(bvh.GetNodes()[0])};
-  transfer_ = TransferToGPUPass(
-      {pos_transfer, ind_transfer, nrm_transfer, bvh_transfer},
-      resource_manager);
-  render_graph_.AddPass(&transfer_, vk::PipelineStageFlagBits2::eTransfer);
   shader::Loader raygen_shader(kRayGenShaderPath);
   auto raygen_d_set =
       raygen_shader.GenerateDescriptorSet(render_graph_.GetDescriptorPool(), 0);
+  gpu_resources::Buffer *ray_traversal_state = resource_manager.AddBuffer({});
+  gpu_resources::Buffer *per_pixel_state = resource_manager.AddBuffer({});
   raygen_ =
       RayGenPass(raygen_shader, raygen_d_set, &camera_state_.GetCameraInfo(),
                  ray_traversal_state, per_pixel_state);
   render_graph_.AddPass(&raygen_,
                         vk::PipelineStageFlagBits2KHR::eComputeShader);
 
-  gpu_resources::Buffer* buf_arr[4] = {vertex_pos, vertex_ind, vertex_nrm,
-                                       bvh_buffer};
-  BufferBatch<4> geometry_buffers(buf_arr);
   shader::Loader traverse_primary_shader(kTraversePrimaryShaderPath);
-  geometry_buffers.SetDSet(traverse_primary_shader.GenerateDescriptorSet(
+  shader::Loader trace_shadow_shader(kTraverseShadowShaderPath);
+  geometry_buffers.SetDSet(trace_shadow_shader.GenerateDescriptorSet(
       render_graph_.GetDescriptorPool(), 0));
+  gpu_resources::Buffer *shadow_ray_traversal_state =
+      resource_manager.AddBuffer({});
+  gpu_resources::Buffer *shadow_ray_hash = resource_manager.AddBuffer({});
+
   trace_primary_ = TracePrimaryPass(
-      traverse_primary_shader, render_graph_.GetDescriptorPool(), color_target,
-      depth_target, ray_traversal_state, per_pixel_state, geometry_buffers);
+      traverse_primary_shader, render_graph_.GetDescriptorPool(),
+      geometry_buffers, ray_traversal_state, per_pixel_state,
+      shadow_ray_traversal_state, shadow_ray_hash);
   render_graph_.AddPass(&trace_primary_,
                         vk::PipelineStageFlagBits2KHR::eComputeShader);
 
+  gpu_resources::Buffer *shadow_ray_ord = resource_manager.AddBuffer({});
+  shadow_ray_sort_.Apply(
+      render_graph_, swapchain.GetExtent().width * swapchain.GetExtent().height,
+      shadow_ray_hash, shadow_ray_ord);
+
+  gpu_resources::Image *color_target = resource_manager.AddImage({});
+  gpu_resources::Image *depth_target = resource_manager.AddImage({});
+  trace_shadow_ = TraceShadowPass(
+      trace_shadow_shader, render_graph_.GetDescriptorPool(), geometry_buffers,
+      ray_traversal_state, per_pixel_state, color_target, depth_target,
+      shadow_ray_traversal_state, shadow_ray_ord);
+  render_graph_.AddPass(&trace_shadow_);
+
   present_ = BlitToSwapchainPass(color_target);
+  ready_to_present_ = device.createSemaphore({});
   render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
                         ready_to_present_,
                         swapchain.GetImageAvaliableSemaphore());
   render_graph_.Init();
-  // camera_state_.SetPos(glm::vec3{0, 250, 0});
 }
 
 bool RayTracer2::Draw() {
   camera_state_.Update();
-  auto& swapchain = base::Base::Get().GetSwapchain();
+  auto &swapchain = base::Base::Get().GetSwapchain();
 
   if (!swapchain.AcquireNextImage()) {
     LOG << "Failed to acquire next image";
@@ -431,9 +501,7 @@ bool RayTracer2::Draw() {
   return true;
 }
 
-void RayTracer2::SetCameraPosition(glm::vec3 pos) {
-  camera_state_.SetPos(pos);
-}
+void RayTracer2::SetCameraPosition(glm::vec3 pos) { camera_state_.SetPos(pos); }
 
 RayTracer2::~RayTracer2() {
   auto device = base::Base::Get().GetContext().GetDevice();
@@ -441,4 +509,46 @@ RayTracer2::~RayTracer2() {
   device.destroySemaphore(ready_to_present_);
 }
 
-}  // namespace examples
+void RayTracer2::PrepareGeometryBuffersTransfer(render_data::Mesh const &mesh,
+                                                render_data::BVH const &bvh,
+                                                BufferBatch<4> &buffers) {
+  auto &resource_manager = render_graph_.GetResourceManager();
+  gpu_resources::Buffer *vertex_pos =
+      resource_manager.AddBuffer(gpu_resources::BufferProperties{
+          0, {}, vk::BufferUsageFlagBits::eStorageBuffer});
+  gpu_resources::Buffer *vertex_ind =
+      resource_manager.AddBuffer(gpu_resources::BufferProperties{
+          0, {}, vk::BufferUsageFlagBits::eStorageBuffer});
+  gpu_resources::Buffer *vertex_nrm =
+      resource_manager.AddBuffer(gpu_resources::BufferProperties{
+          mesh.normal.size() * sizeof(mesh.normal[0]),
+          {},
+          vk::BufferUsageFlagBits::eStorageBuffer});
+  gpu_resources::Buffer *bvh_buffer =
+      resource_manager.AddBuffer(gpu_resources::BufferProperties{
+          bvh.GetNodes().size() * sizeof(bvh.GetNodes()[0]),
+          {},
+          vk::BufferUsageFlagBits::eStorageBuffer});
+
+  TransferToGPUPass::TransferRequest pos_transfer{
+      vertex_pos, (void *)mesh.position.data(),
+      mesh.position.size() * sizeof(mesh.position[0])};
+  TransferToGPUPass::TransferRequest ind_transfer{
+      vertex_ind, (void *)mesh.index.data(),
+      mesh.index.size() * sizeof(mesh.index[0])};
+  TransferToGPUPass::TransferRequest nrm_transfer{
+      vertex_nrm, (void *)mesh.normal.data(),
+      mesh.normal.size() * sizeof(mesh.normal[0])};
+  TransferToGPUPass::TransferRequest bvh_transfer{
+      bvh_buffer, (void *)bvh.GetNodes().data(),
+      bvh.GetNodes().size() * sizeof(bvh.GetNodes()[0])};
+  transfer_ = TransferToGPUPass(
+      {pos_transfer, ind_transfer, nrm_transfer, bvh_transfer},
+      resource_manager);
+
+  render_graph_.AddPass(&transfer_, vk::PipelineStageFlagBits2::eTransfer);
+  std::array<gpu_resources::Buffer *, 4> buf_arr = {vertex_pos, vertex_ind,
+                                                    vertex_nrm, bvh_buffer};
+  buffers = BufferBatch<4>(buf_arr);
+}
+} // namespace examples

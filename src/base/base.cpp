@@ -1,7 +1,8 @@
 #include "base/base.h"
 
-#include <vulkan/vulkan_core.h>
 #include <iostream>
+#include <vulkan/vulkan_core.h>
+
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -13,7 +14,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 namespace base {
 
-void Base::InitInstance(BaseConfig& config) {
+void Base::InitInstance(BaseConfig &config) {
   DCHECK(!instance_) << "Instance already initialized";
   bool glfw_init_result = glfwInit();
   CHECK(glfw_init_result) << "failed to init glfw";
@@ -42,8 +43,8 @@ void Base::InitInstance(BaseConfig& config) {
 VKAPI_ATTR VkBool32 VKAPI_CALL
 debugMessageFunc(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                  VkDebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
-                 VkDebugUtilsMessengerCallbackDataEXT const* pCallbackData,
-                 void* /*pUserData*/) {
+                 VkDebugUtilsMessengerCallbackDataEXT const *pCallbackData,
+                 void * /*pUserData*/) {
   if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
     LOG << pCallbackData->pMessage;
     return VK_TRUE;
@@ -66,7 +67,7 @@ void Base::InitDebugLogger() {
                                            &debugMessageFunc));
 }
 
-void Base::InitBase(BaseConfig& config) {
+void Base::InitBase(BaseConfig &config) {
   LOG << "Initializing Base";
   VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
   InitInstance(config);
@@ -80,7 +81,7 @@ void Base::CreateWindow(vk::Extent2D window_extent) {
   window_ = Window(window_extent);
 }
 
-void Base::CreateContext(ContextConfig& config) {
+void Base::CreateContext(ContextConfig &config) {
   LOG << "Creating context";
   DCHECK(!context_.GetDevice()) << "non-null device during base initialization";
   context_ = Context(config);
@@ -91,13 +92,12 @@ void Base::CreateSwapchain() {
   swapchain_.Create();
 }
 
-Base& Base::Get() {
+Base &Base::Get() {
   static Base instance;
   return instance;
 }
 
-void Base::Init(BaseConfig config,
-                vk::Extent2D window_extent,
+void Base::Init(BaseConfig config, vk::Extent2D window_extent,
                 ContextConfig context_config) {
   InitBase(config);
   CreateWindow(window_extent);
@@ -105,21 +105,13 @@ void Base::Init(BaseConfig config,
   CreateSwapchain();
 }
 
-vk::Instance Base::GetInstance() const {
-  return instance_.get();
-}
+vk::Instance Base::GetInstance() const { return instance_.get(); }
 
-Window& Base::GetWindow() {
-  return window_;
-}
+Window &Base::GetWindow() { return window_; }
 
-Context& Base::GetContext() {
-  return context_;
-}
+Context &Base::GetContext() { return context_; }
 
-Swapchain& Base::GetSwapchain() {
-  return swapchain_;
-}
+Swapchain &Base::GetSwapchain() { return swapchain_; }
 
 Base::~Base() {
   LOG << "Clearing Base";
@@ -129,4 +121,4 @@ Base::~Base() {
   glfwTerminate();
 }
 
-}  // namespace base
+} // namespace base

@@ -9,13 +9,6 @@
 [[vk::binding(2, 0)]] StructuredBuffer<float4> g_vertex_normal;
 [[vk::binding(3, 0)]] StructuredBuffer<BVHNode> g_bvh_buffer;
 
-groupshared VectorizedRayTraversalState l_traversal_state;
-#ifdef VECTORIZED_TRAVERSAL
-groupshared uint l_cur_vrt;
-groupshared uint l_prv_vrt;
-groupshared uint l_nxt_vrt;
-#endif
-
 struct Triangle {
   float3 a;
   float3 b;
@@ -71,164 +64,119 @@ Interception CheckLeafPrimitives(Ray r, uint vrt_ind) {
   return res;
 }
 
+const static uint kTraversalOrderUndefined = 0;
+const static uint kTraversalOrderNone = 1;
+const static uint kTraversalOrderOnlyLeft = 2;
+const static uint kTraversalOrderOnlyRight = 3;
+const static uint kTraversalOrderLeftRight = 4;
+const static uint kTraversalOrderRightLeft = 5;
+const static uint kTraversalOrderMax = 6;
+
+groupshared uint l_traversal_order_votes[kTraverseThreadsPerGroup];
+const static uint kMaxBVHDepth = 64;
+groupshared uint l_traversal_order_stack[kMaxBVHDepth];
+
 bool IsTraversalOmittable(float2 insp_t, float cur_res) {
-  return  insp_t.y < 0 || insp_t.x > insp_t.y || (cur_res > 0 && cur_res + 1e-2 < insp_t.x);
+  return insp_t.y < 0 || insp_t.x > insp_t.y || (cur_res > 0 && cur_res + 1e-2 < insp_t.x);
 }
 
-
-const static uint kVoteDop = 4;
-const static uint kVotesPerThread = kTraversThreadsPerGroup / kVoteDop;
-#ifdef VECTORIZED_TRAVERSAL
-groupshared int l_traversal_order_votes[kTraversThreadsPerGroup];
-uint VoteForTraversalOrder(uint l_ts_ind, uint voted_next) {
-  if (voted_next == g_bvh_buffer[l_cur_vrt].left) {
-    l_traversal_order_votes[l_ts_ind] = -1;
-  } else {
-    l_traversal_order_votes[l_ts_ind] = 1;
+uint CalcTraversalOrderVote(Ray r, float current_insp_t, uint current_node) {
+  BVHNode current = g_bvh_buffer[current_node];
+  BVHNode left = g_bvh_buffer[current.left];
+  BVHNode right = g_bvh_buffer[current.right];
+  float2 l_insp_t = left.bounds.GetInspT(r);
+  float2 r_insp_t = right.bounds.GetInspT(r);
+  bool left_omittable = IsTraversalOmittable(l_insp_t, current_insp_t);
+  bool right_omittable = IsTraversalOmittable(r_insp_t, current_insp_t);
+  uint vote = kTraversalOrderNone;
+  if(!left_omittable && !right_omittable) {
+    if (l_insp_t.x < r_insp_t.x) {
+      vote = kTraversalOrderLeftRight;
+    } else {
+      vote = kTraversalOrderRightLeft;
+    }
+  } else if (left_omittable) {
+    vote = kTraversalOrderOnlyRight;
+  } else if (right_omittable) {
+    vote = kTraversalOrderOnlyLeft;
   }
+  return vote;
+}
+
+uint VoteForTraversalOrder(uint t_idx, uint vote) {
+  l_traversal_order_votes[t_idx] = vote;
   GroupMemoryBarrierWithGroupSync();
-  if (l_ts_ind % kVotesPerThread == 0) {
-    for (uint i = 1; i < kVotesPerThread; i++) {
-      l_traversal_order_votes[l_ts_ind] += l_traversal_order_votes[l_ts_ind + i];
+  uint vote_counts[kTraversalOrderMax];
+  for (uint i = 0; i < kTraversalOrderMax; i++) {
+    vote_counts[i] = 0;
+  }
+  for (uint vote_idx = 0; vote_idx < kTraverseThreadsPerGroup; vote_idx++) {
+    vote_counts[l_traversal_order_votes[vote_idx]] += 1;
+  }
+  if (vote_counts[kTraversalOrderNone] == kTraverseThreadsPerGroup) {
+    return kTraversalOrderNone;
+  }
+  if (vote_counts[kTraversalOrderNone] + vote_counts[kTraversalOrderOnlyLeft] == kTraverseThreadsPerGroup) {
+    return kTraversalOrderOnlyLeft;
+  }
+  if (vote_counts[kTraversalOrderNone] + vote_counts[kTraversalOrderOnlyRight] == kTraverseThreadsPerGroup) {
+    return kTraversalOrderOnlyRight;
+  }
+  vote_counts[kTraversalOrderLeftRight] += vote_counts[kTraversalOrderOnlyLeft];
+  vote_counts[kTraversalOrderRightLeft] += vote_counts[kTraversalOrderOnlyRight];
+  if (vote_counts[kTraversalOrderLeftRight] >= vote_counts[kTraversalOrderRightLeft]) {
+    return kTraversalOrderLeftRight;
+  }
+  return kTraversalOrderRightLeft;
+}
+
+uint DecideNext(uint left, uint right, uint parent, uint prv, uint order) {
+  switch (order) {
+    case kTraversalOrderOnlyLeft: {
+      return (prv == parent) ? left : parent;
+    }
+    case kTraversalOrderOnlyRight: {
+      return (prv == parent) ? right : parent;
+    }
+    case kTraversalOrderLeftRight: {
+      return (prv == parent) ? left : ((prv == left) ? right : parent);
+    }
+    case kTraversalOrderRightLeft: {
+      return (prv == parent) ? right : ((prv == right) ? left : parent);
     }
   }
-  GroupMemoryBarrierWithGroupSync();
-  uint sum = 0;
-  for (uint i = 0; i < kVoteDop; i++) {
-    sum += l_traversal_order_votes[i * kVotesPerThread];
-  }
-  if (sum <= 0) {
-    return g_bvh_buffer[l_cur_vrt].left;
-  }
-  return g_bvh_buffer[l_cur_vrt].right;
-}
-#endif
-
-groupshared bool l_omit_votes[kTraversThreadsPerGroup];
-
-bool VoteForOmitt(uint l_ts_ind, bool vote) {
-  l_omit_votes[l_ts_ind] = vote;
-  GroupMemoryBarrierWithGroupSync();
-  if (l_ts_ind % kTraversThreadsPerGroup == 0) {
-    for (uint i = 1; i < kVotesPerThread; i++) {
-      l_omit_votes[l_ts_ind] &= l_omit_votes[l_ts_ind + i];
-    }
-  }
-  GroupMemoryBarrierWithGroupSync();
-  for (uint i = 0; i < kVoteDop; i++) {
-    if (!l_omit_votes[i * kVotesPerThread]) {
-      return false;
-    }
-  }
-  return true;
+  return parent;
 }
 
-#ifdef VECTORIZED_TRAVERSAL
-void NextBVHVrt(uint l_ts_ind) {
-  l_prv_vrt = l_cur_vrt;
-  l_cur_vrt = l_nxt_vrt;
-  GroupMemoryBarrierWithGroupSync();
-}
-#endif
-
-uint CastRay(uint l_ts_ind, bool any_hit) {
-  l_traversal_state.intersection[l_ts_ind].t = -1;
-  l_traversal_state.intersection[l_ts_ind].primitive_ind = (uint)-1;
-  Ray r = l_traversal_state.GetRay(l_ts_ind);
+Interception CastRay(Ray r, uint t_idx) {
   Interception cur_res;
   cur_res.t = -1;
-#ifdef VECTORIZED_TRAVERSAL
-  l_cur_vrt = 0;
-  l_prv_vrt = uint(-1);
-#else
-  uint prv_vrt = (uint)-1;
-  uint nxt_vrt = (uint)-1;
-#endif
-  uint vrt_visited = 0;
-#ifdef VECTORIZED_TRAVERSAL
-  while (l_cur_vrt != (uint)-1) {
-    ++vrt_visited;
-    l_nxt_vrt = g_bvh_buffer[l_cur_vrt].parent;
-    float2 cur_t = g_bvh_buffer[l_cur_vrt].bounds.GetInspT(r);
-    if (VoteForOmitt(l_ts_ind,
-            IsTraversalOmittable(cur_t, cur_res.t))) {
-      NextBVHVrt(l_ts_ind);
-      continue;
-    }
-#else
-  ++vrt_visited;
-  for (uint cur_vrt = 0; cur_vrt != (uint)-1; prv_vrt = cur_vrt, cur_vrt = nxt_vrt) {
+  l_traversal_order_stack[0] = kTraversalOrderUndefined;
+  l_traversal_order_stack[t_idx] = 0;
+  for (uint cur_vrt = 0, prv_vrt = (uint)-1, nxt_vrt = (uint)-1; cur_vrt != (uint)-1; prv_vrt = cur_vrt, cur_vrt = nxt_vrt) {
+    GroupMemoryBarrierWithGroupSync();
     nxt_vrt = g_bvh_buffer[cur_vrt].parent;
-    float2 cur_t = g_bvh_buffer[cur_vrt].bounds.GetInspT(r);
-    if (cur_t.x > cur_t.y || cur_t.y < 0) {
-      continue;
-    }
-#endif
 
-#ifdef VECTORIZED_TRAVERSAL
-    if (g_bvh_buffer[l_cur_vrt].bvh_level == (uint)(-1)) {
-      Interception new_insp = CheckLeafPrimitives(r, l_cur_vrt);
-#else
-    if (g_bvh_buffer[cur_vrt].bvh_level == (uint)(-1)) {
+    uint current_depth = g_bvh_buffer[cur_vrt].bvh_level;
+    if (current_depth == (uint)(-1)) {
       Interception new_insp = CheckLeafPrimitives(r, cur_vrt);
-#endif
       if (new_insp.t > 0 && (cur_res.t < 0 || new_insp.t < cur_res.t)) {
         cur_res = new_insp;
       }
-      if (any_hit && l_traversal_state.intersection[l_ts_ind].t > 0) {
-      }
-#ifdef VECTORIZED_TRAVERSAL
-      NextBVHVrt(l_ts_ind);
-#endif
       continue;
     }
-#ifdef VECTORIZED_TRAVERSAL
-    uint fst = g_bvh_buffer[l_cur_vrt].left;
-    uint snd = g_bvh_buffer[l_cur_vrt].right;
-#ifdef ENABLE_TRAVERSAL_ORDER_OPTIMIZATION
-    float2 fst_t = g_bvh_buffer[fst].bounds.GetInspT(r);
-    float2 snd_t = g_bvh_buffer[snd].bounds.GetInspT(r);
-
-    if ((snd_t.x < fst_t.x && snd_t.x < snd_t.y) || fst_t.x > fst_t.y || IsTraversalOmittable(fst_t, cur_res.t)) {
-      uint tmp = fst;
-      fst = snd;
-      snd = tmp;
-    }
-
-    uint true_fst = VoteForTraversalOrder(l_ts_ind, fst);
-    if (true_fst == snd) {
-      snd = fst;
-      fst = true_fst;
-    }
-#endif // ENABLE_TRAVERSAL_ORDER_OPTIMIZATION
-    if (l_ts_ind == 0) {
-      if (l_prv_vrt == l_nxt_vrt) {
-        l_nxt_vrt = fst;
-      } else if (l_prv_vrt == fst) {
-        l_nxt_vrt = snd;
-      }
-    }
     GroupMemoryBarrierWithGroupSync();
-    NextBVHVrt(l_ts_ind);
-#else
-    uint fst = g_bvh_buffer[cur_vrt].left;
-    uint snd = g_bvh_buffer[cur_vrt].right;
-    float2 fst_t = g_bvh_buffer[fst].bounds.GetInspT(r);
-    float2 snd_t = g_bvh_buffer[snd].bounds.GetInspT(r);
-    if ((snd_t.x < fst_t.x && snd_t.x < snd_t.y && snd_t.y > 0) || fst_t.x > fst_t.y || IsTraversalOmittable(fst_t, cur_res.t)) {
-      uint tmp = fst;
-      fst = snd;
-      snd = tmp;
+    if (l_traversal_order_stack[current_depth] == kTraversalOrderUndefined) {
+      uint vote = CalcTraversalOrderVote(r, cur_res.t, cur_vrt);
+      l_traversal_order_stack[current_depth] = VoteForTraversalOrder(t_idx, vote);
     }
-    if (prv_vrt == nxt_vrt) {
-      nxt_vrt = fst;
-    } else if (prv_vrt == fst) {
-      nxt_vrt = snd;
-    }
-#endif
+    l_traversal_order_stack[current_depth + 1] = kTraversalOrderUndefined;
+    uint traversal_order = l_traversal_order_stack[current_depth];
+    uint left = g_bvh_buffer[cur_vrt].left;
+    uint right = g_bvh_buffer[cur_vrt].right;
+    nxt_vrt = DecideNext(left, right, nxt_vrt, prv_vrt, traversal_order);
   }
-  l_traversal_state.intersection[l_ts_ind] = cur_res;
-  return vrt_visited;
+  return cur_res;
 }
 
 #endif // RAYTRACE_TRAVERSE

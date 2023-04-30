@@ -19,25 +19,7 @@ struct RayTraversalState {
   Interception intersection;
 };
 
-const static uint kTraversThreadsPerGroup = 32;
-
-struct VectorizedRayTraversalState {
-  float4 ray_origin[kTraversThreadsPerGroup];
-  float4 ray_direction[kTraversThreadsPerGroup];
-  Interception intersection[kTraversThreadsPerGroup];
-
-  Ray GetRay(uint tind) {
-    Ray r;
-    r.origin = ray_origin[tind].xyz;
-    r.direction = ray_direction[tind].xyz;
-    return r;
-  }
-
-  void SetRay(uint tind, Ray r) {
-    ray_origin[tind] = float4(r.origin, 1.0);
-    ray_direction[tind] = float4(r.direction, 0.0);
-  }
-};
+const static uint kTraverseThreadsPerGroup = 32;
 
 struct PerPixelState {
   uint2 pix_cord;
