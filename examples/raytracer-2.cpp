@@ -36,6 +36,9 @@ const static char *kTraverseShadowShaderPath =
 
 const static uint32_t kTraversalStateSize = 48;
 const static uint32_t kPerPixelStateSize = 16;
+const static uint32_t kTraversalThreadsPerGroup = 32;
+
+const static vk::Extent2D kTargetRes = {1280, 720};
 
 TransferToGPUPass::TransferToGPUPass(
     std::vector<TransferRequest> transfer_requests,
@@ -192,13 +195,12 @@ void RayGenPass::OnPreRecord() {
 
 void RayGenPass::OnRecord(vk::CommandBuffer primary_cmd,
                           const std::vector<vk::CommandBuffer> &) noexcept {
-  auto &swapchain = base::Base::Get().GetSwapchain();
   primary_cmd.pushConstants(pipeline_.GetLayout(),
                             vk::ShaderStageFlagBits::eCompute,
                             camera_info_pc_range_.offset,
                             camera_info_pc_range_.size, camera_info_source_);
-  pipeline_.RecordDispatch(primary_cmd, swapchain.GetExtent().width / 8,
-                           swapchain.GetExtent().height / 8, 1);
+  pipeline_.RecordDispatch(primary_cmd, kTargetRes.width / 8,
+                           kTargetRes.height / 8, 1);
 }
 
 DebugRenderPass::DebugRenderPass(const shader::Loader &debug_render_shader,
@@ -253,10 +255,8 @@ void DebugRenderPass::OnPreRecord() {
 void DebugRenderPass::OnRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer> &) noexcept {
-  auto &swapchain = base::Base::Get().GetSwapchain();
-  pipeline_.RecordDispatch(
-      primary_cmd,
-      (swapchain.GetExtent().width * swapchain.GetExtent().height) / 64, 1, 1);
+  pipeline_.RecordDispatch(primary_cmd,
+                           (kTargetRes.width * kTargetRes.height) / 64, 1, 1);
 }
 
 TracePrimaryPass::TracePrimaryPass(
@@ -271,8 +271,7 @@ TracePrimaryPass::TracePrimaryPass(
       per_pixel_state_(per_pixel_state),
       shadow_ray_traversal_state_(shadow_ray_traversal_state),
       shadow_ray_hash_(shadow_ray_hash) {
-  vk::Extent2D swapchain_ext = base::Base::Get().GetSwapchain().GetExtent();
-  uint32_t ray_count = swapchain_ext.width * swapchain_ext.height;
+  uint32_t ray_count = kTargetRes.width * kTargetRes.height;
   ray_traversal_state_->RequireProperties(
       {.size = ray_count * kTraversalStateSize});
   per_pixel_state_->RequireProperties({.size = ray_count * kPerPixelStateSize});
@@ -335,10 +334,9 @@ void TracePrimaryPass::OnPreRecord() {
 void TracePrimaryPass::OnRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer> &) noexcept {
-  vk::Extent2D extent = base::Base::Get().GetSwapchain().GetExtent();
-  uint32_t ray_count = extent.width * extent.height;
-  const static uint32_t kRaysPerGroup = 32;
-  pipeline_.RecordDispatch(primary_cmd, ray_count / kRaysPerGroup, 1, 1);
+  uint32_t ray_count = kTargetRes.width * kTargetRes.height;
+  pipeline_.RecordDispatch(primary_cmd, ray_count / kTraversalThreadsPerGroup,
+                           1, 1);
 }
 
 TraceShadowPass::TraceShadowPass(
@@ -404,13 +402,8 @@ void TraceShadowPass::OnPreRecord() {
   ray_traversal_state_->DeclareAccess(static_data_access, GetPassIdx());
   per_pixel_state_->DeclareAccess(static_data_access, GetPassIdx());
   shadow_ray_ord_->DeclareAccess(static_data_access, GetPassIdx());
+  shadow_ray_traversal_state_->DeclareAccess(static_data_access, GetPassIdx());
 
-  gpu_resources::ResourceAccess shadow_ray_state_access{
-      vk::PipelineStageFlagBits2KHR::eComputeShader,
-      vk::AccessFlagBits2KHR::eShaderStorageWrite |
-          vk::AccessFlagBits2KHR::eShaderStorageRead};
-  shadow_ray_traversal_state_->DeclareAccess(shadow_ray_state_access,
-                                             GetPassIdx());
   gpu_resources::ResourceAccess image_target_access{
       vk::PipelineStageFlagBits2KHR::eComputeShader,
       vk::AccessFlagBits2KHR::eShaderStorageWrite, vk::ImageLayout::eGeneral};
@@ -421,10 +414,9 @@ void TraceShadowPass::OnPreRecord() {
 void TraceShadowPass::OnRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer> &) noexcept {
-  vk::Extent2D extent = base::Base::Get().GetSwapchain().GetExtent();
-  uint32_t ray_count = extent.width * extent.height;
-  const static uint32_t kRaysPerGroup = 32;
-  pipeline_.RecordDispatch(primary_cmd, ray_count / kRaysPerGroup, 1, 1);
+  uint32_t ray_count = kTargetRes.width * kTargetRes.height;
+  pipeline_.RecordDispatch(primary_cmd, ray_count / kTraversalThreadsPerGroup,
+                           1, 1);
 }
 
 RayTracer2::RayTracer2(render_data::Mesh const &mesh,
@@ -435,8 +427,7 @@ RayTracer2::RayTracer2(render_data::Mesh const &mesh,
 
   BufferBatch<4> geometry_buffers;
   PrepareGeometryBuffersTransfer(mesh, bvh, geometry_buffers);
-  camera_state_ =
-      MainCamera(swapchain.GetExtent().width, swapchain.GetExtent().height);
+  camera_state_ = MainCamera(kTargetRes.width, kTargetRes.height);
   shader::Loader raygen_shader(kRayGenShaderPath);
   auto raygen_d_set =
       raygen_shader.GenerateDescriptorSet(render_graph_.GetDescriptorPool(), 0);
@@ -463,13 +454,15 @@ RayTracer2::RayTracer2(render_data::Mesh const &mesh,
   render_graph_.AddPass(&trace_primary_,
                         vk::PipelineStageFlagBits2KHR::eComputeShader);
 
-  gpu_resources::Buffer *shadow_ray_ord = resource_manager.AddBuffer({});
-  shadow_ray_sort_.Apply(
-      render_graph_, swapchain.GetExtent().width * swapchain.GetExtent().height,
-      shadow_ray_hash, shadow_ray_ord);
+  gpu_resources::Buffer *shadow_ray_ord =
+      resource_manager.AddBuffer({.size = 4});
+  shadow_ray_sort_.Apply(render_graph_, kTargetRes.width * kTargetRes.height,
+                         shadow_ray_hash, shadow_ray_ord);
 
-  gpu_resources::Image *color_target = resource_manager.AddImage({});
-  gpu_resources::Image *depth_target = resource_manager.AddImage({});
+  gpu_resources::Image *color_target =
+      resource_manager.AddImage({.extent = kTargetRes});
+  gpu_resources::Image *depth_target =
+      resource_manager.AddImage({.extent = kTargetRes});
   trace_shadow_ = TraceShadowPass(
       trace_shadow_shader, render_graph_.GetDescriptorPool(), geometry_buffers,
       ray_traversal_state, per_pixel_state, color_target, depth_target,
@@ -478,30 +471,33 @@ RayTracer2::RayTracer2(render_data::Mesh const &mesh,
 
   present_ = BlitToSwapchainPass(color_target);
   ready_to_present_ = device.createSemaphore({});
-  render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
-                        ready_to_present_,
-                        swapchain.GetImageAvaliableSemaphore());
+  // render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
+  //                       ready_to_present_,
+  //                       swapchain.GetImageAvaliableSemaphore());
+  render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer);
   render_graph_.Init();
 }
 
 bool RayTracer2::Draw() {
-  camera_state_.Update();
-  auto &swapchain = base::Base::Get().GetSwapchain();
+  // camera_state_.Update();
+  // auto &swapchain = base::Base::Get().GetSwapchain();
 
-  if (!swapchain.AcquireNextImage()) {
-    LOG << "Failed to acquire next image";
-    return false;
-  }
-  swapchain.GetActiveImageInd();
+  // if (!swapchain.AcquireNextImage()) {
+  //   LOG << "Failed to acquire next image";
+  //   return false;
+  // }
+  // swapchain.GetActiveImageInd();
   render_graph_.RenderFrame();
-  if (swapchain.Present(ready_to_present_) != vk::Result::eSuccess) {
-    LOG << "Failed to present";
-    return false;
-  }
+  // if (swapchain.Present(ready_to_present_) != vk::Result::eSuccess) {
+  //   LOG << "Failed to present";
+  //   return false;
+  // }
   return true;
 }
 
-void RayTracer2::SetCameraPosition(glm::vec3 pos) { camera_state_.SetPos(pos); }
+void RayTracer2::SetCameraTransform(utill::Transform transform) {
+  camera_state_.SetTransform(transform);
+}
 
 RayTracer2::~RayTracer2() {
   auto device = base::Base::Get().GetContext().GetDevice();

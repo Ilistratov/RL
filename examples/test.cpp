@@ -1,12 +1,13 @@
 #include "test.h"
 
-#include <stdint.h>
 #include <algorithm>
 #include <cstddef>
 #include <fstream>
+#include <stdint.h>
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_enums.hpp>
 
 #include "base/base.h"
 #include "gpu_resources/buffer.h"
@@ -21,12 +22,12 @@
 namespace examples {
 
 // const uint32_t kNVals = 256 * 256 * 256 * 2;
-const uint32_t kNVals = 512 * 512 * 64;
+const uint32_t kNVals = 1 << 24;
 std::vector<int> g_values;
 // std::vector<uint32_t> g_head_flags;
 
-LoadToGpuPass::LoadToGpuPass(gpu_resources::Buffer* staging,
-                             gpu_resources::Buffer* values)
+LoadToGpuPass::LoadToGpuPass(gpu_resources::Buffer *staging,
+                             gpu_resources::Buffer *values)
     : staging_(staging), values_(values) {
   gpu_resources::BufferProperties required_transfer_src_properties{};
   required_transfer_src_properties.allocation_flags =
@@ -70,7 +71,7 @@ void LoadToGpuPass::OnPreRecord() {
 }
 
 void LoadToGpuPass::OnRecord(vk::CommandBuffer primary_cmd,
-                             const std::vector<vk::CommandBuffer>&) {
+                             const std::vector<vk::CommandBuffer> &) {
   if (staging_ == nullptr) {
     return;
   }
@@ -79,8 +80,8 @@ void LoadToGpuPass::OnRecord(vk::CommandBuffer primary_cmd,
   staging_ = nullptr;
 }
 
-LoadToCpuPass::LoadToCpuPass(gpu_resources::Buffer* staging,
-                             gpu_resources::Buffer* values)
+LoadToCpuPass::LoadToCpuPass(gpu_resources::Buffer *staging,
+                             gpu_resources::Buffer *values)
     : staging_(staging), values_(values) {
   gpu_resources::BufferProperties required_transfer_src_properties{};
   required_transfer_src_properties.allocation_flags =
@@ -111,17 +112,17 @@ void LoadToCpuPass::OnPreRecord() {
 }
 
 void LoadToCpuPass::OnRecord(vk::CommandBuffer primary_cmd,
-                             const std::vector<vk::CommandBuffer>&) {
+                             const std::vector<vk::CommandBuffer> &) {
   gpu_resources::Buffer::RecordCopy(primary_cmd, *values_, *staging_, 0, 0,
                                     g_values.size() * sizeof(g_values[0]));
 }
 
 TestRenderer::TestRenderer() {
-  gpu_resources::Buffer* staging =
+  gpu_resources::Buffer *staging =
       render_graph_.GetResourceManager().AddBuffer({});
-  gpu_resources::Buffer* values =
+  gpu_resources::Buffer *values =
       render_graph_.GetResourceManager().AddBuffer({});
-  gpu_resources::Buffer* pos = render_graph_.GetResourceManager().AddBuffer({});
+  gpu_resources::Buffer *pos = render_graph_.GetResourceManager().AddBuffer({});
   g_values = std::vector<int>(kNVals, 1);
   for (uint32_t i = 0; i < kNVals; i++) {
     g_values[i] = kNVals - i - 1;
@@ -152,4 +153,4 @@ TestRenderer::TestRenderer() {
   LOG << "check done";
 }
 
-}  // namespace examples
+} // namespace examples

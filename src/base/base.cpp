@@ -2,7 +2,8 @@
 
 #include <iostream>
 #include <vulkan/vulkan_core.h>
-
+#include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -16,15 +17,16 @@ namespace base {
 
 void Base::InitInstance(BaseConfig &config) {
   DCHECK(!instance_) << "Instance already initialized";
-  bool glfw_init_result = glfwInit();
-  CHECK(glfw_init_result) << "failed to init glfw";
 
-  LOG << "Initialized GLFW";
-
-  uint32_t glfw_ext_cnt = 0;
-  auto glfw_ext_names_ptr = glfwGetRequiredInstanceExtensions(&glfw_ext_cnt);
-  for (uint32_t i = 0; i < glfw_ext_cnt; i++) {
-    config.instance_extensions.push_back(glfw_ext_names_ptr[i]);
+  if (config.create_window) {
+    bool glfw_init_result = glfwInit();
+    CHECK(glfw_init_result) << "Failed to init glfw";
+    LOG << "Initialized GLFW";
+    uint32_t glfw_ext_cnt = 0;
+    auto glfw_ext_names_ptr = glfwGetRequiredInstanceExtensions(&glfw_ext_cnt);
+    for (uint32_t i = 0; i < glfw_ext_cnt; i++) {
+      config.instance_extensions.push_back(glfw_ext_names_ptr[i]);
+    }
   }
 
   vk::ApplicationInfo application_info(config.app_name, VK_API_VERSION_1_3,
@@ -38,6 +40,9 @@ void Base::InitInstance(BaseConfig &config) {
       << config.instance_extensions << "\nlayers: " << config.instance_layers;
 
   instance_ = vk::createInstanceUnique(instance_info);
+  uint32_t ver = vk::enumerateInstanceVersion();
+  LOG << "Created vk instance with version " << VK_VERSION_MAJOR(ver) << "."
+      << VK_VERSION_MINOR(ver) << "." << VK_VERSION_PATCH(ver);
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -100,9 +105,14 @@ Base &Base::Get() {
 void Base::Init(BaseConfig config, vk::Extent2D window_extent,
                 ContextConfig context_config) {
   InitBase(config);
-  CreateWindow(window_extent);
+  if (config.create_window) {
+    CreateWindow(window_extent);
+  }
+  context_config.create_window = config.create_window;
   CreateContext(context_config);
-  CreateSwapchain();
+  if (config.create_window) {
+    CreateSwapchain();
+  }
 }
 
 vk::Instance Base::GetInstance() const { return instance_.get(); }

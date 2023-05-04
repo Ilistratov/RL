@@ -3,13 +3,14 @@
 #include <iostream>
 
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_structs.hpp>
 
 // #include "examples/mandelbrot.h"
 #include "examples/raytracer-2.h"
 #include "examples/raytracer.h"
-//  #include "examples/test.h"
+#include "examples/test.h"
 
 #include "base/base.h"
 #include "base/context.h"
@@ -20,36 +21,30 @@
 #include "utill/error_handling.h"
 #include "utill/input_manager.h"
 #include "utill/logger.h"
+#include "utill/transform.h"
 
-const static std::string kSceneObjPath = "../assets/objects/squares.obj";
+const static std::string kSceneObjPath = "../assets/objects/conference.obj";
+
+void RunAlt() { examples::TestRenderer test; }
 
 void Run() {
   render_data::Mesh mesh = render_data::Mesh::LoadFromObj(kSceneObjPath);
   render_data::BVH bvh =
-      render_data::BVH(render_data::BVH::BuildPrimitivesBB(mesh), 24, 8);
+      render_data::BVH(render_data::BVH::BuildPrimitivesBB(mesh), 24, 12);
   mesh.ReorderPrimitives(bvh.GetPrimitiveOrd());
   examples::RayTracer2 renderer(mesh, bvh);
   auto &window = base::Base::Get().GetWindow();
-  glm::vec3 pos = {0, 0, 0};
-  renderer.SetCameraPosition(pos);
-  // int skip = 10;
+  utill::Transform initial_pos = utill::Transform::RotationY(0.7) |
+                                 utill::Transform::Translation({-50, 0, -50});
+  renderer.SetCameraTransform(initial_pos);
+  uint32_t counter = 0;
   while (!glfwWindowShouldClose(window.GetWindow())) {
     glfwPollEvents();
+    LOG << "Frame #" << counter++;
     if (!renderer.Draw()) {
       LOG << "Failed to draw";
       break;
     }
-    // utill::MouseState ms = utill::InputManager::GetMouseState();
-    // if (ms.lmb_state.action == GLFW_PRESS && skip == 0) {
-    //   pos.z += 25;
-    //   skip = 10;
-    // } else if (ms.rmb_state.action == GLFW_PRESS && skip == 0) {
-    //   pos.z -= 25;
-    //   skip = 10;
-    // } else if (skip > 0) {
-    //   --skip;
-    // }
-    // renderer.SetCameraPosition(pos);
   }
 }
 
@@ -60,10 +55,11 @@ int main() {
       {VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
        VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
       {//"VK_LAYER_KHRONOS_validation",
-       "VK_LAYER_LUNARG_monitor"},
+       "VK_LAYER_NV_optimus", "VK_LAYER_LUNARG_monitor"},
       //{},
       "RL",
       "RL",
+      false,
   };
 
   base::ContextConfig context_config = {
@@ -72,15 +68,17 @@ int main() {
        VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
        VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
        VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME,
-       VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME},
-      2,
-      vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eGraphics};
+       VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+       VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME},
+      1,
+      vk::QueueFlagBits::eCompute};
 
   try {
     base::Base::Get().Init(base_config, vk::Extent2D{1280, 768},
                            context_config);
-    utill::InputManager::Init();
+    // utill::InputManager::Init();
     Run();
+    // RunAlt();
   } catch (std::exception e) {
     LOG << e.what();
   }

@@ -1,4 +1,5 @@
 #include "base/context.h"
+#include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_handles.hpp>
 
 #define VMA_IMPLEMENTATION
@@ -13,13 +14,13 @@
 
 namespace base {
 
-void Context::PickPhysicalDevice(ContextConfig& config) {
+void Context::PickPhysicalDevice(ContextConfig &config) {
   PhysicalDevicePicker picker(&config, Base::Get().GetWindow().GetSurface());
   physical_device_ = picker.GetPickedDevice();
   queue_family_index_ = picker.GetQueueFamilyIndex();
 }
 
-void Context::CreateDevice(ContextConfig& config) {
+void Context::CreateDevice(ContextConfig &config) {
   std::vector<float> queue_priorities(config.queue_count, 1.0);
   vk::DeviceQueueCreateInfo queue_create_info(
       vk::DeviceQueueCreateFlags{}, queue_family_index_, queue_priorities);
@@ -52,13 +53,18 @@ void Context::InitializeAllocator() {
   VmaVulkanFunctions vulkanFunctions = {};
   vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
   vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+  vulkanFunctions.vkGetDeviceBufferMemoryRequirements =
+      &vkGetDeviceBufferMemoryRequirements;
+  vulkanFunctions.vkGetDeviceImageMemoryRequirements =
+      &vkGetDeviceImageMemoryRequirements;
 
   VmaAllocatorCreateInfo allocateCreateInfo{
       .physicalDevice = physical_device_,
       .device = device_,
       .pVulkanFunctions = &vulkanFunctions,
       .instance = base::Base::Get().GetInstance(),
-      .vulkanApiVersion = VK_API_VERSION_1_2};
+      .vulkanApiVersion = VK_API_VERSION_1_3,
+  };
   auto result = vmaCreateAllocator(&allocateCreateInfo, &allocator_);
   CHECK(result == VK_SUCCESS) << "Failed to create vma allocator: "
                               << vk::to_string((vk::Result)result);
@@ -75,17 +81,15 @@ Context::Context(ContextConfig config) {
   LOG << "Device context initialized";
 }
 
-Context::Context(Context&& other) noexcept {
-  *this = std::move(other);
-}
+Context::Context(Context &&other) noexcept { *this = std::move(other); }
 
-void Context::operator=(Context&& other) noexcept {
+void Context::operator=(Context &&other) noexcept {
   Context tmp;
   tmp.Swap(other);
   Swap(tmp);
 }
 
-void Context::Swap(Context& other) noexcept {
+void Context::Swap(Context &other) noexcept {
   std::swap(device_, other.device_);
   std::swap(physical_device_, other.physical_device_);
   std::swap(allocator_, other.allocator_);
@@ -97,17 +101,11 @@ vk::PhysicalDevice Context::GetPhysicalDevice() const {
   return physical_device_;
 }
 
-vk::Device Context::GetDevice() const {
-  return device_;
-}
+vk::Device Context::GetDevice() const { return device_; }
 
-VmaAllocator Context::GetAllocator() const {
-  return allocator_;
-}
+VmaAllocator Context::GetAllocator() const { return allocator_; }
 
-uint32_t Context::GetQueueFamilyIndex() const {
-  return queue_family_index_;
-}
+uint32_t Context::GetQueueFamilyIndex() const { return queue_family_index_; }
 
 vk::Queue Context::GetQueue(uint32_t queue_ind) const {
   DCHECK(queue_ind < device_queues_.size())
@@ -124,4 +122,4 @@ Context::~Context() {
   }
 }
 
-}  // namespace base
+} // namespace base

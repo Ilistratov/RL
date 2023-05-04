@@ -15,6 +15,7 @@ struct BaseConfig {
   std::vector<const char *> instance_layers;
   const char *app_name;
   const char *engine_name;
+  bool create_window = true;
 };
 
 /*

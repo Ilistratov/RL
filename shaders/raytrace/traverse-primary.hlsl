@@ -16,11 +16,11 @@ Ray GenerateShadowRay(Interception insp) {
   Triangle t = GetTriangleByInd(insp.primitive_ind);
   float2 insp_bar_cord = float2(insp.u, insp.v);
   float3 insp_point = t.GetPointFromBarCord(insp_bar_cord);
-  float3 light_pos = float3(0, 0, 0); //TODO
+  float3 light_pos = float3(20, 50, 0); //TODO
   float3 to_light = normalize(light_pos - insp_point);
   Ray shadow_ray;
   shadow_ray.direction = to_light;
-  shadow_ray.origin = insp_point + to_light * 1e-4;
+  shadow_ray.origin = insp_point + GetNormalAtBarCord(insp.primitive_ind, insp_bar_cord) * 1e-4;
   return shadow_ray;
 }
 
@@ -31,7 +31,6 @@ void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_Group
   r.direction = g_traversal_state[global_tidx.x].ray_direction.xyz;
   Interception insp = CastRay(r, in_group_tidx);
   g_traversal_state[global_tidx.x].intersection = insp;
-  //float visited_fraction = ((float)vrt_visited * 3) / 200;
   uint2 pix_coord = g_per_pixel_state[global_tidx.x].pix_cord;
   if (insp.t > 0) {
     Ray shadow_ray = GenerateShadowRay(insp);
@@ -48,7 +47,5 @@ void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_Group
     g_shadow_ray_traversal_state[global_tidx.x].ray_origin = float4(0, 0, 0, 0);
     g_per_pixel_state[global_tidx.x].shadow_ray_ind = global_tidx.x;
   }
-
-  //g_color_target[pix_coord] = float4(clamp(visited_fraction, 0, 1), clamp(visited_fraction - 1, 0, 1), clamp(visited_fraction - 2, 0, 1), 1);
-  //g_color_target[pix_coord] = float4((vrt_visited & 31) / 32.0, ((vrt_visited >> 5) & 31) / 31.0, ((vrt_visited >> 10) & 31) / 31.0, 1);
+  g_per_pixel_state[global_tidx.x].camera_ray_ind = l_traversal_counters[in_group_tidx];
 }

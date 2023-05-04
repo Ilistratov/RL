@@ -22,28 +22,27 @@ void DescriptorPool::CreatePool() {
 void DescriptorPool::AllocateSets() {
   std::vector<vk::DescriptorSetLayout> managed_set_layouts;
   managed_set_layouts.reserve(managed_sets_.size());
-  for (auto& set : managed_sets_) {
+  for (auto &set : managed_sets_) {
     managed_set_layouts.push_back(set.GetLayout());
   }
   auto device = base::Base::Get().GetContext().GetDevice();
   auto sets = device.allocateDescriptorSets(
       vk::DescriptorSetAllocateInfo(pool_, managed_set_layouts));
   uint32_t set_ind = 0;
-  for (auto& set : managed_sets_) {
+  for (auto &set : managed_sets_) {
     assert(!set.set_);
     set.set_ = sets[set_ind];
     ++set_ind;
   }
 }
 
-DescriptorSet* DescriptorPool::ReserveDescriptorSet(
-    uint32_t set_num,
-    std::vector<BufferDescriptorBinding> buffer_bindings,
+DescriptorSet *DescriptorPool::ReserveDescriptorSet(
+    uint32_t set_num, std::vector<BufferDescriptorBinding> buffer_bindings,
     std::vector<ImageDescriptorBinding> image_bindings) {
-  for (const auto& binding : buffer_bindings) {
+  for (const auto &binding : buffer_bindings) {
     descriptor_type_reserved_count_[binding.GetType()] += binding.GetCount();
   }
-  for (const auto& binding : image_bindings) {
+  for (const auto &binding : image_bindings) {
     descriptor_type_reserved_count_[binding.GetType()] += binding.GetCount();
   }
   pipeline_handler::DescriptorSet d_set(set_num, buffer_bindings,
@@ -59,13 +58,8 @@ void DescriptorPool::Create() {
 }
 
 DescriptorPool::~DescriptorPool() {
-  std::vector<vk::DescriptorSet> sets;
-  sets.reserve(managed_sets_.size());
-  for (auto& set : managed_sets_) {
-    sets.push_back(set.set_);
-  }
   auto device = base::Base::Get().GetContext().GetDevice();
   device.destroyDescriptorPool(pool_);
 }
 
-}  // namespace pipeline_handler
+} // namespace pipeline_handler

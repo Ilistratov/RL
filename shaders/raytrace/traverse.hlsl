@@ -48,6 +48,15 @@ Triangle GetTriangleByInd(uint ind) {
   return res;
 }
 
+float3 GetNormalAtBarCord(uint trg_ind, float2 bar_cord) {
+  float3 na = g_vertex_normal[g_vertex_ind[3 * trg_ind + 0].y].xyz;
+  float3 nb = g_vertex_normal[g_vertex_ind[3 * trg_ind + 1].y].xyz;
+  float3 nc = g_vertex_normal[g_vertex_ind[3 * trg_ind + 2].y].xyz;
+  float3 n = nb * bar_cord.x + nc * bar_cord.y
+                             + na * (1 - (bar_cord.x + bar_cord.y));
+  return normalize(n);
+}
+
 Interception CheckLeafPrimitives(Ray r, uint vrt_ind) {
   Interception res;
   res.t = -1;
@@ -64,6 +73,8 @@ Interception CheckLeafPrimitives(Ray r, uint vrt_ind) {
   return res;
 }
 
+//#define COHERENT_TRAVERSAL
+
 const static uint kTraversalOrderUndefined = 0;
 const static uint kTraversalOrderNone = 1;
 const static uint kTraversalOrderOnlyLeft = 2;
@@ -75,9 +86,11 @@ const static uint kTraversalOrderMax = 6;
 
 groupshared uint l_traversal_counters[kTraverseThreadsPerGroup];
 
+#ifdef COHERENT_TRAVERSAL
 groupshared uint l_traversal_order_votes[kTraverseThreadsPerGroup];
 const static uint kMaxBVHDepth = 64;
 groupshared uint l_traversal_order_stack[kMaxBVHDepth];
+#endif
 
 bool IsTraversalOmittable(float2 insp_t, float cur_res) {
   return insp_t.y < 0 || insp_t.x > insp_t.y || (cur_res > 0 && cur_res + 1e-2 < insp_t.x);
@@ -98,15 +111,19 @@ uint CalcTraversalOrderVote(Ray r, float current_insp_t, uint current_node) {
     } else {
       vote = kTraversalOrderRightLeft;
     }
-  } else if (left_omittable) {
+  } else if (!right_omittable) {
     vote = kTraversalOrderOnlyRight;
-  } else if (right_omittable) {
+  } else if (!left_omittable) {
     vote = kTraversalOrderOnlyLeft;
   }
   return vote;
 }
 
+
 uint VoteForTraversalOrder(uint t_idx, uint vote) {
+#ifndef COHERENT_TRAVERSAL
+  return vote;
+#else
   l_traversal_order_votes[t_idx] = vote;
   GroupMemoryBarrierWithGroupSync();
   uint vote_counts[kTraversalOrderMax];
@@ -131,9 +148,11 @@ uint VoteForTraversalOrder(uint t_idx, uint vote) {
     return kTraversalOrderLeftRight;
   }
   return kTraversalOrderRightLeft;
+#endif
 }
 
 bool VoteForTraversalOmission(uint t_idx, uint vote) {
+#ifdef COHERENT_TRAVERSAL
   l_traversal_order_votes[t_idx] = vote;
   GroupMemoryBarrierWithGroupSync();
   for (uint vote_idx = 0; vote_idx < kTraverseThreadsPerGroup; vote_idx++) {
@@ -142,9 +161,12 @@ bool VoteForTraversalOmission(uint t_idx, uint vote) {
     }
   }
   return true;
+#else
+  return vote;
+#endif
 }
 
-uint DecideNext(uint left, uint right, uint parent, uint prv, uint order) {
+uint DecideNext(uint left, uint right, uint parent, uint prv, uint order, Ray r, float cur_insp, uint t_idx) {
   switch (order) {
     case kTraversalOrderOnlyLeft: {
       return (prv == parent) ? left : parent;
@@ -153,10 +175,32 @@ uint DecideNext(uint left, uint right, uint parent, uint prv, uint order) {
       return (prv == parent) ? right : parent;
     }
     case kTraversalOrderLeftRight: {
-      return (prv == parent) ? left : ((prv == left) ? right : parent);
+      if (prv == parent) {
+        return left;
+      }
+      if (prv == right) {
+        return parent;
+      }
+      float2 right_insp = g_bvh_buffer[right].bounds.GetInspT(r);
+      int vote = IsTraversalOmittable(right_insp, cur_insp);
+      if (VoteForTraversalOmission(t_idx, vote)) {
+        return parent;
+      }
+      return right;
     }
     case kTraversalOrderRightLeft: {
-      return (prv == parent) ? right : ((prv == right) ? left : parent);
+      if (prv == parent) {
+        return right;
+      }
+      if (prv == left) {
+        return parent;
+      }
+      float2 left_insp = g_bvh_buffer[left].bounds.GetInspT(r);
+      int vote = IsTraversalOmittable(left_insp, cur_insp);
+      if (VoteForTraversalOmission(t_idx, vote)) {
+        return parent;
+      }
+      return left;
     }
   }
   return parent;
@@ -165,18 +209,23 @@ uint DecideNext(uint left, uint right, uint parent, uint prv, uint order) {
 Interception CastRay(Ray r, uint t_idx) {
   Interception cur_res;
   cur_res.t = -1;
+#ifdef COHERENT_TRAVERSAL
   l_traversal_order_stack[0] = kTraversalOrderUndefined;
   l_traversal_order_stack[t_idx] = 0;
+#endif
   l_traversal_counters[t_idx] = 0;
+  if (length(r.direction) < 0.5) {
+    return cur_res;
+  }
   for (uint cur_vrt = 0, prv_vrt = (uint)-1, nxt_vrt = (uint)-1; cur_vrt != (uint)-1; prv_vrt = cur_vrt, cur_vrt = nxt_vrt) {
+#ifdef COHERENT_TRAVERSAL
     GroupMemoryBarrierWithGroupSync();
-    nxt_vrt = g_bvh_buffer[cur_vrt].parent;
-    uint vrt_ommitable = (uint)IsTraversalOmittable(g_bvh_buffer[cur_vrt].bounds.GetInspT(r), cur_res.t);
-    if (VoteForTraversalOmission(t_idx, vrt_ommitable)) {
-      continue;
-    }
+#endif
+    l_traversal_counters[t_idx] += 1;
+    BVHNode current_node = g_bvh_buffer[cur_vrt];
+    nxt_vrt = current_node.parent;
 
-    uint current_depth = g_bvh_buffer[cur_vrt].bvh_level;
+    uint current_depth = current_node.bvh_level;
     if (current_depth == (uint)(-1)) {
       Interception new_insp = CheckLeafPrimitives(r, cur_vrt);
       if (new_insp.t > 0 && (cur_res.t < 0 || new_insp.t < cur_res.t)) {
@@ -184,6 +233,7 @@ Interception CastRay(Ray r, uint t_idx) {
       }
       continue;
     }
+#ifdef COHERENT_TRAVERSAL
     GroupMemoryBarrierWithGroupSync();
     if (l_traversal_order_stack[current_depth] == kTraversalOrderUndefined) {
       uint vote = CalcTraversalOrderVote(r, cur_res.t, cur_vrt);
@@ -191,9 +241,12 @@ Interception CastRay(Ray r, uint t_idx) {
     }
     l_traversal_order_stack[current_depth + 1] = kTraversalOrderUndefined;
     uint traversal_order = l_traversal_order_stack[current_depth];
-    uint left = g_bvh_buffer[cur_vrt].left;
-    uint right = g_bvh_buffer[cur_vrt].right;
-    nxt_vrt = DecideNext(left, right, nxt_vrt, prv_vrt, traversal_order);
+#else
+    uint traversal_order = CalcTraversalOrderVote(r, cur_res.t, cur_vrt);
+#endif
+    uint left = current_node.left;
+    uint right = current_node.right;
+    nxt_vrt = DecideNext(left, right, nxt_vrt, prv_vrt, traversal_order, r, cur_res.t, t_idx);
   }
   return cur_res;
 }

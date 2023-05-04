@@ -29,11 +29,11 @@ Transform Transform::Translation(glm::vec3 d_pos) {
   return Transform(transform_mat);
 }
 
-Transform Transform::Combine(const Transform& fst, const Transform& snd) {
+Transform Transform::Combine(const Transform &fst, const Transform &snd) {
   return snd.tranform_mat_ * fst.tranform_mat_;
 }
 
-Transform Transform::Combine(const std::vector<Transform>& transforms) {
+Transform Transform::Combine(const std::vector<Transform> &transforms) {
   Transform res;
   for (auto t : transforms) {
     res.tranform_mat_ = t.tranform_mat_ * res.tranform_mat_;
@@ -41,21 +41,13 @@ Transform Transform::Combine(const std::vector<Transform>& transforms) {
   return res;
 }
 
-glm::vec3 Transform::GetDirX() const {
-  return tranform_mat_[0];
-}
+glm::vec3 Transform::GetDirX() const { return tranform_mat_[0]; }
 
-glm::vec3 Transform::GetDirY() const {
-  return tranform_mat_[1];
-}
+glm::vec3 Transform::GetDirY() const { return tranform_mat_[1]; }
 
-glm::vec3 Transform::GetDirZ() const {
-  return tranform_mat_[2];
-}
+glm::vec3 Transform::GetDirZ() const { return tranform_mat_[2]; }
 
-glm::vec3 Transform::GetPos() const {
-  return tranform_mat_[3];
-}
+glm::vec3 Transform::GetPos() const { return tranform_mat_[3]; }
 
 glm::vec3 Transform::TransformDir(glm::vec3 dir) const {
   return tranform_mat_ * glm::vec4(dir, 0);
@@ -65,4 +57,8 @@ glm::vec3 Transform::TransformPoint(glm::vec3 point) const {
   return tranform_mat_ * glm::vec4(point, 1);
 }
 
-}  // namespace utill
+Transform operator|(const Transform &fst, const Transform &snd) {
+  return Transform::Combine(fst, snd);
+}
+
+} // namespace utill

@@ -13,8 +13,7 @@ bool Executor::TaskInfo::HasSemaphoreOperations() const {
   return external_wait || external_signal;
 }
 
-void Executor::ScheduleTask(Task* task,
-                            vk::PipelineStageFlags2KHR stage_flags,
+void Executor::ScheduleTask(Task *task, vk::PipelineStageFlags2KHR stage_flags,
                             vk::Semaphore external_signal,
                             vk::Semaphore external_wait,
                             uint32_t secondary_cmd_count) {
@@ -94,7 +93,7 @@ void Executor::Execute() {
     batch_start_ind = batch_end_ind;
   }
 
-  auto& context = base::Base::Get().GetContext();
+  auto &context = base::Base::Get().GetContext();
   auto device = context.GetDevice();
   auto fence = device.createFence({});
   context.GetQueue(0).submit2KHR(batch_submit_info, fence);
@@ -103,16 +102,18 @@ void Executor::Execute() {
   std::vector<vk::CommandBuffer> recycle_secondary;
   recycle_primary.reserve(primary_cmd_count);
   recycle_secondary.reserve(secondary_cmd_count);
-  for (auto& batch : batches) {
+  for (auto &batch : batches) {
     recycle_primary.push_back(batch.cmd_to_execute.commandBuffer);
     recycle_secondary.insert(recycle_secondary.end(),
                              batch.secondary_cmd.begin(),
                              batch.secondary_cmd.end());
   }
+  device.waitForFences(fence, true, -1);
+  LOG << "Warning, tmp wait for fence";
   cmd_pool_.RecycleCmd(recycle_primary, recycle_secondary, fence);
 }
 
-void Executor::ExecuteOneTime(Task* task, uint32_t secondary_cmd_count) {
+void Executor::ExecuteOneTime(Task *task, uint32_t secondary_cmd_count) {
   vk::CommandBuffer primary_cmd =
       cmd_pool_.GetCmd(vk::CommandBufferLevel::ePrimary, 1)[0];
   std::vector<vk::CommandBuffer> secondary_cmd =
@@ -126,7 +127,7 @@ void Executor::ExecuteOneTime(Task* task, uint32_t secondary_cmd_count) {
   vk::CommandBufferSubmitInfoKHR cmd_submit_info(primary_cmd);
   vk::SubmitInfo2KHR submit_info({}, {}, cmd_submit_info, {});
 
-  auto& context = base::Base::Get().GetContext();
+  auto &context = base::Base::Get().GetContext();
   auto device = context.GetDevice();
   auto fence = device.createFence({});
 
@@ -138,4 +139,4 @@ void Executor::ExecuteOneTime(Task* task, uint32_t secondary_cmd_count) {
   cmd_pool_.RecycleCmd({primary_cmd}, secondary_cmd, {});
 }
 
-}  // namespace gpu_executor
+} // namespace gpu_executor

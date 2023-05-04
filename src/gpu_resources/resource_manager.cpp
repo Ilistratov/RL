@@ -15,13 +15,13 @@
 
 namespace gpu_resources {
 
-Buffer* ResourceManager::AddBuffer(BufferProperties properties) {
+Buffer *ResourceManager::AddBuffer(BufferProperties properties) {
   buffers_.push_back(Buffer(properties, &syncronizer_));
   return &buffers_.back();
 }
 
-Image* ResourceManager::AddImage(ImageProperties properties) {
-  auto& swapchain = base::Base::Get().GetSwapchain();
+Image *ResourceManager::AddImage(ImageProperties properties) {
+  auto &swapchain = base::Base::Get().GetSwapchain();
   if (properties.extent.width == 0 || properties.extent.height == 0) {
     properties.extent = swapchain.GetExtent();
   }
@@ -32,7 +32,7 @@ Image* ResourceManager::AddImage(ImageProperties properties) {
   return &images_.back();
 }
 
-PassAccessSyncronizer* ResourceManager::GetAccessSyncronizer() {
+PassAccessSyncronizer *ResourceManager::GetAccessSyncronizer() {
   return &syncronizer_;
 }
 
@@ -40,26 +40,26 @@ PassAccessSyncronizer* ResourceManager::GetAccessSyncronizer() {
 // supported
 uint32_t ResourceManager::CreateAndMapPhysicalResources() {
   uint32_t resource_count = 0;
-  for (auto& buffer : buffers_) {
+  for (auto &buffer : buffers_) {
     PhysicalBuffer physical_buffer(resource_count, buffer.required_properties_);
     resource_count += 1;
     physical_buffers_.push_back(std::move(physical_buffer));
   }
 
-  for (auto& image : images_) {
+  for (auto &image : images_) {
     PhysicalImage physical_image(resource_count, image.required_properties_);
     resource_count += 1;
     physical_images_.push_back(std::move(physical_image));
   }
 
   uint32_t idx = 0;
-  for (auto& buffer : buffers_) {
+  for (auto &buffer : buffers_) {
     buffer.buffer_ = &physical_buffers_[idx];
     idx += 1;
   }
 
   idx = 0;
-  for (auto& image : images_) {
+  for (auto &image : images_) {
     image.image_ = &physical_images_[idx];
     idx += 1;
   }
@@ -68,14 +68,14 @@ uint32_t ResourceManager::CreateAndMapPhysicalResources() {
 
 void ResourceManager::InitPhysicalResources() {
   uint32_t idx = 0;
-  for (auto& buffer : physical_buffers_) {
+  for (auto &buffer : physical_buffers_) {
     buffer.SetDebugName(std::string("rg-buffer-") + std::to_string(idx));
     idx += 1;
   }
 
   idx = 0;
 
-  for (auto& image : physical_images_) {
+  for (auto &image : physical_images_) {
     image.SetDebugName(std::string("rg-image-") + std::to_string(idx));
     idx += 1;
   }
@@ -88,9 +88,9 @@ void ResourceManager::InitResources(uint32_t pass_count) {
   ResourceAccess initial_access;
   initial_access.layout = vk::ImageLayout::eUndefined;
   initial_access.stage_flags = vk::PipelineStageFlagBits2KHR::eTopOfPipe;
-  for (auto& image : physical_images_) {
+  for (auto &image : physical_images_) {
     syncronizer_.AddAccess(&image, initial_access, pass_count);
   }
 }
 
-}  // namespace gpu_resources
+} // namespace gpu_resources

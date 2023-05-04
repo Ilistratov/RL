@@ -1,7 +1,7 @@
 #include "raytracer.h"
 
-#include <vcruntime.h>
 #include <cmath>
+#include <vcruntime.h>
 #include <vector>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_structs.hpp>
@@ -32,29 +32,27 @@ static MainCamera g_main_camera_state;
 using gpu_resources::GetDataSize;
 
 template <typename T>
-static void FillStagingBuffer(gpu_resources::Buffer* staging_buffer,
-                              const std::vector<T>& data,
-                              size_t& dst_offset) {
+static void FillStagingBuffer(gpu_resources::Buffer *staging_buffer,
+                              const std::vector<T> &data, size_t &dst_offset) {
   DCHECK(staging_buffer) << "Unexpected null";
   size_t data_byte_size = GetDataSize(data);
-  void* map_start = staging_buffer->GetBuffer()->GetMappingStart();
+  void *map_start = staging_buffer->GetBuffer()->GetMappingStart();
   DCHECK(map_start) << "Expected buffer memory to be mapped";
-  memcpy((char*)map_start + dst_offset, data.data(), data_byte_size);
+  memcpy((char *)map_start + dst_offset, data.data(), data_byte_size);
   dst_offset += data_byte_size;
 }
 
 static void RecordCopyFromStaging(vk::CommandBuffer cmd,
-                                  gpu_resources::Buffer* staging_buffer,
-                                  gpu_resources::Buffer* dst_buffer,
-                                  size_t& staging_offset,
-                                  size_t size) {
+                                  gpu_resources::Buffer *staging_buffer,
+                                  gpu_resources::Buffer *dst_buffer,
+                                  size_t &staging_offset, size_t size) {
   gpu_resources::Buffer::RecordCopy(cmd, *staging_buffer, *dst_buffer,
                                     staging_offset, 0, size);
   staging_offset += size;
 }
 
 size_t GeometryBuffers::AddBuffersToRenderGraph(
-    gpu_resources::ResourceManager& resource_manager) {
+    gpu_resources::ResourceManager &resource_manager) {
   gpu_resources::BufferProperties properties{};
   size_t total_data_size = 0;
 
@@ -105,11 +103,9 @@ void GeometryBuffers::DeclareCommonAccess(gpu_resources::ResourceAccess access,
 }
 
 ResourceTransferPass::ResourceTransferPass(
-    GeometryBuffers geometry,
-    gpu_resources::Buffer* staging_buffer,
-    gpu_resources::Buffer* camera_info)
-    : geometry_(geometry),
-      staging_buffer_(staging_buffer),
+    GeometryBuffers geometry, gpu_resources::Buffer *staging_buffer,
+    gpu_resources::Buffer *camera_info)
+    : geometry_(geometry), staging_buffer_(staging_buffer),
       camera_info_(camera_info) {
   gpu_resources::BufferProperties required_transfer_src_properties{};
   required_transfer_src_properties.allocation_flags =
@@ -168,7 +164,7 @@ void ResourceTransferPass::OnPreRecord() {
 
 void ResourceTransferPass::OnRecord(
     vk::CommandBuffer primary_cmd,
-    const std::vector<vk::CommandBuffer>&) noexcept {
+    const std::vector<vk::CommandBuffer> &) noexcept {
   if (is_first_record_) {
     is_first_record_ = false;
     size_t staging_offset = 0;
@@ -187,23 +183,20 @@ void ResourceTransferPass::OnRecord(
                           staging_offset, GetDataSize(g_scene_bvh.GetNodes()));
   }
 
-  void* camera_buffer_mapping = camera_info_->GetBuffer()->GetMappingStart();
+  void *camera_buffer_mapping = camera_info_->GetBuffer()->GetMappingStart();
   DCHECK(camera_buffer_mapping);
   memcpy(camera_buffer_mapping, &g_main_camera_state.GetCameraInfo(),
          sizeof(CameraInfo));
 }
 
-RaytracerPass::RaytracerPass(const shader::Loader& raytrace_shader,
-                             pipeline_handler::DescriptorSet* d_set,
+RaytracerPass::RaytracerPass(const shader::Loader &raytrace_shader,
+                             pipeline_handler::DescriptorSet *d_set,
                              GeometryBuffers geometry,
-                             gpu_resources::Image* color_target,
-                             gpu_resources::Image* depth_target,
-                             gpu_resources::Buffer* camera_info)
-    : geometry_(geometry),
-      color_target_(color_target),
-      depth_target_(depth_target),
-      camera_info_(camera_info),
-      d_set_(d_set) {
+                             gpu_resources::Image *color_target,
+                             gpu_resources::Image *depth_target,
+                             gpu_resources::Buffer *camera_info)
+    : geometry_(geometry), color_target_(color_target),
+      depth_target_(depth_target), camera_info_(camera_info), d_set_(d_set) {
   gpu_resources::BufferProperties requeired_buffer_propertires{};
   geometry_.AddCommonRequierment(requeired_buffer_propertires);
 
@@ -217,12 +210,12 @@ RaytracerPass::RaytracerPass(const shader::Loader& raytrace_shader,
   camera_info_->RequireProperties(requeired_camera_info_propertires);
 
   d_set_->BulkBind(
-      std::vector<gpu_resources::Image*>{color_target, depth_target}, true);
+      std::vector<gpu_resources::Image *>{color_target, depth_target}, true);
   d_set_->BulkBind(
-      std::vector<gpu_resources::Buffer*>{geometry.position, geometry.normal,
-                                          /*unused geometry.tex_coord*/
-                                          geometry.index, geometry.light,
-                                          camera_info, geometry.bvh},
+      std::vector<gpu_resources::Buffer *>{geometry.position, geometry.normal,
+                                           /*unused geometry.tex_coord*/
+                                           geometry.index, geometry.light,
+                                           camera_info, geometry.bvh},
       true);
   pipeline_ = pipeline_handler::Compute(raytrace_shader, {d_set_});
 }
@@ -241,17 +234,17 @@ void RaytracerPass::OnPreRecord() {
 }
 
 void RaytracerPass::OnRecord(vk::CommandBuffer primary_cmd,
-                             const std::vector<vk::CommandBuffer>&) noexcept {
-  auto& swapchain = base::Base::Get().GetSwapchain();
+                             const std::vector<vk::CommandBuffer> &) noexcept {
+  auto &swapchain = base::Base::Get().GetSwapchain();
   pipeline_.RecordDispatch(primary_cmd, swapchain.GetExtent().width / 8,
                            swapchain.GetExtent().height / 8, 1);
 }
 
-RayTracer::RayTracer(render_data::Mesh& mesh, render_data::BVH const& bvh) {
+RayTracer::RayTracer(render_data::Mesh &mesh, render_data::BVH const &bvh) {
   auto device = base::Base::Get().GetContext().GetDevice();
-  auto& swapchain = base::Base::Get().GetSwapchain();
+  auto &swapchain = base::Base::Get().GetSwapchain();
   ready_to_present_ = device.createSemaphore({});
-  auto& resource_manager = render_graph_.GetResourceManager();
+  auto &resource_manager = render_graph_.GetResourceManager();
 
   // This is bad, but i'm too tired to deal with it RN.
   // This renderer is only for comparsion with a new one anyway
@@ -261,18 +254,18 @@ RayTracer::RayTracer(render_data::Mesh& mesh, render_data::BVH const& bvh) {
   gpu_resources::BufferProperties buffer_properties{};
   GeometryBuffers geometry{};
   buffer_properties.size = geometry.AddBuffersToRenderGraph(resource_manager);
-  gpu_resources::Buffer* staging_buffer =
+  gpu_resources::Buffer *staging_buffer =
       resource_manager.AddBuffer(buffer_properties);
 
   gpu_resources::ImageProperties image_properties{};
-  gpu_resources::Image* color_target =
+  gpu_resources::Image *color_target =
       resource_manager.AddImage(image_properties);
   image_properties.format = vk::Format::eR32Sfloat;
-  gpu_resources::Image* depth_target =
+  gpu_resources::Image *depth_target =
       resource_manager.AddImage(image_properties);
 
   buffer_properties.size = sizeof(CameraInfo);
-  gpu_resources::Buffer* camera_info =
+  gpu_resources::Buffer *camera_info =
       resource_manager.AddBuffer(buffer_properties);
 
   resource_transfer_ =
@@ -280,7 +273,7 @@ RayTracer::RayTracer(render_data::Mesh& mesh, render_data::BVH const& bvh) {
   render_graph_.AddPass(&resource_transfer_);
 
   shader::Loader raytrace_shader("shaders/raytrace.spv");
-  pipeline_handler::DescriptorSet* d_set =
+  pipeline_handler::DescriptorSet *d_set =
       raytrace_shader.GenerateDescriptorSet(render_graph_.GetDescriptorPool(),
                                             0);
 
@@ -299,7 +292,7 @@ RayTracer::RayTracer(render_data::Mesh& mesh, render_data::BVH const& bvh) {
 
 bool RayTracer::Draw() {
   g_main_camera_state.Update();
-  auto& swapchain = base::Base::Get().GetSwapchain();
+  auto &swapchain = base::Base::Get().GetSwapchain();
 
   if (!swapchain.AcquireNextImage()) {
     LOG << "Failed to acquire next image";
@@ -314,8 +307,8 @@ bool RayTracer::Draw() {
   return true;
 }
 
-void RayTracer::SetCameraPosition(glm::vec3 pos) {
-  g_main_camera_state.SetPos(pos);
+void RayTracer::SetCameraTransform(utill::Transform transform) {
+  g_main_camera_state.SetTransform(transform);
 }
 
 RayTracer::~RayTracer() {
@@ -324,4 +317,4 @@ RayTracer::~RayTracer() {
   device.destroySemaphore(ready_to_present_);
 }
 
-}  // namespace examples
+} // namespace examples

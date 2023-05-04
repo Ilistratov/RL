@@ -12,9 +12,7 @@ MainCamera::MainCamera(uint32_t screen_width, uint32_t screen_height)
                    float(screen_width) / screen_height},
       is_controlled_(false) {}
 
-const CameraInfo& MainCamera::GetCameraInfo() const {
-  return camera_info_;
-}
+const CameraInfo &MainCamera::GetCameraInfo() const { return camera_info_; }
 
 const static int g_move_axis[][2] = {{GLFW_KEY_A, GLFW_KEY_D},
                                      {GLFW_KEY_LEFT_SHIFT, GLFW_KEY_SPACE},
@@ -64,11 +62,8 @@ void MainCamera::Update() {
       utill::Transform::Combine(camera_info_.camera_to_world, translate);
 }
 
-void MainCamera::SetPos(glm::vec3 pos) {
-  utill::Transform& current = camera_info_.camera_to_world;
-  utill::Transform translate =
-      utill::Transform::Translation(pos - current.GetPos());
-  current = utill::Transform::Combine(current, translate);
+void MainCamera::SetTransform(utill::Transform transform) {
+  camera_info_.camera_to_world = transform;
 }
 
-}  // namespace examples
+} // namespace examples

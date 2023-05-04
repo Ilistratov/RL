@@ -10,15 +10,6 @@
 [[vk::binding(0, 3)]] RWStructuredBuffer<RayTraversalState> g_shadow_ray_traversal_state;
 [[vk::binding(1, 3)]] RWStructuredBuffer<uint> g_shadow_ray_ord;
 
-float3 GetNormalAtBarCord(uint trg_ind, float2 bar_cord) {
-  float3 na = g_vertex_normal[g_vertex_ind[3 * trg_ind + 0].y].xyz;
-  float3 nb = g_vertex_normal[g_vertex_ind[3 * trg_ind + 1].y].xyz;
-  float3 nc = g_vertex_normal[g_vertex_ind[3 * trg_ind + 2].y].xyz;
-  float3 n = nb * bar_cord.x + nc * bar_cord.y
-                             + na * (1 - (bar_cord.x + bar_cord.y));
-  return normalize(n);
-}
-
 float4 CalcLightAtInterseption(Interception primary_insp, Ray primary_ray, Interception shadow_insp, Ray shadow_ray) {
   float3 materialColor = float3(1.0, 1.0, 1.0);
 	uint specPow = 256;
@@ -33,9 +24,9 @@ float4 CalcLightAtInterseption(Interception primary_insp, Ray primary_ray, Inter
   float3 ligt_pos = float3(0, 0, 0);//TODO
   float3 to_light = shadow_ray.direction;
   float dst_to_light = distance(shadow_ray.origin, ligt_pos);
-  bool isValid = shadow_insp.t < 0 || shadow_insp.t > dst_to_light;
-  diffuse += isValid ? max(0, dot(trg_n, to_light)) : 0;
-	specular += isValid ? pow(max(0, dot(to_light, reflect(primary_ray.direction, trg_n))), 128) : 0;
+  bool is_lightsource_visible = shadow_insp.t < 0 || shadow_insp.t > dst_to_light;
+  diffuse += is_lightsource_visible ? max(0, dot(trg_n, to_light)) : 0;
+	specular += is_lightsource_visible ? pow(max(0, dot(to_light, reflect(primary_ray.direction, trg_n))), 128) : 0;
   return float4(materialColor * (diffuse + specular + 0.2), 1.0);
 }
 
@@ -59,11 +50,7 @@ void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_Group
     shadow_ray.origin = g_shadow_ray_traversal_state[pix_state_idx].ray_origin.xyz;
     shadow_ray.direction = g_shadow_ray_traversal_state[pix_state_idx].ray_direction.xyz;
     Interception shadow_insp;
-    if (length(shadow_ray.direction) == 0) {
-      shadow_insp.t = -1;
-    } else {
-      shadow_insp = CastRay(shadow_ray, in_group_tidx);
-    }
+    shadow_insp = CastRay(shadow_ray, in_group_tidx);
     g_color_target[pix_coord] = CalcLightAtInterseption(primary_insp, primary_ray, shadow_insp, shadow_ray);
     g_depth_target[pix_coord] = 1 - exp(-1 / primary_insp.t);
   } else {
@@ -73,5 +60,14 @@ void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_Group
     g_color_target[pix_coord] = skybox_color;
     g_depth_target[pix_coord] = 0;
   }
-  //g_color_target[pix_coord] *= CounterToHeat(l_traversal_counters[in_group_tidx]);
+  //g_color_target[pix_coord] = CounterToHeat(l_traversal_counters[in_group_tidx]);
+  //g_color_target[pix_coord] = CounterToHeat(g_per_pixel_state[pix_state_idx].camera_ray_ind);
+  if (pix_coord.x % 4 == 0 && pix_coord.y % 4 == 0) {
+    g_color_target[pix_coord] = CounterToHeat(g_per_pixel_state[pix_state_idx].camera_ray_ind + l_traversal_counters[in_group_tidx]);
+  }
+  if (pix_coord.x < 10 && pix_coord.y <= 300) {
+    g_color_target[pix_coord] = CounterToHeat(300 - pix_coord.y);
+  } else if (pix_coord.x < 15 && pix_coord.y <= 305) {
+    g_color_target[pix_coord] = float4(0, 0, 0, 1.0);
+  }
 }

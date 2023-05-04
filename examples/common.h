@@ -1,8 +1,9 @@
 #pragma once
 
-#include <stdint.h>
 #include <cstdint>
 #include <glm/fwd.hpp>
+#include <stdint.h>
+
 
 #include "utill/transform.h"
 
@@ -19,13 +20,13 @@ class MainCamera {
   CameraInfo camera_info_;
   bool is_controlled_;
 
- public:
+public:
   MainCamera() = default;
   MainCamera(uint32_t screen_width, uint32_t screen_height);
 
-  const CameraInfo& GetCameraInfo() const;
+  const CameraInfo &GetCameraInfo() const;
   void Update();
-  void SetPos(glm::vec3 pos);
+  void SetTransform(utill::Transform transform);
 };
 
-}  // namespace examples
+} // namespace examples
