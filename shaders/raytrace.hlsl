@@ -177,7 +177,7 @@ float4 CalcLightAtInterseption(Interseption insp, Ray r, int t_idx) {
   uint light_struct_size = 0;
   light_pos.GetDimensions(light_cnt, light_struct_size);
   for (int i = 0; i < light_cnt; i++) {
-    float3 to_light = light_pos[i].xyz - insp_point;
+    float3 to_light = r.origin - insp_point;
     float light_dst = length(to_light);
     to_light = normalize(to_light);
     Ray shadow_ray;
@@ -209,7 +209,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gind : SV_GroupIndex) {
     color_target[DTid.xy] = CalcLightAtInterseption(res, camera_ray, Gind);
     depth_target[DTid.xy] = max(0, 1 - res.dst / 100);
   }
-  color_target[DTid.xy] = CounterToHeat(traversal_counters[Gind]);
+  //color_target[DTid.xy] = CounterToHeat(traversal_counters[Gind]);
   if (DTid.x < 10 && DTid.y <= 300) {
     color_target[DTid.xy] = CounterToHeat(300 - DTid.y);
   } else if (DTid.x < 15 && DTid.y <= 305) {

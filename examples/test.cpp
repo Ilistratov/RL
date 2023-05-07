@@ -18,12 +18,13 @@
 #include "shader/loader.h"
 #include "utill/error_handling.h"
 #include "utill/logger.h"
+#include <random>
 
 namespace examples {
 
 // const uint32_t kNVals = 256 * 256 * 256 * 2;
 const uint32_t kNVals = 1 << 24;
-std::vector<int> g_values;
+std::vector<uint32_t> g_values;
 // std::vector<uint32_t> g_head_flags;
 
 LoadToGpuPass::LoadToGpuPass(gpu_resources::Buffer *staging,
@@ -123,10 +124,13 @@ TestRenderer::TestRenderer() {
   gpu_resources::Buffer *values =
       render_graph_.GetResourceManager().AddBuffer({});
   gpu_resources::Buffer *pos = render_graph_.GetResourceManager().AddBuffer({});
-  g_values = std::vector<int>(kNVals, 1);
+  g_values = std::vector<uint32_t>(kNVals, 1);
   for (uint32_t i = 0; i < kNVals; i++) {
-    g_values[i] = kNVals - i - 1;
+    g_values[i] = i;
   }
+  std::random_device rd;
+  std::mt19937 g(rd());
+  std::shuffle(g_values.begin(), g_values.end(), g);
   pos->RequireProperties(gpu_resources::BufferProperties{
       .size = g_values.size() * sizeof(g_values[0])});
   load_to_gpu_ = LoadToGpuPass(staging, values);
@@ -149,8 +153,14 @@ TestRenderer::TestRenderer() {
            staging->GetBuffer()->GetMappingStart(),
            g_values.size() * sizeof(int));
   LOG << "memcpy done";
-  DCHECK(std::is_sorted(g_values.begin(), g_values.end())) << "Not sorted";
+  for (uint32_t i = 0; i < g_values.size(); i++) {
+    CHECK(i == g_values[i]);
+  }
   LOG << "check done";
+  std::shuffle(g_values.begin(), g_values.end(), g);
+  LOG << "std::sort start";
+  std::sort(g_values.begin(), g_values.end());
+  LOG << "std::sort end";
 }
 
 } // namespace examples

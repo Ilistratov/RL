@@ -108,8 +108,6 @@ void Executor::Execute() {
                              batch.secondary_cmd.begin(),
                              batch.secondary_cmd.end());
   }
-  device.waitForFences(fence, true, -1);
-  LOG << "Warning, tmp wait for fence";
   cmd_pool_.RecycleCmd(recycle_primary, recycle_secondary, fence);
 }
 

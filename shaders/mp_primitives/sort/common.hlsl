@@ -15,7 +15,7 @@ struct StageInformation {
 
 const static uint kNBitPerPass = 4;
 const static uint kNElementsPerThread = 16;
-const static uint KNThreadsPerGroup = 64;
+const static uint KNThreadsPerGroup = 32;
 const static uint KNElementsPerGroup = kNElementsPerThread * KNThreadsPerGroup;
 const static uint kNHistBuckets = 1U << kNBitPerPass;
 const static uint kNHistSize = kNHistBuckets * KNThreadsPerGroup;

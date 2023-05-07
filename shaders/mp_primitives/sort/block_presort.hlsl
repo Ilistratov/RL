@@ -56,7 +56,7 @@ uint CalcDigHistPrefSum(uint in_group_tidx) {
   return src_array;
 }
 
-[numthreads(64, 1, 1)]
+[numthreads(32, 1, 1)]
 void main(uint3 global_thread_idx : SV_DispatchThreadID,
           uint in_group_thread_idx : SV_GroupIndex,
           uint3 group_idx : SV_GroupID) {

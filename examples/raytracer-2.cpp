@@ -38,7 +38,7 @@ const static uint32_t kTraversalStateSize = 48;
 const static uint32_t kPerPixelStateSize = 16;
 const static uint32_t kTraversalThreadsPerGroup = 32;
 
-const static vk::Extent2D kTargetRes = {1280, 720};
+const static vk::Extent2D kTargetRes = {1280, 768};
 
 TransferToGPUPass::TransferToGPUPass(
     std::vector<TransferRequest> transfer_requests,
@@ -471,27 +471,27 @@ RayTracer2::RayTracer2(render_data::Mesh const &mesh,
 
   present_ = BlitToSwapchainPass(color_target);
   ready_to_present_ = device.createSemaphore({});
-  // render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
-  //                       ready_to_present_,
-  //                       swapchain.GetImageAvaliableSemaphore());
+  render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer,
+                        ready_to_present_,
+                        swapchain.GetImageAvaliableSemaphore());
   render_graph_.AddPass(&present_, vk::PipelineStageFlagBits2KHR::eTransfer);
   render_graph_.Init();
 }
 
 bool RayTracer2::Draw() {
-  // camera_state_.Update();
-  // auto &swapchain = base::Base::Get().GetSwapchain();
+  camera_state_.Update();
+  auto &swapchain = base::Base::Get().GetSwapchain();
 
-  // if (!swapchain.AcquireNextImage()) {
-  //   LOG << "Failed to acquire next image";
-  //   return false;
-  // }
-  // swapchain.GetActiveImageInd();
+  if (!swapchain.AcquireNextImage()) {
+    LOG << "Failed to acquire next image";
+    return false;
+  }
+  swapchain.GetActiveImageInd();
   render_graph_.RenderFrame();
-  // if (swapchain.Present(ready_to_present_) != vk::Result::eSuccess) {
-  //   LOG << "Failed to present";
-  //   return false;
-  // }
+  if (swapchain.Present(ready_to_present_) != vk::Result::eSuccess) {
+    LOG << "Failed to present";
+    return false;
+  }
   return true;
 }
 

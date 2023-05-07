@@ -12,7 +12,7 @@
 
 float4 CalcLightAtInterseption(Interception primary_insp, Ray primary_ray, Interception shadow_insp, Ray shadow_ray) {
   float3 materialColor = float3(1.0, 1.0, 1.0);
-	uint specPow = 256;
+	uint specPow = 512;
   Triangle t = GetTriangleByInd(primary_insp.primitive_ind);
   float2 insp_bar_cord = float2(primary_insp.u, primary_insp.v);
   float3 trg_n = GetNormalAtBarCord(primary_insp.primitive_ind, insp_bar_cord);
@@ -21,13 +21,13 @@ float4 CalcLightAtInterseption(Interception primary_insp, Ray primary_ray, Inter
   float specular = 0;
   uint light_cnt = 0;
   uint light_struct_size = 0;
-  float3 ligt_pos = float3(0, 0, 0);//TODO
+  float3 ligt_pos = float3(20, 30, 20);//TODO
   float3 to_light = shadow_ray.direction;
   float dst_to_light = distance(shadow_ray.origin, ligt_pos);
   bool is_lightsource_visible = shadow_insp.t < 0 || shadow_insp.t > dst_to_light;
   diffuse += is_lightsource_visible ? max(0, dot(trg_n, to_light)) : 0;
 	specular += is_lightsource_visible ? pow(max(0, dot(to_light, reflect(primary_ray.direction, trg_n))), 128) : 0;
-  return float4(materialColor * (diffuse + specular + 0.2), 1.0);
+  return float4(materialColor * (diffuse * 0.6 + specular * 0.7 + 0.2), 1.0);
 }
 
 float4 CounterToHeat(uint counter) {
@@ -62,9 +62,9 @@ void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_Group
   }
   //g_color_target[pix_coord] = CounterToHeat(l_traversal_counters[in_group_tidx]);
   //g_color_target[pix_coord] = CounterToHeat(g_per_pixel_state[pix_state_idx].camera_ray_ind);
-  if (pix_coord.x % 4 == 0 && pix_coord.y % 4 == 0) {
-    g_color_target[pix_coord] = CounterToHeat(g_per_pixel_state[pix_state_idx].camera_ray_ind + l_traversal_counters[in_group_tidx]);
-  }
+  //if (pix_coord.x % 4 == 0 && pix_coord.y % 4 == 0) {
+  g_color_target[pix_coord] = CounterToHeat(g_per_pixel_state[pix_state_idx].camera_ray_ind + l_traversal_counters[in_group_tidx]);
+  //}
   if (pix_coord.x < 10 && pix_coord.y <= 300) {
     g_color_target[pix_coord] = CounterToHeat(300 - pix_coord.y);
   } else if (pix_coord.x < 15 && pix_coord.y <= 305) {

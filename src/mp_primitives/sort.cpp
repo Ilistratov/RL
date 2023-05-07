@@ -1,10 +1,4 @@
 #include "mp_primitives/sort.h"
-#include <stdint.h>
-#include <type_traits>
-#include <vector>
-#include <vulkan/vulkan_enums.hpp>
-#include <vulkan/vulkan_handles.hpp>
-#include <vulkan/vulkan_structs.hpp>
 #include "gpu_resources/buffer.h"
 #include "gpu_resources/physical_buffer.h"
 #include "gpu_resources/resource_access_syncronizer.h"
@@ -13,6 +7,13 @@
 #include "pipeline_handler/descriptor_set.h"
 #include "shader/loader.h"
 #include "utill/error_handling.h"
+#include <stdint.h>
+#include <type_traits>
+#include <vector>
+#include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_handles.hpp>
+#include <vulkan/vulkan_structs.hpp>
+
 
 namespace mp_primitives {
 namespace detail {
@@ -23,13 +24,13 @@ struct StageInfoPC {
   uint32_t n_groups;
 };
 
-const static char* kBlockPresortShaderPath =
+const static char *kBlockPresortShaderPath =
     "shaders/mp_primitives/sort/block_presort.spv";
-const static char* kScatterShaderPath =
+const static char *kScatterShaderPath =
     "shaders/mp_primitives/sort/scatter.spv";
 // Should be coherent with shaders/mp-primitives/sort/common.hlsl
 const static uint32_t kNElementsPerThread = 16;
-const static uint32_t kNThreadsPerGroup = 64;
+const static uint32_t kNThreadsPerGroup = 32;
 const static uint32_t kNElementsPerGroup =
     kNThreadsPerGroup * kNElementsPerThread;
 const static uint32_t kNHistBuckets = (1 << kSortBitsPerPhase);
@@ -38,12 +39,11 @@ static inline uint32_t GroupsPerInvocation(uint32_t n_elements) {
   return (n_elements + kNElementsPerGroup - 1) / kNElementsPerGroup;
 }
 
-static inline void RecordSortPhaseInvocation(
-    vk::CommandBuffer cmd,
-    pipeline_handler::Compute& pipeline,
-    vk::PushConstantRange pc_range,
-    uint32_t n_elements,
-    uint32_t n_bit_offset) {
+static inline void
+RecordSortPhaseInvocation(vk::CommandBuffer cmd,
+                          pipeline_handler::Compute &pipeline,
+                          vk::PushConstantRange pc_range, uint32_t n_elements,
+                          uint32_t n_bit_offset) {
   StageInfoPC push_constants{.n_elements = n_elements,
                              .n_bit_offset = n_bit_offset,
                              .n_groups = GroupsPerInvocation(n_elements)};
@@ -53,24 +53,19 @@ static inline void RecordSortPhaseInvocation(
 }
 
 SortBlockPresortPass::SortBlockPresortPass(
-    const shader::Loader& presort_shader,
-    pipeline_handler::DescriptorPool& dpool,
-    pipeline_handler::DescriptorSet* key_hist_dset,
-    uint32_t n_elements,
-    uint32_t n_bit_offset,
-    gpu_resources::Buffer* key_buffer,
-    gpu_resources::Buffer* pos_buffer,
-    gpu_resources::Buffer* key_hist_buffer)
+    const shader::Loader &presort_shader,
+    pipeline_handler::DescriptorPool &dpool,
+    pipeline_handler::DescriptorSet *key_hist_dset, uint32_t n_elements,
+    uint32_t n_bit_offset, gpu_resources::Buffer *key_buffer,
+    gpu_resources::Buffer *pos_buffer, gpu_resources::Buffer *key_hist_buffer)
     : pc_range_(presort_shader.GeneratePushConstantRanges()[0]),
-      n_elements_(n_elements),
-      n_bit_offset_(n_bit_offset),
-      key_buffer_(key_buffer),
-      pos_buffer_(pos_buffer),
+      n_elements_(n_elements), n_bit_offset_(n_bit_offset),
+      key_buffer_(key_buffer), pos_buffer_(pos_buffer),
       key_hist_buffer_(key_hist_buffer) {
-  pipeline_handler::DescriptorSet* sort_data_dset =
+  pipeline_handler::DescriptorSet *sort_data_dset =
       presort_shader.GenerateDescriptorSet(dpool, 0);
   sort_data_dset->BulkBind(
-      std::vector<gpu_resources::Buffer*>{key_buffer_, pos_buffer_});
+      std::vector<gpu_resources::Buffer *>{key_buffer_, pos_buffer_});
   pipeline_ = pipeline_handler::Compute(presort_shader,
                                         {sort_data_dset, key_hist_dset});
 
@@ -85,16 +80,16 @@ SortBlockPresortPass::SortBlockPresortPass(
 }
 
 SortBlockPresortPass::SortBlockPresortPass(
-    SortBlockPresortPass&& other) noexcept {
+    SortBlockPresortPass &&other) noexcept {
   Swap(other);
 }
 
-void SortBlockPresortPass::operator=(SortBlockPresortPass&& other) noexcept {
+void SortBlockPresortPass::operator=(SortBlockPresortPass &&other) noexcept {
   SortBlockPresortPass tmp(std::move(other));
   Swap(tmp);
 }
 
-void SortBlockPresortPass::Swap(SortBlockPresortPass& other) noexcept {
+void SortBlockPresortPass::Swap(SortBlockPresortPass &other) noexcept {
   Pass::Swap(other);
   pipeline_.Swap(other.pipeline_);
   std::swap(pc_range_, other.pc_range_);
@@ -116,37 +111,33 @@ void SortBlockPresortPass::OnPreRecord() {
 }
 
 void SortBlockPresortPass::OnRecord(vk::CommandBuffer primary_cmd,
-                                    const std::vector<vk::CommandBuffer>&) {
+                                    const std::vector<vk::CommandBuffer> &) {
   RecordSortPhaseInvocation(primary_cmd, pipeline_, pc_range_, n_elements_,
                             n_bit_offset_);
 }
 
-SortScatterPass::SortScatterPass(const shader::Loader& scatter_shader,
-                                 pipeline_handler::DescriptorPool& dpool,
-                                 pipeline_handler::DescriptorSet* key_hist_dset,
-                                 uint32_t n_elements,
-                                 uint32_t n_bit_offset,
-                                 gpu_resources::Buffer* src_key_buffer,
-                                 gpu_resources::Buffer* src_pos_buffer,
-                                 gpu_resources::Buffer* key_hist_buffer,
-                                 gpu_resources::Buffer* dst_key_buffer,
-                                 gpu_resources::Buffer* dst_pos_buffer)
+SortScatterPass::SortScatterPass(const shader::Loader &scatter_shader,
+                                 pipeline_handler::DescriptorPool &dpool,
+                                 pipeline_handler::DescriptorSet *key_hist_dset,
+                                 uint32_t n_elements, uint32_t n_bit_offset,
+                                 gpu_resources::Buffer *src_key_buffer,
+                                 gpu_resources::Buffer *src_pos_buffer,
+                                 gpu_resources::Buffer *key_hist_buffer,
+                                 gpu_resources::Buffer *dst_key_buffer,
+                                 gpu_resources::Buffer *dst_pos_buffer)
     : pc_range_(scatter_shader.GeneratePushConstantRanges()[0]),
-      n_elements_(n_elements),
-      n_bit_offset_(n_bit_offset),
-      src_key_buffer_(src_key_buffer),
-      src_pos_buffer_(src_pos_buffer),
-      key_hist_buffer_(key_hist_buffer),
-      dst_key_buffer_(dst_key_buffer),
+      n_elements_(n_elements), n_bit_offset_(n_bit_offset),
+      src_key_buffer_(src_key_buffer), src_pos_buffer_(src_pos_buffer),
+      key_hist_buffer_(key_hist_buffer), dst_key_buffer_(dst_key_buffer),
       dst_pos_buffer_(dst_pos_buffer) {
-  pipeline_handler::DescriptorSet* src_buffers_dset =
+  pipeline_handler::DescriptorSet *src_buffers_dset =
       scatter_shader.GenerateDescriptorSet(dpool, 0);
   src_buffers_dset->BulkBind(
-      std::vector<gpu_resources::Buffer*>{src_key_buffer_, src_pos_buffer_});
-  pipeline_handler::DescriptorSet* dst_buffers_dset =
+      std::vector<gpu_resources::Buffer *>{src_key_buffer_, src_pos_buffer_});
+  pipeline_handler::DescriptorSet *dst_buffers_dset =
       scatter_shader.GenerateDescriptorSet(dpool, 2);
   dst_buffers_dset->BulkBind(
-      std::vector<gpu_resources::Buffer*>{dst_key_buffer_, dst_pos_buffer_});
+      std::vector<gpu_resources::Buffer *>{dst_key_buffer_, dst_pos_buffer_});
   pipeline_ = pipeline_handler::Compute(
       scatter_shader, {src_buffers_dset, key_hist_dset, dst_buffers_dset});
 
@@ -157,16 +148,16 @@ SortScatterPass::SortScatterPass(const shader::Loader& scatter_shader,
   dst_pos_buffer_->RequireProperties(properties);
 }
 
-SortScatterPass::SortScatterPass(SortScatterPass&& other) noexcept {
+SortScatterPass::SortScatterPass(SortScatterPass &&other) noexcept {
   Swap(other);
 }
 
-void SortScatterPass::operator=(SortScatterPass&& other) noexcept {
+void SortScatterPass::operator=(SortScatterPass &&other) noexcept {
   SortScatterPass tmp(std::move(other));
   Swap(tmp);
 }
 
-void SortScatterPass::Swap(SortScatterPass& other) noexcept {
+void SortScatterPass::Swap(SortScatterPass &other) noexcept {
   Pass::Swap(other);
   pipeline_.Swap(other.pipeline_);
   std::swap(pc_range_, other.pc_range_);
@@ -193,27 +184,25 @@ void SortScatterPass::OnPreRecord() {
 }
 
 void SortScatterPass::OnRecord(vk::CommandBuffer primary_cmd,
-                               const std::vector<vk::CommandBuffer>&) {
+                               const std::vector<vk::CommandBuffer> &) {
   RecordSortPhaseInvocation(primary_cmd, pipeline_, pc_range_, n_elements_,
                             n_bit_offset_);
 }
 
-void Sort::Apply(render_graph::RenderGraph& render_graph,
-                 uint32_t n_elements,
-                 gpu_resources::Buffer* key,
-                 gpu_resources::Buffer* pos) {
-  gpu_resources::Buffer* key_hist =
+void Sort::Apply(render_graph::RenderGraph &render_graph, uint32_t n_elements,
+                 gpu_resources::Buffer *key, gpu_resources::Buffer *pos) {
+  gpu_resources::Buffer *key_hist =
       render_graph.GetResourceManager().AddBuffer({});
-  gpu_resources::Buffer* key_tmp =
+  gpu_resources::Buffer *key_tmp =
       render_graph.GetResourceManager().AddBuffer({});
-  gpu_resources::Buffer* pos_tmp =
+  gpu_resources::Buffer *pos_tmp =
       render_graph.GetResourceManager().AddBuffer({});
 
   shader::Loader presort_shader(kBlockPresortShaderPath);
   shader::Loader scatter_shader(kScatterShaderPath);
 
-  auto& dpool = render_graph.GetDescriptorPool();
-  pipeline_handler::DescriptorSet* hist_dset =
+  auto &dpool = render_graph.GetDescriptorPool();
+  pipeline_handler::DescriptorSet *hist_dset =
       presort_shader.GenerateDescriptorSet(dpool, 1);
   hist_dset->BulkBind({key_hist});
   for (uint32_t phase_idx = 0; phase_idx < kSortNPhases; phase_idx++) {
@@ -243,5 +232,5 @@ void Sort::Apply(render_graph::RenderGraph& render_graph,
   }
 }
 
-}  // namespace detail
-}  // namespace mp_primitives
+} // namespace detail
+} // namespace mp_primitives

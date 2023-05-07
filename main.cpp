@@ -23,7 +23,7 @@
 #include "utill/logger.h"
 #include "utill/transform.h"
 
-const static std::string kSceneObjPath = "../assets/objects/conference.obj";
+const static std::string kSceneObjPath = "../assets/objects/dragon.obj";
 
 void RunAlt() { examples::TestRenderer test; }
 
@@ -34,13 +34,12 @@ void Run() {
   mesh.ReorderPrimitives(bvh.GetPrimitiveOrd());
   examples::RayTracer2 renderer(mesh, bvh);
   auto &window = base::Base::Get().GetWindow();
-  utill::Transform initial_pos = utill::Transform::RotationY(0.7) |
-                                 utill::Transform::Translation({-50, 0, -50});
+  utill::Transform initial_pos = utill::Transform::RotationX(0.5) |
+                                 utill::Transform::RotationY(-0.7) |
+                                 utill::Transform::Translation({10, 15, -10});
   renderer.SetCameraTransform(initial_pos);
-  uint32_t counter = 0;
   while (!glfwWindowShouldClose(window.GetWindow())) {
     glfwPollEvents();
-    LOG << "Frame #" << counter++;
     if (!renderer.Draw()) {
       LOG << "Failed to draw";
       break;
@@ -55,11 +54,11 @@ int main() {
       {VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
        VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
       {//"VK_LAYER_KHRONOS_validation",
-       "VK_LAYER_NV_optimus", "VK_LAYER_LUNARG_monitor"},
+       "VK_LAYER_LUNARG_monitor"},
       //{},
       "RL",
       "RL",
-      false,
+      true,
   };
 
   base::ContextConfig context_config = {
@@ -76,7 +75,7 @@ int main() {
   try {
     base::Base::Get().Init(base_config, vk::Extent2D{1280, 768},
                            context_config);
-    // utill::InputManager::Init();
+    utill::InputManager::Init();
     Run();
     // RunAlt();
   } catch (std::exception e) {
