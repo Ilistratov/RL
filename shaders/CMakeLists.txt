@@ -1,5 +1,3 @@
-cmake_minimum_required (VERSION 3.8)
-
 set(HLSL_SOURCE_FILES
   mp_primitives/scan/aggregate.hlsl
   mp_primitives/scan/scatter.hlsl
@@ -27,3 +25,5 @@ foreach(HLSL_SOURCE ${HLSL_SOURCE_FILES})
 endforeach(HLSL_SOURCE)
 
 add_custom_target(shaders DEPENDS ${SPIRV_BINARY_FILES})
+
+install(DIRECTORY ${CMAKE_BINARY_DIR}/shaders DESTINATION ./ FILES_MATCHING PATTERN "*.spv")

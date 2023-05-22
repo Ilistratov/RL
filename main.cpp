@@ -30,7 +30,7 @@ void RunAlt() { examples::TestRenderer test; }
 void Run() {
   render_data::Mesh mesh = render_data::Mesh::LoadFromObj(kSceneObjPath);
   render_data::BVH bvh =
-      render_data::BVH(render_data::BVH::BuildPrimitivesBB(mesh), 24, 12);
+      render_data::BVH(render_data::BVH::BuildPrimitivesBB(mesh), 32, 4);
   mesh.ReorderPrimitives(bvh.GetPrimitiveOrd());
   examples::RayTracer2 renderer(mesh, bvh);
   auto &window = base::Base::Get().GetWindow();

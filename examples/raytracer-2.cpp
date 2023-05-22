@@ -456,8 +456,8 @@ RayTracer2::RayTracer2(render_data::Mesh const &mesh,
 
   gpu_resources::Buffer *shadow_ray_ord =
       resource_manager.AddBuffer({.size = 4});
-  shadow_ray_sort_.Apply(render_graph_, kTargetRes.width * kTargetRes.height,
-                         shadow_ray_hash, shadow_ray_ord);
+  // shadow_ray_sort_.Apply(render_graph_, kTargetRes.width * kTargetRes.height,
+  //                        shadow_ray_hash, shadow_ray_ord);
 
   gpu_resources::Image *color_target =
       resource_manager.AddImage({.extent = kTargetRes});

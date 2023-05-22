@@ -2,7 +2,7 @@
 #include "bvh.hlsl"
 #include "classify.hlsl"
 
-#define VECTORIZED_TRAVERSAL
+//#define VECTORIZED_TRAVERSAL
 #define ENABLE_TRAVERSAL_ORDER_OPTIMIZATION
 #include "traverse.hlsl"
 

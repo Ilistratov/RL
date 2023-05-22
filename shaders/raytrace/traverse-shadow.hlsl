@@ -37,8 +37,8 @@ float4 CounterToHeat(uint counter) {
 
 [numthreads(32, 1, 1)]
 void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_GroupIndex) {
-  uint pix_state_idx = g_shadow_ray_ord[global_tidx.x];
-  //uint pix_state_idx = global_tidx.x;
+  //uint pix_state_idx = g_shadow_ray_ord[global_tidx.x];
+  uint pix_state_idx = global_tidx.x;
   uint2 pix_coord = g_per_pixel_state[pix_state_idx].pix_cord;
   Ray primary_ray;
   primary_ray.origin = g_traversal_state[pix_state_idx].ray_origin.xyz;
@@ -63,11 +63,11 @@ void main(uint3 global_tidx : SV_DispatchThreadID, uint in_group_tidx : SV_Group
   //g_color_target[pix_coord] = CounterToHeat(l_traversal_counters[in_group_tidx]);
   //g_color_target[pix_coord] = CounterToHeat(g_per_pixel_state[pix_state_idx].camera_ray_ind);
   //if (pix_coord.x % 4 == 0 && pix_coord.y % 4 == 0) {
-  g_color_target[pix_coord] = CounterToHeat(g_per_pixel_state[pix_state_idx].camera_ray_ind + l_traversal_counters[in_group_tidx]);
+  //g_color_target[pix_coord] = CounterToHeat(g_per_pixel_state[pix_state_idx].camera_ray_ind + l_traversal_counters[in_group_tidx]);
   //}
-  if (pix_coord.x < 10 && pix_coord.y <= 300) {
-    g_color_target[pix_coord] = CounterToHeat(300 - pix_coord.y);
-  } else if (pix_coord.x < 15 && pix_coord.y <= 305) {
-    g_color_target[pix_coord] = float4(0, 0, 0, 1.0);
-  }
+  //if (pix_coord.x < 10 && pix_coord.y <= 300) {
+  //  g_color_target[pix_coord] = CounterToHeat(300 - pix_coord.y);
+  //} else if (pix_coord.x < 15 && pix_coord.y <= 305) {
+  //  g_color_target[pix_coord] = float4(0, 0, 0, 1.0);
+  //}
 }

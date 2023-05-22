@@ -1,7 +1,7 @@
 #include "shader/loader.h"
 
-#include <stdint.h>
 #include <fstream>
+#include <stdint.h>
 #include <vector>
 
 #include <spirv_cross/spirv.hpp>
@@ -23,59 +23,60 @@ namespace shader {
 
 namespace {
 
-std::vector<uint32_t> LoadSpirvIR(const char* path) {
+std::vector<uint32_t> LoadSpirvIR(const char *path) {
   DLOG << "Reading spirv IR from " << path;
-  std::ifstream file(path, std::ios::binary | std::ios::ate);
+  std::string spirv_bin_file = "../" + std::string(path);
+  std::ifstream file(spirv_bin_file, std::ios::binary | std::ios::ate);
   CHECK(file.good()) << "Failed to open " << path;
   size_t file_size = file.tellg();
   DCHECK(file_size % sizeof(uint32_t) == 0);
   std::vector<uint32_t> shader_binary(file_size / sizeof(uint32_t));
   file.seekg(0);
-  file.read((char*)shader_binary.data(), file_size);
+  file.read((char *)shader_binary.data(), file_size);
   file.close();
 
   return shader_binary;
 }
 
-}  // namespace
+} // namespace
 
-uint32_t Loader::GetSet(const spirv_cross::Resource& resource) const noexcept {
+uint32_t Loader::GetSet(const spirv_cross::Resource &resource) const noexcept {
   return compiler_.get_decoration(resource.id, spv::DecorationDescriptorSet);
 }
 
-uint32_t Loader::GetBinding(
-    const spirv_cross::Resource& resource) const noexcept {
+uint32_t
+Loader::GetBinding(const spirv_cross::Resource &resource) const noexcept {
   return compiler_.get_decoration(resource.id, spv::DecorationBinding);
 }
 
-Loader::Loader(const char* path) : Loader(LoadSpirvIR(path)) {}
+Loader::Loader(const char *path) : Loader(LoadSpirvIR(path)) {}
 
-Loader::Loader(const std::vector<uint32_t>& spirv_binary)
+Loader::Loader(const std::vector<uint32_t> &spirv_binary)
     : compiler_(spirv_binary) {
   switch (compiler_.get_execution_model()) {
-    case spv::ExecutionModelGLCompute:
-      shader_stage_ = vk::ShaderStageFlagBits::eCompute;
-      break;
-    case spv::ExecutionModelVertex:
-    case spv::ExecutionModelTessellationControl:
-    case spv::ExecutionModelTessellationEvaluation:
-    case spv::ExecutionModelGeometry:
-    case spv::ExecutionModelFragment:
-    case spv::ExecutionModelKernel:
-    case spv::ExecutionModelTaskNV:
-    case spv::ExecutionModelMeshNV:
-    case spv::ExecutionModelRayGenerationKHR:
-    case spv::ExecutionModelIntersectionKHR:
-    case spv::ExecutionModelAnyHitKHR:
-    case spv::ExecutionModelClosestHitKHR:
-    case spv::ExecutionModelMissKHR:
-    case spv::ExecutionModelCallableKHR:
-    case spv::ExecutionModelTaskEXT:
-    case spv::ExecutionModelMeshEXT:
-    case spv::ExecutionModelMax:
-    default:
-      CHECK(false) << "Unsupported execution model "
-                   << compiler_.get_execution_model();
+  case spv::ExecutionModelGLCompute:
+    shader_stage_ = vk::ShaderStageFlagBits::eCompute;
+    break;
+  case spv::ExecutionModelVertex:
+  case spv::ExecutionModelTessellationControl:
+  case spv::ExecutionModelTessellationEvaluation:
+  case spv::ExecutionModelGeometry:
+  case spv::ExecutionModelFragment:
+  case spv::ExecutionModelKernel:
+  case spv::ExecutionModelTaskNV:
+  case spv::ExecutionModelMeshNV:
+  case spv::ExecutionModelRayGenerationKHR:
+  case spv::ExecutionModelIntersectionKHR:
+  case spv::ExecutionModelAnyHitKHR:
+  case spv::ExecutionModelClosestHitKHR:
+  case spv::ExecutionModelMissKHR:
+  case spv::ExecutionModelCallableKHR:
+  case spv::ExecutionModelTaskEXT:
+  case spv::ExecutionModelMeshEXT:
+  case spv::ExecutionModelMax:
+  default:
+    CHECK(false) << "Unsupported execution model "
+                 << compiler_.get_execution_model();
   }
   auto device = base::Base::Get().GetContext().GetDevice();
   shader_module_ = device.createShaderModule(
@@ -83,9 +84,9 @@ Loader::Loader(const std::vector<uint32_t>& spirv_binary)
   CHECK(shader_module_) << "Failed to create shader module";
 }
 
-pipeline_handler::DescriptorSet* Loader::GenerateDescriptorSet(
-    pipeline_handler::DescriptorPool& pool,
-    uint32_t set) const {
+pipeline_handler::DescriptorSet *
+Loader::GenerateDescriptorSet(pipeline_handler::DescriptorPool &pool,
+                              uint32_t set) const {
   std::vector<pipeline_handler::BufferDescriptorBinding> buffer_bindings;
   std::vector<pipeline_handler::ImageDescriptorBinding> image_bindings;
   const auto shader_resources = compiler_.get_shader_resources();
@@ -114,17 +115,13 @@ std::vector<vk::PushConstantRange> Loader::GeneratePushConstantRanges() const {
   return result;
 }
 
-vk::ShaderStageFlags Loader::GetShaderStage() const {
-  return shader_stage_;
-}
+vk::ShaderStageFlags Loader::GetShaderStage() const { return shader_stage_; }
 
-vk::ShaderModule Loader::GetShaderModule() const {
-  return shader_module_;
-}
+vk::ShaderModule Loader::GetShaderModule() const { return shader_module_; }
 
 Loader::~Loader() {
   auto device = base::Base::Get().GetContext().GetDevice();
   device.destroyShaderModule(shader_module_);
 }
 
-}  // namespace shader
+} // namespace shader
