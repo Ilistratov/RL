@@ -1,4 +1,11 @@
 #include "base/context.h"
+#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan_handles.hpp>
+
+#define VMA_IMPLEMENTATION
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+#include <vma/vk_mem_alloc.h>
 
 #include "base/base.h"
 #include "base/physical_device_picker.h"
@@ -7,13 +14,13 @@
 
 namespace base {
 
-void Context::PickPhysicalDevice(ContextConfig& config) {
+void Context::PickPhysicalDevice(ContextConfig &config) {
   PhysicalDevicePicker picker(&config, Base::Get().GetWindow().GetSurface());
   physical_device_ = picker.GetPickedDevice();
   queue_family_index_ = picker.GetQueueFamilyIndex();
 }
 
-void Context::CreateDevice(ContextConfig& config) {
+void Context::CreateDevice(ContextConfig &config) {
   std::vector<float> queue_priorities(config.queue_count, 1.0);
   vk::DeviceQueueCreateInfo queue_create_info(
       vk::DeviceQueueCreateFlags{}, queue_family_index_, queue_priorities);
@@ -24,12 +31,10 @@ void Context::CreateDevice(ContextConfig& config) {
                                    config.device_extensions, &device_features);
   vk::PhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features(true);
   vk::PhysicalDeviceSynchronization2FeaturesKHR synchronization2_features(true);
+  vk::PhysicalDevice8BitStorageFeaturesKHR storage_features(true, true, true);
 
-  vk::StructureChain<vk::DeviceCreateInfo,
-                     vk::PhysicalDeviceTimelineSemaphoreFeatures,
-                     vk::PhysicalDeviceSynchronization2FeaturesKHR>
-      info_chain(device_info, timeline_semaphore_features,
-                 synchronization2_features);
+  vk::StructureChain info_chain(device_info, timeline_semaphore_features,
+                                synchronization2_features, storage_features);
 
   LOG << "Creating device with:\nExt: " << config.device_extensions
       << "\nLayers: " << config.device_layers;
@@ -44,27 +49,50 @@ void Context::CreateDevice(ContextConfig& config) {
   }
 }
 
+void Context::InitializeAllocator() {
+  VmaVulkanFunctions vulkanFunctions = {};
+  vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+  vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+  vulkanFunctions.vkGetDeviceBufferMemoryRequirements =
+      &vkGetDeviceBufferMemoryRequirements;
+  vulkanFunctions.vkGetDeviceImageMemoryRequirements =
+      &vkGetDeviceImageMemoryRequirements;
+
+  VmaAllocatorCreateInfo allocateCreateInfo{
+      .physicalDevice = physical_device_,
+      .device = device_,
+      .pVulkanFunctions = &vulkanFunctions,
+      .instance = base::Base::Get().GetInstance(),
+      .vulkanApiVersion = VK_API_VERSION_1_3,
+  };
+  auto result = vmaCreateAllocator(&allocateCreateInfo, &allocator_);
+  CHECK(result == VK_SUCCESS) << "Failed to create vma allocator: "
+                              << vk::to_string((vk::Result)result);
+}
+
 Context::Context(ContextConfig config) {
   LOG << "Picking physical device";
   PickPhysicalDevice(config);
   LOG << "Creating device";
   CreateDevice(config);
-  LOG << "Initialized context";
+  VULKAN_HPP_DEFAULT_DISPATCHER.init(device_);
+  LOG << "Initializing vma";
+  InitializeAllocator();
+  LOG << "Device context initialized";
 }
 
-Context::Context(Context&& other) noexcept {
-  *this = std::move(other);
-}
+Context::Context(Context &&other) noexcept { *this = std::move(other); }
 
-void Context::operator=(Context&& other) noexcept {
+void Context::operator=(Context &&other) noexcept {
   Context tmp;
   tmp.Swap(other);
   Swap(tmp);
 }
 
-void Context::Swap(Context& other) noexcept {
+void Context::Swap(Context &other) noexcept {
   std::swap(device_, other.device_);
   std::swap(physical_device_, other.physical_device_);
+  std::swap(allocator_, other.allocator_);
   std::swap(queue_family_index_, other.queue_family_index_);
   device_queues_.swap(other.device_queues_);
 }
@@ -73,13 +101,11 @@ vk::PhysicalDevice Context::GetPhysicalDevice() const {
   return physical_device_;
 }
 
-vk::Device Context::GetDevice() const {
-  return device_;
-}
+vk::Device Context::GetDevice() const { return device_; }
 
-uint32_t Context::GetQueueFamilyIndex() const {
-  return queue_family_index_;
-}
+VmaAllocator Context::GetAllocator() const { return allocator_; }
+
+uint32_t Context::GetQueueFamilyIndex() const { return queue_family_index_; }
 
 vk::Queue Context::GetQueue(uint32_t queue_ind) const {
   DCHECK(queue_ind < device_queues_.size())
@@ -88,10 +114,12 @@ vk::Queue Context::GetQueue(uint32_t queue_ind) const {
 }
 
 Context::~Context() {
-  if (!device_) {
-    return;
+  if (allocator_) {
+    vmaDestroyAllocator(allocator_);
   }
-  device_.destroy();
+  if (device_) {
+    device_.destroy();
+  }
 }
 
-}  // namespace base
+} // namespace base

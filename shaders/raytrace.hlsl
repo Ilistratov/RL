@@ -1,3 +1,5 @@
+#include "raytrace/bvh.hlsl"
+
 [[vk::binding(0, 0)]] RWTexture2D<float4> color_target;
 [[vk::binding(1, 0)]] RWTexture2D<float> depth_target;
 
@@ -15,54 +17,6 @@ struct CameraInfo {
 };
 
 [[vk::binding(7, 0)]] ConstantBuffer<CameraInfo> camera_info;
-
-struct Ray {
-  float3 origin;
-  float3 direction;
-};
-
-float2 GetInspT1d(float origin, float speed, float2 range) {
-  if (abs(speed) < 1e-4) {
-    if (range.x < origin && origin < range.y) {
-      return float2(0, 1e9);
-    } else {
-      return float2(0, -1);
-    }
-  }
-  float t1 = (range.x - origin) / speed;
-  float t2 = (range.y - origin) / speed;
-  if (t1 > t2) {
-    float t_tmp = t1;
-    t1 = t2;
-    t2 = t_tmp;
-  }
-  t1 = max(0, t1);
-  return float2(t1, t2);
-}
-
-struct BoundingBox {
-  float2 x_range;
-  float2 y_range;
-  float2 z_range;
-
-  float2 GetInspT(Ray r) {
-    float2 t_range_x = GetInspT1d(r.origin.x, r.direction.x, x_range);
-    float2 t_range_y = GetInspT1d(r.origin.y, r.direction.y, y_range);
-    float2 t_range_z = GetInspT1d(r.origin.z, r.direction.z, z_range);
-    float2 res;
-    res.x = max(max(t_range_x.x, t_range_y.x), t_range_z.x);
-    res.y = min(min(t_range_x.y, t_range_y.y), t_range_z.y);
-    return res;
-  }
-};
-
-struct BVHNode {
-  BoundingBox bounds;
-  uint left;
-  uint right;
-  uint parent;
-  uint bvh_level;
-};
 
 [[vk::binding(8, 0)]] StructuredBuffer<BVHNode> bvh_buffer;
 
@@ -147,20 +101,20 @@ bool IsTraversalOmittable(float2 insp_t, float cur_res) {
   return insp_t.x > insp_t.y || (cur_res > 0 && cur_res + 1e-2 < insp_t.x);
 }
 
-Interseption CastRay(Ray r) {
+groupshared int traversal_counters[64];
+
+Interseption CastRay(Ray r, int t_idx) {
   uint cur_trg = (uint)-1;
   float3 cur_insp = float3(-1, 0, 0);
   // uint insp_l = 0;
   uint n_bvh_nodes = 0;
   uint memb_size = 0;
-  // uint it_count = 0;
   bvh_buffer.GetDimensions(n_bvh_nodes, memb_size);
 
   for (uint cur_vrt = 0, prv_vrt = -1, nxt_vrt = 0; nxt_vrt != -1;
        prv_vrt = cur_vrt, cur_vrt = nxt_vrt) {
     nxt_vrt = bvh_buffer[cur_vrt].parent;
-    // ++it_count;
-
+    traversal_counters[t_idx] += 1;
     if (bvh_buffer[cur_vrt].bvh_level == (uint)(-1)) {
       for (uint t_ind = bvh_buffer[cur_vrt].left; t_ind < bvh_buffer[cur_vrt].right; t_ind++) {
         // it_count += 2;
@@ -205,7 +159,7 @@ Interseption CastRay(Ray r) {
   return res;
 }
 
-float4 CalcLightAtInterseption(Interseption insp, Ray r) {
+float4 CalcLightAtInterseption(Interseption insp, Ray r, int t_idx) {
   // float t_flag = insp.insp_left / 4;
   // float t_flag2 = insp.insp_left / 16;
   // float t_flag3 = insp.insp_left / 64;
@@ -223,29 +177,42 @@ float4 CalcLightAtInterseption(Interseption insp, Ray r) {
   uint light_struct_size = 0;
   light_pos.GetDimensions(light_cnt, light_struct_size);
   for (int i = 0; i < light_cnt; i++) {
-    float3 to_light = light_pos[i].xyz - insp_point;
+    float3 to_light = r.origin - insp_point;
     float light_dst = length(to_light);
     to_light = normalize(to_light);
     Ray shadow_ray;
     shadow_ray.direction = to_light;
     shadow_ray.origin = insp_point + to_light * 1e-4;
-    Interseption shadow_ray_insp = CastRay(shadow_ray);
+    Interseption shadow_ray_insp = CastRay(shadow_ray, t_idx);
     bool isValid = shadow_ray_insp.trg_ind == (uint)(-1) | light_dst < shadow_ray_insp.dst;
+    //bool isValid = true;
     diffuse += isValid ? max(0, dot(trg_n, to_light)) : 0;
 		specular += isValid ? pow(max(0, dot(to_light, reflect(r.direction, trg_n))), 128) : 0;
   }
   return float4(materialColor * (diffuse + specular + 0.2), 1.0);
 }
 
+float4 CounterToHeat(uint counter) {
+  float val = counter / 100.0;
+  return float4(clamp(val, 0, 1), clamp(val - 1, 0, 1), clamp(val - 2, 0, 1), 1.0);
+}
+
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint Gind : SV_GroupIndex) {
   Ray camera_ray = PixCordToRay(DTid.x, DTid.y);
-  Interseption res = CastRay(camera_ray);
+  //color_target[DTid.xy] = float4(0.3, 0.3, 0.3, 1);
+  traversal_counters[Gind] = 0;
+  Interseption res = CastRay(camera_ray, Gind);
   color_target[DTid.xy] = float4(0.1, 0.1, 0.1, 1.0);
   depth_target[DTid.xy] = 0.0f;
   if (res.trg_ind != (uint)-1) {
-    color_target[DTid.xy] = CalcLightAtInterseption(res, camera_ray);
+    color_target[DTid.xy] = CalcLightAtInterseption(res, camera_ray, Gind);
     depth_target[DTid.xy] = max(0, 1 - res.dst / 100);
   }
-  // color_target[DTid.xy] = float4(res.it_count / 128.0, res.it_count / 256.0, res.it_count / 512.0, 1.0);
+  //color_target[DTid.xy] = CounterToHeat(traversal_counters[Gind]);
+  if (DTid.x < 10 && DTid.y <= 300) {
+    color_target[DTid.xy] = CounterToHeat(300 - DTid.y);
+  } else if (DTid.x < 15 && DTid.y <= 305) {
+    color_target[DTid.xy] = float4(0, 0, 0, 1.0);
+  }
 }

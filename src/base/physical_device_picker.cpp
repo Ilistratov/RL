@@ -11,6 +11,9 @@ bool PhysicalDevicePicker::CheckFeatures(vk::PhysicalDevice device) const {
 }
 
 bool PhysicalDevicePicker::CheckPresentModes(vk::PhysicalDevice device) const {
+  if (!config_->create_window) {
+    return true;
+  }
   auto present_modes = device.getSurfacePresentModesKHR(surface_);
   auto surface_formats = device.getSurfaceFormatsKHR(surface_);
   return !present_modes.empty() && !surface_formats.empty();
@@ -20,7 +23,7 @@ uint32_t PhysicalDevicePicker::GetSuitableQueueFamilyIndex(
     vk::PhysicalDevice device) const {
   auto queue_properties = device.getQueueFamilyProperties();
   uint32_t family_index = 0;
-  for (const auto& queue : queue_properties) {
+  for (const auto &queue : queue_properties) {
     if ((queue.queueFlags & config_->required_flags) &&
         queue.queueCount >= config_->queue_count) {
       return family_index;
@@ -32,15 +35,15 @@ uint32_t PhysicalDevicePicker::GetSuitableQueueFamilyIndex(
 }
 
 bool PhysicalDevicePicker::CheckExtensions(vk::PhysicalDevice device) {
-  for (auto& [ext_name, is_available] : extension_availability_) {
+  for (auto &[ext_name, is_available] : extension_availability_) {
     is_available = false;
   }
   auto available_ext = device.enumerateDeviceExtensionProperties();
 
-  for (const auto& ext : available_ext) {
+  for (const auto &ext : available_ext) {
     extension_availability_[std::string(ext.extensionName)] = true;
   }
-  for (const auto& [ext_name, is_available] : extension_availability_) {
+  for (const auto &[ext_name, is_available] : extension_availability_) {
     if (!is_available) {
       LOG << "Extension " << ext_name << " is not available";
       return false;
@@ -50,6 +53,9 @@ bool PhysicalDevicePicker::CheckExtensions(vk::PhysicalDevice device) {
 }
 
 bool PhysicalDevicePicker::CheckSurfaceSupport(vk::PhysicalDevice device) {
+  if (!config_->create_window) {
+    return true;
+  }
   return device.getSurfaceSupportKHR(GetSuitableQueueFamilyIndex(device),
                                      surface_);
 }
@@ -60,11 +66,11 @@ bool PhysicalDevicePicker::IsDeviceSuitable(vk::PhysicalDevice device) {
          CheckExtensions(device) && CheckSurfaceSupport(device);
 }
 
-uint64_t PhysicalDevicePicker::calcDeviceMemSize(
-    vk::PhysicalDevice device) const {
+uint64_t
+PhysicalDevicePicker::calcDeviceMemSize(vk::PhysicalDevice device) const {
   uint64_t res = 0;
   auto mem_properties = device.getMemoryProperties();
-  for (const auto& heap : mem_properties.memoryHeaps) {
+  for (const auto &heap : mem_properties.memoryHeaps) {
     res += heap.size;
   }
   return res;
@@ -91,7 +97,7 @@ bool PhysicalDevicePicker::DeviceCmp(vk::PhysicalDevice lhs,
 void PhysicalDevicePicker::PickPhysicalDevice() {
   auto instance = Base::Get().GetInstance();
   auto physical_devices = instance.enumeratePhysicalDevices();
-  for (auto& current_device : physical_devices) {
+  for (auto &current_device : physical_devices) {
     LOG << "Checking "
         << std::string(current_device.getProperties().deviceName);
 
@@ -111,10 +117,10 @@ void PhysicalDevicePicker::PickPhysicalDevice() {
       << " With queue family: " << result_queue_family_index_;
 }
 
-PhysicalDevicePicker::PhysicalDevicePicker(const ContextConfig* config,
+PhysicalDevicePicker::PhysicalDevicePicker(const ContextConfig *config,
                                            vk::SurfaceKHR surface)
     : config_(config), surface_(surface) {
-  for (const auto& ext_name : config->device_extensions) {
+  for (const auto &ext_name : config->device_extensions) {
     extension_availability_[ext_name] = false;
   }
   PickPhysicalDevice();
@@ -128,4 +134,4 @@ uint32_t PhysicalDevicePicker::GetQueueFamilyIndex() const {
   return result_queue_family_index_;
 }
 
-}  // namespace base
+} // namespace base

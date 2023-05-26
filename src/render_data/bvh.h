@@ -22,6 +22,7 @@ struct BoundingBox {
 
   glm::vec3 GetSize() const;
   float GetVolume() const;
+  float GetSurfaceArea() const;
   bool IsEmpty() const;
   bool Contains(const BoundingBox& other) const;
 };
@@ -73,7 +74,9 @@ class BVH {
 
  public:
   BVH() = default;
-  BVH(std::vector<std::pair<BoundingBox, uint32_t>>&& primitives);
+  BVH(std::vector<std::pair<BoundingBox, uint32_t>>&& primitives,
+      uint32_t max_depth = 16,
+      uint32_t min_node_primitives = 8);
 
   static std::vector<std::pair<BoundingBox, uint32_t>> BuildPrimitivesBB(
       const Mesh& mesh);

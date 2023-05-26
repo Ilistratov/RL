@@ -1,33 +1,28 @@
 #pragma once
 
+#include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
-
-#include "gpu_resources/device_memory_allocator.h"
 
 namespace gpu_resources {
 
 struct BufferProperties {
   vk::DeviceSize size = 0;
+  VmaAllocationCreateFlags allocation_flags = {};
   vk::BufferUsageFlags usage_flags = {};
-  vk::MemoryPropertyFlags memory_flags = {};
 
   static BufferProperties Unite(const BufferProperties& lhs,
                                 const BufferProperties& rhs);
 };
 
 class PhysicalBuffer {
- private:
+  BufferProperties properties_ = {};
   uint32_t resource_idx_ = 0;
   vk::Buffer buffer_ = {};
-  MemoryBlock* memory_ = nullptr;
-  BufferProperties properties_ = {};
+  VmaAllocation allocation_ = {};
 
   friend class ResourceManager;
 
-  void CreateVkBuffer();
   void SetDebugName(const std::string& debug_name) const;
-  void RequestMemory(DeviceMemoryAllocator& allocator);
-  vk::BindBufferMemoryInfo GetBindMemoryInfo() const;
 
  public:
   PhysicalBuffer() = default;

@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.20)
 project(RL_Executable)
 
 include(BuildFlags.cmake)
@@ -21,3 +21,9 @@ add_dependencies(renderer shaders)
 
 add_subdirectory(src)
 target_link_libraries(renderer rl_lib)
+
+set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install)
+
+install(TARGETS renderer
+        RUNTIME DESTINATION bin)
+install(DIRECTORY assets DESTINATION ./)

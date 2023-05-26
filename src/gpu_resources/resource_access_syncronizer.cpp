@@ -1,23 +1,22 @@
 #include "gpu_resources/resource_access_syncronizer.h"
 
-#include <vulkan/vulkan_enums.hpp>
 #include "gpu_resources/common.h"
 #include "utill/error_handling.h"
-
 
 namespace gpu_resources {
 
 using namespace error_messages;
 
 bool ResourceAccess::IsModify() const {
-  return (access_flags | (vk::AccessFlagBits2KHR::eAccelerationStructureWrite |
-                          vk::AccessFlagBits2KHR::eColorAttachmentWrite |
-                          vk::AccessFlagBits2KHR::eDepthStencilAttachmentWrite |
-                          vk::AccessFlagBits2KHR::eHostWrite |
-                          vk::AccessFlagBits2KHR::eMemoryWrite |
-                          vk::AccessFlagBits2KHR::eShaderStorageWrite |
-                          vk::AccessFlagBits2KHR::eShaderWrite |
-                          vk::AccessFlagBits2KHR::eTransferWrite)) !=
+  return (access_flags &
+          (vk::AccessFlagBits2KHR::eAccelerationStructureWriteKHR |
+           vk::AccessFlagBits2KHR::eColorAttachmentWrite |
+           vk::AccessFlagBits2KHR::eDepthStencilAttachmentWrite |
+           vk::AccessFlagBits2KHR::eHostWrite |
+           vk::AccessFlagBits2KHR::eMemoryWrite |
+           vk::AccessFlagBits2KHR::eShaderStorageWrite |
+           vk::AccessFlagBits2KHR::eShaderWrite |
+           vk::AccessFlagBits2KHR::eTransferWrite)) !=
          vk::AccessFlagBits2KHR::eNone;
 }
 

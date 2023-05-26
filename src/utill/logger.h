@@ -46,7 +46,9 @@ class Voidify {
  public:
   Voidify() = default;
   template <typename T>
-  void operator<<(const T&) {}
+  Voidify& operator<<(const T&) {
+    return *this;
+  }
   template <typename T>
   void operator&(const T&) {}
 };

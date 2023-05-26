@@ -5,7 +5,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-namespace gpu_executer {
+namespace gpu_executor {
 
 const uint32_t kCmdPoolMaxAllocStep = 256;
 
@@ -46,4 +46,4 @@ class CommandPool {
   ~CommandPool();
 };
 
-}  // namespace gpu_executer
+}  // namespace gpu_executor

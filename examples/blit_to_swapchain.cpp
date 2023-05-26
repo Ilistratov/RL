@@ -8,7 +8,7 @@
 
 namespace examples {
 
-BlitToSwapchainPass::BlitToSwapchainPass(gpu_resources::Image* render_target)
+BlitToSwapchainPass::BlitToSwapchainPass(gpu_resources::Image *render_target)
     : Pass(0), render_target_(render_target) {
   LOG << "Initializing BlitToSwapchainPass";
   DCHECK(render_target != nullptr)
@@ -28,8 +28,11 @@ void BlitToSwapchainPass::OnPreRecord() {
 
 void BlitToSwapchainPass::OnRecord(
     vk::CommandBuffer primary_cmd,
-    const std::vector<vk::CommandBuffer>&) noexcept {
-  auto& swapchain = base::Base::Get().GetSwapchain();
+    const std::vector<vk::CommandBuffer> &) noexcept {
+  if (base::Base::Get().GetWindow().GetWindow() == nullptr) {
+    return;
+  }
+  auto &swapchain = base::Base::Get().GetSwapchain();
   gpu_resources::PhysicalImage swapchain_image(
       swapchain.GetImage(swapchain.GetActiveImageInd()), swapchain.GetExtent(),
       swapchain.GetFormat());
@@ -56,4 +59,4 @@ void BlitToSwapchainPass::OnRecord(
   swapchain_image.Release();
 }
 
-}  // namespace examples
+} // namespace examples

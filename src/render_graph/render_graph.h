@@ -3,14 +3,14 @@
 #include <memory>
 #include <vector>
 
-#include "gpu_executer/executer.h"
+#include "gpu_executor/executor.h"
 #include "gpu_resources/resource_manager.h"
 #include "pipeline_handler/descriptor_pool.h"
 #include "render_graph/pass.h"
 
 namespace render_graph {
 
-class PreFrameResourceInitializerTask : public gpu_executer::Task {
+class PreFrameResourceInitializerTask : public gpu_executor::Task {
   gpu_resources::PassAccessSyncronizer* access_syncronizer_ = nullptr;
   uint32_t pass_count_ = 0;
 
@@ -26,7 +26,7 @@ class PreFrameResourceInitializerTask : public gpu_executer::Task {
 
 class RenderGraph {
   gpu_resources::ResourceManager resource_manager_;
-  gpu_executer::Executer executer_;
+  gpu_executor::Executor executor_;
   pipeline_handler::DescriptorPool descriptor_pool_;
   PreFrameResourceInitializerTask initialize_task_;
   std::vector<Pass*> passes_;
@@ -44,6 +44,7 @@ class RenderGraph {
                vk::Semaphore external_signal = {},
                vk::Semaphore external_wait = {});
   gpu_resources::ResourceManager& GetResourceManager();
+  pipeline_handler::DescriptorPool& GetDescriptorPool();
   void Init();
   void RenderFrame();
 };

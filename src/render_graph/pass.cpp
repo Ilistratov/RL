@@ -1,6 +1,7 @@
 #include "render_graph/pass.h"
 
 #include <stdint.h>
+#include <type_traits>
 #include "utill/error_handling.h"
 
 namespace render_graph {
@@ -15,7 +16,21 @@ void Pass::RecordPostPassParriers(vk::CommandBuffer cmd) {
   cmd.pipelineBarrier2KHR(dep_info);
 }
 
-void Pass::OnReserveDescriptorSets(pipeline_handler::DescriptorPool&) noexcept {
+Pass::Pass(Pass&& other) noexcept {
+  Swap(other);
+}
+
+void Pass::operator=(Pass&& other) noexcept {
+  Pass tmp(std::move(other));
+  Swap(tmp);
+}
+
+void Pass::Swap(Pass& other) noexcept {
+  DCHECK(pass_idx_ == uint32_t(-1)) << "Bound passes can not be moved";
+  DCHECK(other.pass_idx_ == uint32_t(-1)) << "Bound passes can not be moved";
+  std::swap(access_syncronizer_, other.access_syncronizer_);
+  std::swap(pass_idx_, other.pass_idx_);
+  std::swap(secondary_cmd_count_, other.secondary_cmd_count_);
 }
 
 void Pass::OnPreRecord() {}
@@ -25,17 +40,17 @@ void Pass::OnRecord(vk::CommandBuffer, const std::vector<vk::CommandBuffer>&) {}
 Pass::Pass(uint32_t secondary_cmd_count)
     : pass_idx_(-1), secondary_cmd_count_(secondary_cmd_count) {}
 
-void Pass::OnRegister(uint32_t pass_idx,
-                      gpu_resources::PassAccessSyncronizer* access_syncronizer,
-                      pipeline_handler::DescriptorPool& pool) {
+void Pass::OnRegister(
+    uint32_t pass_idx,
+    gpu_resources::PassAccessSyncronizer* access_syncronizer) {
   DCHECK(access_syncronizer != nullptr)
       << "access_syncronizer must be valid PassAccessSyncronizer";
   pass_idx_ = pass_idx;
   access_syncronizer_ = access_syncronizer;
-  OnReserveDescriptorSets(pool);
 }
 
 void Pass::OnResourcesInitialized() noexcept {}
+
 void Pass::OnWorkloadRecord(
     vk::CommandBuffer primary_cmd,
     const std::vector<vk::CommandBuffer>& secondary_cmd) {

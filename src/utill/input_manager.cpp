@@ -13,10 +13,7 @@ struct InputState {
 
 static InputState g_input_state;
 
-void KeyCallback(GLFWwindow* /*window*/,
-                 int key,
-                 int /*scancode*/,
-                 int action,
+void KeyCallback(GLFWwindow * /*window*/, int key, int /*scancode*/, int action,
                  int mods) {
   if (key == GLFW_KEY_UNKNOWN || key >= GLFW_KEY_LAST) {
     return;
@@ -24,15 +21,13 @@ void KeyCallback(GLFWwindow* /*window*/,
   g_input_state.keys[key] = {action, mods};
 }
 
-static void NormalCursorPosCallback(GLFWwindow* /*window*/,
-                                    double pos_x,
+static void NormalCursorPosCallback(GLFWwindow * /*window*/, double pos_x,
                                     double pos_y) {
   g_input_state.mouse.pos_x = pos_x;
   g_input_state.mouse.pos_y = pos_y;
 }
 
-static void DisabledCursorPosCallback(GLFWwindow* window,
-                                      double pos_x,
+static void DisabledCursorPosCallback(GLFWwindow *window, double pos_x,
                                       double pos_y) {
   int size_x = 0;
   int size_y = 0;
@@ -56,9 +51,7 @@ static void DisabledCursorPosCallback(GLFWwindow* window,
   g_input_state.mouse.pos_y = pos_y / size_y;
 }
 
-static void MouseButtonCallbeck(GLFWwindow* /*window*/,
-                                int button,
-                                int action,
+static void MouseButtonCallback(GLFWwindow * /*window*/, int button, int action,
                                 int mods) {
   if (button == GLFW_MOUSE_BUTTON_LEFT) {
     g_input_state.mouse.lmb_state = {action, mods};
@@ -67,17 +60,17 @@ static void MouseButtonCallbeck(GLFWwindow* /*window*/,
   }
 }
 
-}  // namespace
+} // namespace
 
 bool InputManager::IsValidKey(int key) {
   return key != GLFW_KEY_UNKNOWN && key < GLFW_KEY_LAST;
 }
 
 void InputManager::Init() {
-  GLFWwindow* window = base::Base::Get().GetWindow().GetWindow();
+  GLFWwindow *window = base::Base::Get().GetWindow().GetWindow();
   glfwSetKeyCallback(window, KeyCallback);
   glfwSetCursorPosCallback(window, NormalCursorPosCallback);
-  glfwSetMouseButtonCallback(window, MouseButtonCallbeck);
+  glfwSetMouseButtonCallback(window, MouseButtonCallback);
 }
 
 KeyState InputManager::GetKeyState(int key) {
@@ -95,12 +88,10 @@ bool InputManager::IsKeyPressed(int key) {
          g_input_state.keys[key].action == GLFW_REPEAT;
 }
 
-MouseState InputManager::GetMouseState() {
-  return g_input_state.mouse;
-}
+MouseState InputManager::GetMouseState() { return g_input_state.mouse; }
 
 void InputManager::SetCursorMode(int mode) {
-  GLFWwindow* window = base::Base::Get().GetWindow().GetWindow();
+  GLFWwindow *window = base::Base::Get().GetWindow().GetWindow();
   glfwSetInputMode(window, GLFW_CURSOR, mode);
   if (mode == GLFW_CURSOR_DISABLED) {
     glfwSetCursorPos(window, 0, 0);
@@ -110,4 +101,4 @@ void InputManager::SetCursorMode(int mode) {
   }
 }
 
-}  // namespace utill
+} // namespace utill

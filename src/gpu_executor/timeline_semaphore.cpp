@@ -1,10 +1,10 @@
-#include "gpu_executer/timeline_semaphore.h"
+#include "gpu_executor/timeline_semaphore.h"
 
 #include "base/base.h"
 
 #include "utill/error_handling.h"
 
-namespace gpu_executer {
+namespace gpu_executor {
 
 TimelineSemaphore::TimelineSemaphore() {
   vk::SemaphoreTypeCreateInfo timeline_create_info(vk::SemaphoreType::eTimeline,
@@ -40,4 +40,4 @@ TimelineSemaphore::~TimelineSemaphore() {
   device.destroySemaphore(semaphore_);
 }
 
-}  // namespace gpu_executer
+}  // namespace gpu_executor

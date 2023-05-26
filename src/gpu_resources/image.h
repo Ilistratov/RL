@@ -7,7 +7,6 @@
 #include <vector>
 #include <vulkan/vulkan_handles.hpp>
 
-#include "gpu_resources/device_memory_allocator.h"
 #include "gpu_resources/pass_access_syncronizer.h"
 #include "gpu_resources/physical_image.h"
 #include "gpu_resources/resource_access_syncronizer.h"

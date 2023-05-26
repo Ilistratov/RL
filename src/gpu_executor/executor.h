@@ -8,12 +8,12 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "gpu_executer/command_pool.h"
-#include "gpu_executer/task.h"
+#include "gpu_executor/command_pool.h"
+#include "gpu_executor/task.h"
 
-namespace gpu_executer {
+namespace gpu_executor {
 
-class Executer {
+class Executor {
   struct TaskInfo {
     Task* task;
     vk::PipelineStageFlags2KHR stage_flags = {};
@@ -37,10 +37,10 @@ class Executer {
   SubmitInfo RecordCmdBatch(uint32_t batch_start, uint32_t batch_end);
 
  public:
-  Executer() = default;
+  Executor() = default;
 
-  Executer(const Executer&) = delete;
-  void operator=(const Executer&) = delete;
+  Executor(const Executor&) = delete;
+  void operator=(const Executor&) = delete;
 
   void ScheduleTask(Task* task,
                     vk::PipelineStageFlags2KHR stage_flags = {},
@@ -53,4 +53,4 @@ class Executer {
   void Execute();
 };
 
-}  // namespace gpu_executer
+}  // namespace gpu_executor

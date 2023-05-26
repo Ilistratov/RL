@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "gpu_resources/device_memory_allocator.h"
 #include "gpu_resources/pass_access_syncronizer.h"
 #include "gpu_resources/physical_buffer.h"
 #include "gpu_resources/resource_access_syncronizer.h"
@@ -46,6 +45,8 @@ class Buffer {
   vk::Buffer GetVkBuffer() const noexcept;
   PhysicalBuffer* GetBuffer() const noexcept;
   vk::DeviceSize GetSize() const noexcept;
+
+  explicit operator vk::Buffer() const noexcept;
 };
 
 template <typename T>
